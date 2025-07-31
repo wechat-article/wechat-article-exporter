@@ -21,16 +21,16 @@ export const ACCOUNT_TYPE: Record<number, string> = {
  * 公共代理
  */
 export const AVAILABLE_PROXY_LIST: string[] = [
-    'https://wproxy-01.deno.dev/',
-    'https://wproxy-02.deno.dev/',
-    'https://wproxy-03.deno.dev/',
-    'https://wproxy-04.deno.dev/',
-    'https://wproxy-05.deno.dev/',
-    'https://wproxy-06.deno.dev/',
-    'https://wproxy-07.deno.dev/',
-    'https://wproxy-08.deno.dev/',
-    'https://wproxy-09.deno.dev/',
-    'https://wproxy-10.deno.dev/',
+    'https://00.workers-proxy.top/',
+    'https://01.workers-proxy.top/',
+    'https://02.workers-proxy.top/',
+    'https://03.workers-proxy.top/',
+    'https://04.workers-proxy.top/',
+    'https://05.workers-proxy.top/',
+    'https://06.workers-proxy.top/',
+    'https://07.workers-proxy.top/',
+    'https://08.workers-proxy.top/',
+    'https://09.workers-proxy.top/',
 ]
 
 
