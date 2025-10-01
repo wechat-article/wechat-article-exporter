@@ -1,37 +1,40 @@
 <template>
-  <div :class="isDev ? 'debug-screens' : ''">
+  <div :class="isDev ? 'debug-screens' : ''" class="flex flex-col h-screen">
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
 
     <UNotifications />
+    <UModals />
   </div>
 </template>
 
 <script setup lang="ts">
-const isDev = !import.meta.env.PROD
-const runtimeConfig = useRuntimeConfig()
+import { ModuleRegistry } from 'ag-grid-community';
+import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise';
+import { gridLicense } from '~/config';
 
-const websiteID = runtimeConfig.public.umamiWebsiteID
+const isDev = !import.meta.env.PROD;
+const runtimeConfig = useRuntimeConfig();
 
-if (!useLoginAccount().value) {
-  navigateTo('/login', {replace: true})
-}
+const websiteID = runtimeConfig.public.umamiWebsiteID;
+
+ModuleRegistry.registerModules([AllEnterpriseModule]);
+LicenseManager.setLicenseKey(gridLicense);
 
 useHead({
   script: [
-    websiteID ?
-    {
-      src: 'https://cloud.umami.is/script.js',
-      defer: true,
-      'data-website-id': websiteID
-    } : '',
-  ]
-})
+    websiteID
+      ? {
+          src: 'https://cloud.umami.is/script.js',
+          defer: true,
+          'data-website-id': websiteID,
+        }
+      : '',
+  ],
+});
 </script>
 
 <style>
-.highlight {
-  color: red;
-}
+@import 'styles.css';
 </style>

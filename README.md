@@ -1,111 +1,36 @@
-<p align="center">
-  <img src="./assets/logo.svg" alt="Logo">
-</p>
+# exporter
 
-# wechat-article-exporter
+## 后续优化点
 
-![GitHub stars]
-![GitHub forks]
-![GitHub License]
+### 1. 导出 PDF 格式
 
+本地需要起一个 https://pptr.dev/ 服务，然后网页与该服务建立 ws 连接，调用该服务，将 html 格式转为 pdf / image / md 等格式。
+连接并使用该服务之前需要进行认证，防止被恶意网站利用。
 
-一个在线的微信公众号文章批量下载工具，支持下载阅读量与评论数据，无需搭建任何环境，HTML 格式可100%还原文章样式，支持私有化部署，可在 Windows/macOS/Linux 系统上使用。
-
-交流群(QQ): `991482155`
-
-## 部署站点
-
-| 开源版                          | 专业版                            |
-|------------------------------|--------------------------------|
-| https://free-wxdown.deno.dev | https://exporter.wxdown.online |
+如果不想起服务的话，下载的格式为 html，就需要单独的本地工具处理上面的转换。
 
 
-## 文档
+### 2. 公共代理优化
 
-[文档站点](https://docs.wxdown.online) 上线啦 🎉🎉🎉，后续使用教程会在此站点统一进行维护。
+公共代理部署在 CF 中，通过 IP 白名单进行访问，在设置页面用户最多可设置3个IP白名单，通过 CF 提供的 API 设置到 WAF 中，如下所示：
 
+```shell
+curl -X POST \
+   "https://api.cloudflare.com/client/v4/zones/88fdc453fd7fcd34dc11c3dcc4a4b39b/rulesets/171f833bf3e0423d9b731137a0b43970/rules" \
+   -H "Authorization: Bearer $CF_AUTH_TOKEN" \
+   -d '{
+    "description": "IP白名单",
+    "expression": "(not ip.src in {192.10.10.1 232.2.1.3})",
+    "action": "block",
+    "position": {
+        "index": 1
+    }
+}'
+```
 
-## :dart: 特性
+## Docker
 
-- [x] 搜索公众号，支持关键字搜索
-- [x] 搜索公众号内文章(根据文章标题搜索)
-- [x] 支持导出 html/json/excel/txt 格式(html 格式打包了图片和样式文件，能够保证100%还原文章样式)
-- [x] 缓存文章列表数据，减少接口请求次数 (关键字搜索的文章不会进入缓存)
-- [x] 支持文章过滤，包括作者、标题、发布时间、原创标识、所属合集等
-- [x] 支持合集下载
-- [x] 支持图片分享消息
-- [x] 支持视频分享消息
-- [x] 支持导出评论、评论回复、阅读量、转发量等数据 (需要抓包获取 credentials 信息，[查看操作步骤](docs/credentials.md))
-- [x] 支持docker部署
-- [ ] 支持订阅机制，根据指定规则自动下载文章
-- [x] 开放 API 接口
-
-
-## :heart: 感谢
-
-- 感谢 [Deno Deploy]、[Cloudflare Workers] 提供免费托管服务
-- 感谢 [WeChat_Article] 项目提供原理思路
-
-
-## :coffee: 支持
-
-如果你觉得本项目帮助到了你，请给作者一个免费的 Star，感谢你的支持！
-
-
-
-## 关于后续更新计划
-
-为了项目能够长期健康的发展，后续会推出一些付费服务，具体可查看 issue 中的 [pro计划](https://github.com/wechat-article/wechat-article-exporter/labels/pro%E8%AE%A1%E5%88%92) 标签
-
-
-## :bulb: 原理
-
-在公众号后台写文章时支持搜索其他公众号的文章功能，以此来实现抓取指定公众号所有文章的目的。
-
-
-## :memo: 许可
-
-MIT
-
-## 声明
-
-本程序(开源版 and 专业版)承诺，不会利用您扫码登录的公众号进行任何形式的私有爬虫，也就是说不存在把你的账号作为公共账号为别人爬取文章的行为，也不存在类似账号池的东西。
-
-您的公众号只会服务于您自己的抓取文章的目的。
-
-通过本程序获取的公众号文章内容，版权归文章原作者所有，请合理使用。若发现侵权行为，请通过邮件联系我们。
-
-
-## :star: Star 历史
-
-[![Star History Chart]][Star History Chart Link]
-
-
-
-<!-- Definitions -->
-
-[deploy-badge]: https://img.shields.io/github/actions/workflow/status/jooooock/wechat-article-exporter/.github%2Fworkflows%2Fdeno_deploy.yml?label=Deploy
-
-[deploy]: https://github.com/jooooock/wechat-article-exporter/actions
-
-[Github stars]: https://img.shields.io/github/stars/jooooock/wechat-article-exporter?style=social&label=Star&style=plastic
-
-[Github forks]: https://img.shields.io/github/forks/jooooock/wechat-article-exporter?style=social&label=Fork&style=plastic
-
-[Github License]: https://img.shields.io/github/license/jooooock/wechat-article-exporter?label=License
-
-[微信公众平台]: https://mp.weixin.qq.com/cgi-bin/registermidpage?action=index&lang=zh_CN
-
-[登录页面]: https://wechat-article-exporter.deno.dev/login
-
-[切换账号]: assets/switch-account.png
-
-[Deno Deploy]: https://deno.com/deploy
-
-[Cloudflare Workers]: https://workers.cloudflare.com
-
-[Wechat_Article]: https://github.com/1061700625/WeChat_Article
-
-[Star History Chart]: https://api.star-history.com/svg?repos=jooooock/wechat-article-exporter&type=Timeline
-
-[Star History Chart Link]: https://star-history.com/#jooooock/wechat-article-exporter&Timeline
+```shell
+docker tag [local_image_id] dockerhub_username/repository_name:tag
+docker push dockerhub_username/repository_name:tag
+```

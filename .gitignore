@@ -20,6 +20,7 @@ logs
 _data
 debug
 scripts
+design
 
 # Local env files
 .env

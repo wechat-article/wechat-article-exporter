@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Pro Membership Pricing</title>
+  <link crossorigin="" rel="preconnect" href="https://fonts.gstatic.com/">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#4747eb",
+            "background-light": "#f6f6f8",
+            "background-dark": "#111121",
+            "pro-start": "#059669", // A rich, techy green
+            "pro-end": "#10B981", // A slightly lighter, vibrant green
+            "highlight": "#F59E0B" // A vibrant, techy orange
+          },
+          fontFamily: {
+            "display": ["Space Grotesk"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          keyframes: {
+            sparkle: {
+              '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+              '50%': { opacity: 0.5, transform: 'scale(1.2)' },
+            }
+          },
+          animation: {
+            sparkle: 'sparkle 1.5s infinite',
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#1c1c38] dark:text-background-light">
+<div class="flex flex-col min-h-screen">
+  <header class="w-full">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4 border-b border-black/10 dark:border-white/10">
+        <div class="flex items-center gap-3">
+          <svg class="h-6 w-6 text-primary" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
+          </svg>
+          <h2 class="text-xl font-bold">TechSite</h2>
+        </div>
+        <nav class="hidden md:flex items-center gap-8">
+          <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Home</a>
+          <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Features</a>
+          <a class="text-sm font-medium text-primary" href="#">Pricing</a>
+          <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Contact</a>
+        </nav>
+        <div class="flex items-center gap-4">
+          <button class="bg-primary text-white font-bold text-sm py-2 px-4 rounded-lg hover:opacity-90 transition-opacity">Log In</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">Choose Your Plan</h1>
+      <p class="mt-4 text-lg text-[#1c1c38]/80 dark:text-background-light/80 max-w-2xl mx-auto">
+        Upgrade to Pro for exclusive features, priority support, and a better experience.
+      </p>
+    </div>
+
+    <div class="flex flex-col lg:flex-row justify-center items-start lg:items-center gap-8 mb-16">
+      <div class="w-full max-w-md bg-white/50 dark:bg-black/10 p-8 rounded-xl border border-black/10 dark:border-white/10 flex flex-col">
+        <div class="flex-grow">
+          <h3 class="text-2xl font-bold">Free</h3>
+          <p class="mt-2 text-[#1c1c38]/70 dark:text-background-light/70">For individuals starting out.</p>
+          <div class="mt-6">
+            <span class="text-5xl font-bold">$0</span>
+            <span class="text-lg font-medium text-[#1c1c38]/70 dark:text-background-light/70">/month</span>
+          </div>
+          <ul class="mt-8 space-y-4">
+            <li class="flex items-center gap-3 text-[#1c1c38]/80 dark:text-background-light/80">
+              <svg class="text-primary/70 flex-shrink-0" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+              <span>Basic features</span>
+            </li>
+            <li class="flex items-center gap-3 text-[#1c1c38]/80 dark:text-background-light/80">
+              <svg class="text-primary/70 flex-shrink-0" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+              <span>Community support</span>
+            </li>
+          </ul>
+        </div>
+        <button class="mt-8 w-full bg-primary/20 dark:bg-primary/30 text-primary font-bold py-3 px-4 rounded-lg hover:bg-primary/30 dark:hover:bg-primary/40 transition-colors">
+          Get Started
+        </button>
+      </div>
+
+      <div class="w-full max-w-md bg-gradient-to-br from-pro-start to-pro-end p-8 rounded-xl border border-transparent text-white relative z-10 shadow-2xl shadow-green-500/20 dark:shadow-green-400/10 transform scale-105 lg:scale-110">
+        <div class="absolute top-0 right-8 -mt-4">
+          <div class="bg-white text-pro-start text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-lg">Best Value</div>
+        </div>
+        <div class="flex-grow">
+          <h3 class="text-2xl font-bold text-white">Pro</h3>
+          <p class="mt-2 text-white/80">For professionals and teams.</p>
+          <div class="mt-6">
+            <span class="text-5xl font-bold">$10</span>
+            <span class="text-lg font-medium text-white/80">/month</span>
+          </div>
+          <div class="mt-4 relative text-center">
+            <div class="absolute inset-0 -m-2 bg-highlight/20 dark:bg-highlight/10 rounded-lg animate-pulse"></div>
+            <p class="relative z-10 font-bold text-highlight animate-sparkle">
+              <svg class="inline-block w-5 h-5 mr-1 text-highlight/80" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+              </svg>
+              限时优惠：首月半价！
+            </p>
+          </div>
+          <ul class="mt-8 space-y-4">
+            <li class="flex items-center gap-3 text-white/90">
+              <svg class="text-white flex-shrink-0" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+              <span>All Free features</span>
+            </li>
+            <li class="flex items-center gap-3 text-white/90">
+              <svg class="text-white flex-shrink-0" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+              <span>Advanced analytics</span>
+            </li>
+            <li class="flex items-center gap-3 text-white/90">
+              <svg class="text-white flex-shrink-0" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+              <span>Priority support</span>
+            </li>
+            <li class="flex items-center gap-3 text-white/90">
+              <svg class="text-white flex-shrink-0" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+              <span>Exclusive content</span>
+            </li>
+          </ul>
+        </div>
+        <button class="mt-8 w-full bg-white text-pro-start font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity shadow-lg">
+          Subscribe Now
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-24">
+      <h2 class="text-3xl font-bold text-center mb-8">Features Comparison</h2>
+      <div class="max-w-4xl mx-auto overflow-hidden rounded-xl shadow-lg border border-black/5 dark:border-white/5">
+        <table class="w-full table-auto">
+          <thead class="bg-white/50 dark:bg-black/10 border-b border-black/5 dark:border-white/5">
+          <tr>
+            <th class="py-4 px-6 text-left text-lg font-semibold text-[#1c1c38] dark:text-background-light">Feature</th>
+            <th class="py-4 px-6 text-center text-lg font-semibold text-[#1c1c38] dark:text-background-light">Free</th>
+            <th class="py-4 px-6 text-center text-lg font-semibold text-pro-start dark:text-pro-end">Pro</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr class="hover:bg-white/5 dark:hover:bg-black/5 transition-colors cursor-pointer">
+            <td class="py-4 px-6 font-medium">Basic features</td>
+            <td class="text-center text-primary/80"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+            <td class="text-center text-pro-end"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+          </tr>
+          <tr class="hover:bg-white/5 dark:hover:bg-black/5 transition-colors cursor-pointer">
+            <td class="py-4 px-6 font-medium">Community support</td>
+            <td class="text-center text-primary/80"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+            <td class="text-center text-pro-end"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+          </tr>
+          <tr class="hover:bg-white/5 dark:hover:bg-black/5 transition-colors cursor-pointer">
+            <td class="py-4 px-6 font-medium">Advanced analytics</td>
+            <td class="text-center text-gray-400 dark:text-gray-500">-</td>
+            <td class="text-center text-pro-end"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+          </tr>
+          <tr class="hover:bg-white/5 dark:hover:bg-black/5 transition-colors cursor-pointer">
+            <td class="py-4 px-6 font-medium">Priority support</td>
+            <td class="text-center text-gray-400 dark:text-gray-500">-</td>
+            <td class="text-center text-pro-end"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+          </tr>
+          <tr class="hover:bg-white/5 dark:hover:bg-black/5 transition-colors cursor-pointer">
+            <td class="py-4 px-6 font-medium">Exclusive content</td>
+            <td class="text-center text-gray-400 dark:text-gray-500">-</td>
+            <td class="text-center text-pro-end"><svg class="inline-block w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mt-24">
+      <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+      <div class="max-w-3xl mx-auto space-y-4">
+        <div x-data="{ open: false }">
+          <button @click="open = !open" class="w-full flex justify-between items-center text-left py-4 px-6 bg-white/50 dark:bg-black/10 rounded-lg hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+            <span class="font-medium text-lg">如何取消订阅？</span>
+            <svg :class="{ 'rotate-180': open }" class="w-5 h-5 text-primary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </button>
+          <div class="px-6 pb-4 text-[#1c1c38]/80 dark:text-background-light/80" x-collapse="" x-show="open">
+            <p class="mt-2">您可以随时在您的账户设置中取消订阅。取消后，您仍然可以在当前计费周期结束前享受 Pro 会员的所有权益。</p>
+          </div>
+        </div>
+        <div x-data="{ open: false }">
+          <button @click="open = !open" class="w-full flex justify-between items-center text-left py-4 px-6 bg-white/50 dark:bg-black/10 rounded-lg hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+            <span class="font-medium text-lg">支持哪些支付方式？</span>
+            <svg :class="{ 'rotate-180': open }" class="w-5 h-5 text-primary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </button>
+          <div class="px-6 pb-4 text-[#1c1c38]/80 dark:text-background-light/80" x-collapse="" x-show="open">
+            <p class="mt-2">我们支持所有主流信用卡，包括 Visa、Mastercard 和 American Express。我们也支持通过 PayPal 进行支付。</p>
+          </div>
+        </div>
+        <div x-data="{ open: false }">
+          <button @click="open = !open" class="w-full flex justify-between items-center text-left py-4 px-6 bg-white/50 dark:bg-black/10 rounded-lg hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+            <span class="font-medium text-lg">Pro 会员和免费会员有什么主要区别？</span>
+            <svg :class="{ 'rotate-180': open }" class="w-5 h-5 text-primary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </button>
+          <div class="px-6 pb-4 text-[#1c1c38]/80 dark:text-background-light/80" x-collapse="" x-show="open">
+            <p class="mt-2">Pro 会员可以访问我们的所有高级功能，包括高级分析、优先支持和独家内容。免费会员只能使用基本功能和社区支持。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="w-full">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="py-8 text-center text-sm text-[#1c1c38]/60 dark:text-background-light/60 border-t border-black/10 dark:border-white/10">
+        <div class="flex justify-center gap-6 mb-4">
+          <a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+          <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+          <a class="hover:text-primary transition-colors" href="#">Contact Us</a>
+        </div>
+        <p>© 2024 TechSite. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</div>
+<script defer="" src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+<script defer="" src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

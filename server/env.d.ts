@@ -1,5 +1,5 @@
 interface globalThis {
-    Deno: any
+  Deno: any;
 }
 
-export {}
+export {};

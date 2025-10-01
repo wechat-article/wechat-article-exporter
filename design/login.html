@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Login - TechSite</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#137fec",
+            "background-light": "#f6f7f8",
+            "background-dark": "#101922",
+          },
+          fontFamily: {
+            "display": ["Space Grotesk"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+  <style>
+      .material-symbols-outlined {
+          font-variation-settings:
+                  'FILL' 1,
+                  'wght' 400,
+                  'GRAD' 0,
+                  'opsz' 24
+      }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200">
+<div class="flex flex-col min-h-screen">
+  <header class="w-full">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between py-4 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <svg class="h-6 w-6 text-primary" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path></svg>
+          <h1 class="text-xl font-bold text-slate-900 dark:text-white">TechSite</h1>
+        </div>
+        <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+          <a class="hover:text-primary transition-colors" href="#">Home</a>
+          <a class="hover:text-primary transition-colors" href="#">Features</a>
+          <a class="hover:text-primary transition-colors" href="#">Pricing</a>
+          <a class="hover:text-primary transition-colors" href="#">Contact</a>
+        </div>
+        <a class="hidden md:inline-flex items-center justify-center px-4 py-2 text-sm font-bold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors" href="#">
+          Sign Up
+        </a>
+        <button class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="w-full max-w-md space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome Back</h2>
+        <p class="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
+          Sign in to continue to your account.
+        </p>
+      </div>
+      <div class="bg-white dark:bg-background-dark p-8 shadow-sm rounded-xl border border-slate-200 dark:border-slate-800">
+        <form action="#" class="space-y-6" method="POST">
+          <div>
+            <label class="sr-only" for="email">Email address</label>
+            <input autocomplete="email" class="relative block w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-3 bg-transparent text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:z-10 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" id="email" name="email" placeholder="Email address" required="" type="email"/>
+          </div>
+          <div>
+            <label class="sr-only" for="password">Password</label>
+            <input autocomplete="current-password" class="relative block w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-3 bg-transparent text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:z-10 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" id="password" name="password" placeholder="Password" required="" type="password"/>
+          </div>
+          <div class="text-right">
+            <a class="text-sm font-medium text-primary hover:text-primary/90" href="#">Forgot Password?</a>
+          </div>
+          <div>
+            <button class="group relative flex w-full justify-center rounded-lg border border-transparent bg-primary py-3 px-4 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark" type="submit">
+              Log In
+            </button>
+          </div>
+        </form>
+        <div class="mt-6">
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-slate-300 dark:border-slate-700"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="bg-white dark:bg-background-dark px-2 text-slate-500 dark:text-slate-400">Or continue with</span>
+            </div>
+          </div>
+          <div class="mt-6 flex justify-center items-center gap-4">
+            <a class="inline-flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-background-dark p-3 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50" href="#">
+              <svg aria-hidden="true" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" fill-rule="evenodd"></path></svg>
+            </a>
+            <a class="inline-flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-background-dark p-3 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50" href="#">
+              <svg aria-hidden="true" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 6.93l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+            </a>
+            <a class="inline-flex items-center justify-center gap-2 text-sm font-medium text-primary hover:text-primary/90" href="#">
+              <span class="material-symbols-outlined text-xl">passkey</span>
+              <span class="sr-only">Continue with Passkey</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="text-center">
+        <a class="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary/90 transition-colors" href="#">Continue as a guest</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body></html>

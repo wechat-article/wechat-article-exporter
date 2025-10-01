@@ -1,39 +1,44 @@
-import dayjs from "dayjs";
-import JSZip from "jszip";
-import mime from "mime";
-import {sleep} from "@antfu/utils";
-import {getAssetCache, updateAssetCache} from "~/store/assetes";
+import dayjs from 'dayjs';
+import JSZip from 'jszip';
+import mime from 'mime';
+import { getAssetCache, updateAssetCache } from '~/store/v2/assets';
 import * as pool from '~/utils/pool';
-import type {DownloadableArticle} from "~/types/types";
-import type {AudioResource, VideoPageInfo} from "~/types/video";
-import {getComment} from "~/apis";
-
+import type { DownloadableArticle } from '~/types/types';
+import type { AudioResource, VideoPageInfo } from '~/types/video';
+import { getComment } from '~/apis';
 
 export function formatTimeStamp(timestamp: number) {
-    return dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm')
+  return dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm:ss');
 }
 
+export const ITEM_SHOW_TYPE: Record<number, string> = {
+  0: '普通图文',
+  5: '视频分享',
+  6: '音乐分享',
+  7: '音频分享',
+  8: '图片分享',
+  10: '文本分享',
+  11: '文章分享',
+  17: '短文',
+};
+
 export function formatItemShowType(type: number) {
-    switch (type) {
-        case 0:
-            return '普通图文'
-        case 5:
-            return '视频分享'
-        case 6:
-            return '音乐分享'
-        case 7:
-            return '音频分享'
-        case 8:
-            return '图片分享'
-        case 10:
-            return '文本分享'
-        case 11:
-            return '文章分享'
-        case 17:
-            return '短文'
-        default:
-            return '未识别'
-    }
+  return ITEM_SHOW_TYPE[type] || '未识别';
+}
+
+// 工具函数：将时长字符串转为秒数
+export function durationToSeconds(duration: string | undefined) {
+  if (!duration) return 0;
+  const [min, sec] = duration.split(':').map(Number);
+  return min * 60 + sec;
+}
+
+export function formatNumber(num: any): string {
+  if (typeof num === 'number') {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  } else {
+    return num.toString();
+  }
 }
 
 /**
@@ -43,23 +48,30 @@ export function formatItemShowType(type: number) {
  * @param withCredential
  * @param timeout 超时时间(单位: 秒)，默认 30
  */
-async function downloadAssetWithProxy<T extends Blob | string>(url: string, proxy: string | undefined, withCredential = false, timeout = 30) {
-    const headers: Record<string, string> = {}
-    if (withCredential) {
-        try {
-            const credentials = JSON.parse(window.localStorage.getItem('credentials')!)
-            headers.cookie = `pass_ticket=${credentials.pass_ticket};wap_sid2=${credentials.wap_sid2}`;
-        } catch (e) {}
-    }
-    let targetURL = proxy ? `${proxy}?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}` : url
-    targetURL = targetURL.replace(/^http:\/\//, 'https://')
+export async function downloadAssetWithProxy<T extends Blob | string>(
+  url: string,
+  proxy: string | undefined,
+  withCredential = false,
+  timeout = 30
+) {
+  const headers: Record<string, string> = {};
+  if (withCredential) {
+    try {
+      const credentials = JSON.parse(window.localStorage.getItem('credentials')!);
+      headers.cookie = `pass_ticket=${credentials.pass_ticket};wap_sid2=${credentials.wap_sid2}`;
+    } catch (e) {}
+  }
+  let targetURL = proxy
+    ? `${proxy}?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}`
+    : url;
+  targetURL = targetURL.replace(/^http:\/\//, 'https://');
 
-    return await $fetch<T>(targetURL, {
-        retry: 0,
-        timeout: timeout * 1000,
-    })
+  return await $fetch<T>(targetURL, {
+    retry: 0,
+    timeout: timeout * 1000,
+    referrerPolicy: 'unsafe-url',
+  });
 }
-
 
 /**
  * 下载文章的 html
@@ -67,37 +79,37 @@ async function downloadAssetWithProxy<T extends Blob | string>(url: string, prox
  * @param title
  */
 export async function downloadArticleHTML(articleURL: string, title?: string) {
-    let html = ''
-    const parser = new DOMParser()
+  let html = '';
+  const parser = new DOMParser();
 
-    const htmlDownloadFn = async (url: string, proxy: string) => {
-        const fullHTML = await downloadAssetWithProxy<string>(url, proxy, true)
+  const htmlDownloadFn = async (url: string, proxy: string) => {
+    const fullHTML = await downloadAssetWithProxy<string>(url, proxy, true);
 
-        // 验证是否下载完整
-        const document = parser.parseFromString(fullHTML, 'text/html')
-        const $jsContent = document.querySelector('#js_content')
-        const $layout = document.querySelector('#js_fullscreen_layout_padding')
-        if (!$jsContent) {
-            if ($layout) {
-                console.log(`文章(${title})已被删除，跳过下载`)
-                return 0
-            }
+    // 验证是否下载完整
+    const document = parser.parseFromString(fullHTML, 'text/html');
+    const $jsContent = document.querySelector('#js_content');
+    const $layout = document.querySelector('#js_fullscreen_layout_padding');
+    if (!$jsContent) {
+      if ($layout) {
+        console.log(`文章(${title})已被删除，跳过下载`);
+        return 0;
+      }
 
-            console.log(`文章(${title})下载失败`)
-            throw new Error('下载失败，请重试')
-        }
-        html = fullHTML
-
-        return new Blob([html]).size
+      console.log(`文章(${title})下载失败`);
+      throw new Error('下载失败，请重试');
     }
+    html = fullHTML;
 
-    await pool.downloads([articleURL], htmlDownloadFn)
+    return new Blob([html]).size;
+  };
 
-    if (!html) {
-        throw new Error('下载html失败，请稍后重试')
-    }
+  await pool.downloads([articleURL], htmlDownloadFn);
 
-    return html
+  if (!html) {
+    throw new Error('下载html失败，请稍后重试');
+  }
+
+  return html;
 }
 
 /**
@@ -106,565 +118,611 @@ export async function downloadArticleHTML(articleURL: string, title?: string) {
  * @param callback
  */
 export async function downloadArticleHTMLs(articles: DownloadableArticle[], callback: (count: number) => void) {
-    const parser = new DOMParser()
-    const results: DownloadableArticle[] = []
+  const parser = new DOMParser();
+  const results: DownloadableArticle[] = [];
 
-    const htmlDownloadFn = async (article: DownloadableArticle, proxy: string) => {
-        const fullHTML = await downloadAssetWithProxy<string>(article.url, proxy, true)
+  const htmlDownloadFn = async (article: DownloadableArticle, proxy: string) => {
+    const fullHTML = await downloadAssetWithProxy<string>(article.url, proxy, true);
 
-        // 验证是否下载完整
-        const document = parser.parseFromString(fullHTML, 'text/html')
-        const $jsContent = document.querySelector('#js_content')
-        const $layout = document.querySelector('#js_fullscreen_layout_padding')
-        if (!$jsContent) {
-            if ($layout) {
-                console.log(`文章(${article.title})已被删除，跳过下载`)
-                return 0
-            }
+    // 验证是否下载完整
+    const document = parser.parseFromString(fullHTML, 'text/html');
+    const $jsContent = document.querySelector('#js_content');
+    const $layout = document.querySelector('#js_fullscreen_layout_padding');
+    if (!$jsContent) {
+      if ($layout) {
+        console.log(`文章(${article.title})已被删除，跳过下载`);
+        return 0;
+      }
 
-            console.log(`文章(${article.title})下载失败`)
-            throw new Error('下载失败，请重试')
-        }
-
-        article.html = fullHTML
-        results.push(article)
-        callback(results.length)
-        await sleep(2000)
-
-        return new Blob([fullHTML]).size
+      console.log(`文章(${article.title})下载失败`);
+      throw new Error('下载失败，请重试');
     }
 
-    await pool.downloads(articles, htmlDownloadFn)
+    article.html = fullHTML;
+    results.push(article);
+    callback(results.length);
+    await sleep(2000);
 
-    return results
+    return new Blob([fullHTML]).size;
+  };
+
+  await pool.downloads(articles, htmlDownloadFn);
+
+  return results;
 }
-
 
 /**
  * 打包 html 中的资源
+ * @param fakeid
  * @param html
  * @param title
  * @param zip
  */
-export async function packHTMLAssets(html: string, title: string, zip?: JSZip) {
-    if (!zip) {
-        zip = new JSZip();
+export async function packHTMLAssets(fakeid: string, html: string, title: string, zip?: JSZip) {
+  if (!zip) {
+    zip = new JSZip();
+  }
+  zip.folder('assets');
+
+  const parser = new DOMParser();
+  const document = parser.parseFromString(html, 'text/html');
+  const $jsArticleContent = document.querySelector('#js_article')!;
+  const $jsArticleBottomBar = document.querySelector('#js_article_bottom_bar')!;
+
+  // #js_content 默认是不可见的(通过js修改为可见)，需要移除该样式
+  $jsArticleContent.querySelector('#js_content')?.removeAttribute('style');
+
+  // 删除无用dom元素
+  $jsArticleContent.querySelector('#js_top_ad_area')?.remove();
+  $jsArticleContent.querySelector('#js_tags_preview_toast')?.remove();
+  $jsArticleContent.querySelector('#content_bottom_area')?.remove();
+  $jsArticleContent.querySelectorAll('script').forEach(el => {
+    el.remove();
+  });
+  $jsArticleContent.querySelector('#js_pc_qr_code')?.remove();
+  $jsArticleContent.querySelector('#wx_stream_article_slide_tip')?.remove();
+
+  let bodyCls = document.body.className;
+
+  // 渲染发布时间
+  function __setPubTime(oriTimestamp: number, dom: HTMLElement) {
+    const dateObj = new Date(oriTimestamp * 1000);
+    const padStart = function padStart(v: number) {
+      return '0'.concat(v.toString()).slice(-2);
+    };
+    const year = dateObj.getFullYear().toString();
+    const month = padStart(dateObj.getMonth() + 1);
+    const date = padStart(dateObj.getDate());
+    const hour = padStart(dateObj.getHours());
+    const minute = padStart(dateObj.getMinutes());
+    const timeString = ''.concat(hour, ':').concat(minute);
+    const dateString = ''.concat(year, '年').concat(month, '月').concat(date, '日');
+    const showDate = ''.concat(dateString, ' ').concat(timeString);
+
+    if (dom) {
+      dom.innerText = showDate;
     }
-    zip.folder('assets')
+  }
+  const pubTimeMatchResult = html.match(/var oriCreateTime = '(?<date>\d+)'/);
+  if (pubTimeMatchResult && pubTimeMatchResult.groups && pubTimeMatchResult.groups.date) {
+    __setPubTime(parseInt(pubTimeMatchResult.groups.date), document.getElementById('publish_time')!);
+  }
 
-
-    const parser = new DOMParser()
-    const document = parser.parseFromString(html, 'text/html')
-    const $jsArticleContent = document.querySelector('#js_article')!
-    const $jsArticleBottomBar = document.querySelector('#js_article_bottom_bar')!
-
-    // #js_content 默认是不可见的(通过js修改为可见)，需要移除该样式
-    $jsArticleContent.querySelector('#js_content')?.removeAttribute('style')
-
-    // 删除无用dom元素
-    $jsArticleContent.querySelector('#js_top_ad_area')?.remove()
-    $jsArticleContent.querySelector('#js_tags_preview_toast')?.remove()
-    $jsArticleContent.querySelector('#content_bottom_area')?.remove()
-    $jsArticleContent.querySelectorAll('script').forEach(el => {
-        el.remove()
-    })
-    $jsArticleContent.querySelector('#js_pc_qr_code')?.remove()
-    $jsArticleContent.querySelector('#wx_stream_article_slide_tip')?.remove()
-
-
-    let bodyCls = document.body.className
-
-    // 渲染发布时间
-    function __setPubTime(oriTimestamp: number, dom: HTMLElement) {
-        const dateObj = new Date(oriTimestamp * 1000);
-        const padStart = function padStart(v: number) {
-            return "0".concat(v.toString()).slice(-2);
-        };
-        const year = dateObj.getFullYear().toString();
-        const month = padStart(dateObj.getMonth() + 1);
-        const date = padStart(dateObj.getDate());
-        const hour = padStart(dateObj.getHours());
-        const minute = padStart(dateObj.getMinutes());
-        const timeString = "".concat(hour, ":").concat(minute);
-        const dateString = "".concat(year, "年").concat(month, "月").concat(date, "日");
-        const showDate = "".concat(dateString, " ").concat(timeString);
-
-        if (dom) {
-            dom.innerText = showDate;
-        }
+  // 渲染ip属地
+  function getIpWoridng(ipConfig: any) {
+    let ipWording = '';
+    if (parseInt(ipConfig.countryId, 10) === 156) {
+      ipWording = ipConfig.provinceName;
+    } else if (ipConfig.countryId) {
+      ipWording = ipConfig.countryName;
     }
-    const pubTimeMatchResult = html.match(/var oriCreateTime = '(?<date>\d+)'/)
-    if (pubTimeMatchResult && pubTimeMatchResult.groups && pubTimeMatchResult.groups.date) {
-        __setPubTime(parseInt(pubTimeMatchResult.groups.date), document.getElementById('publish_time')!)
+    return ipWording;
+  }
+  const ipWrp = document.getElementById('js_ip_wording_wrp')!;
+  const ipWording = document.getElementById('js_ip_wording')!;
+  const ipWordingMatchResult = html.match(/window\.ip_wording = (?<data>{\s+countryName: '[^']+',[^}]+})/s);
+  if (ipWrp && ipWording && ipWordingMatchResult && ipWordingMatchResult.groups && ipWordingMatchResult.groups.data) {
+    const json = ipWordingMatchResult.groups.data;
+    eval('window.ip_wording = ' + json);
+    const ipWordingDisplay = getIpWoridng((window as any).ip_wording);
+    if (ipWordingDisplay !== '') {
+      ipWording.innerHTML = ipWordingDisplay;
+      ipWrp.style.display = 'inline-block';
     }
+  }
 
-    // 渲染ip属地
-    function getIpWoridng(ipConfig: any) {
-        let ipWording = '';
-        if (parseInt(ipConfig.countryId, 10) === 156) {
-            ipWording = ipConfig.provinceName;
-        } else if (ipConfig.countryId) {
-            ipWording = ipConfig.countryName;
-        }
-        return ipWording;
+  // 渲染 标题已修改
+  function __setTitleModify(isTitleModified: boolean) {
+    const wrp = document.getElementById('js_title_modify_wrp')!;
+    const titleModifyNode = document.getElementById('js_title_modify')!;
+    if (!wrp) return;
+    if (isTitleModified) {
+      titleModifyNode.innerHTML = '标题已修改';
+      wrp.style.display = 'inline-block';
+    } else {
+      wrp.parentNode?.removeChild(wrp);
     }
-    const ipWrp = document.getElementById('js_ip_wording_wrp')!
-    const ipWording = document.getElementById('js_ip_wording')!
-    const ipWordingMatchResult = html.match(/window\.ip_wording = (?<data>{\s+countryName: '[^']+',[^}]+})/s)
-    if (ipWrp && ipWording && ipWordingMatchResult && ipWordingMatchResult.groups && ipWordingMatchResult.groups.data) {
-        const json = ipWordingMatchResult.groups.data
-        eval('window.ip_wording = ' + json)
-        const ipWordingDisplay = getIpWoridng((window as any).ip_wording)
-        if (ipWordingDisplay !== '') {
-            ipWording.innerHTML = ipWordingDisplay;
-            ipWrp.style.display = 'inline-block';
-        }
-    }
+  }
+  const titleModifiedMatchResult = html.match(/window\.isTitleModified = "(?<data>\d*)" \* 1;/);
+  if (titleModifiedMatchResult && titleModifiedMatchResult.groups && titleModifiedMatchResult.groups.data) {
+    __setTitleModify(titleModifiedMatchResult.groups.data === '1');
+  }
 
-    // 渲染 标题已修改
-    function __setTitleModify(isTitleModified: boolean) {
-        const wrp = document.getElementById('js_title_modify_wrp')!
-        const titleModifyNode = document.getElementById('js_title_modify')!
-        if (!wrp) return;
-        if (isTitleModified) {
-            titleModifyNode.innerHTML = '标题已修改';
-            wrp.style.display = 'inline-block';
+  // 文章引用
+  const js_share_source = document.getElementById('js_share_source');
+  const contentTpl = document.getElementById('content_tpl');
+  if (js_share_source && contentTpl) {
+    const html = contentTpl.innerHTML
+      .replace(/<img[^>]*>/g, '<p>[图片]</p>')
+      .replace(
+        /<iframe [^>]*?class=\"res_iframe card_iframe js_editor_card\"[^>]*?data-cardid=[\'\"][^\'\"]*[^>]*?><\/iframe>/gi,
+        '<p>[卡券]</p>'
+      )
+      .replace(/<mpvoice([^>]*?)js_editor_audio([^>]*?)><\/mpvoice>/g, '<p>[语音]</p>')
+      .replace(/<mpgongyi([^>]*?)js_editor_gy([^>]*?)><\/mpgongyi>/g, '<p>[公益]</p>')
+      .replace(/<qqmusic([^>]*?)js_editor_qqmusic([^>]*?)><\/qqmusic>/g, '<p>[音乐]</p>')
+      .replace(/<mpshop([^>]*?)js_editor_shop([^>]*?)><\/mpshop>/g, '<p>[小店]</p>')
+      .replace(/<iframe([^>]*?)class=[\'\"][^\'\"]*video_iframe([^>]*?)><\/iframe>/g, '<p>[视频]</p>')
+      .replace(/(<iframe[^>]*?js_editor_vote_card[^<]*?<\/iframe>)/gi, '<p>[投票]</p>')
+      .replace(/<mp-weapp([^>]*?)weapp_element([^>]*?)><\/mp-weapp>/g, '<p>[小程序]</p>')
+      .replace(/<mp-miniprogram([^>]*?)><\/mp-miniprogram>/g, '<p>[小程序]</p>')
+      .replace(/<mpproduct([^>]*?)><\/mpproduct>/g, '<p>[商品]</p>')
+      .replace(/<mpcps([^>]*?)><\/mpcps>/g, '<p>[商品]</p>');
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    let content = div.innerText;
+    content = content.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
+    if (content.length > 140) {
+      content = content.substr(0, 140) + '...';
+    }
+    const digest = content.split('\n').map(function (line) {
+      return '<p>' + line + '</p>';
+    });
+    document.getElementById('js_content')!.innerHTML = digest.join('');
+
+    // 替换url
+    const sourceURL = js_share_source.getAttribute('data-url');
+    if (sourceURL) {
+      const link = document.createElement('a');
+      link.href = sourceURL;
+      link.className = js_share_source.className;
+      link.innerHTML = js_share_source.innerHTML;
+      js_share_source.replaceWith(link);
+    }
+  }
+
+  // 下载留言数据
+  let commentHTML = '';
+  const commentIdMatchResult = html.match(/var comment_id = '(?<comment_id>\d+)' \|\| '0';/);
+  if (commentIdMatchResult && commentIdMatchResult.groups && commentIdMatchResult.groups.comment_id) {
+    const comment_id = commentIdMatchResult.groups.comment_id;
+    const commentResponse = await getComment(comment_id);
+    // 抓到了留言数据
+    if (commentResponse) {
+      // 留言总数
+      const totalCount =
+        commentResponse.elected_comment.length +
+        commentResponse.elected_comment.reduce((total, item) => {
+          return total + item.reply_new.reply_total_cnt;
+        }, 0);
+
+      commentHTML += '<div style="max-width: 667px;margin: 0 auto;padding: 10px 10px 80px;">';
+      commentHTML += `<p style="font-size: 15px;color: #949494;">留言 ${totalCount}</p>`;
+      commentHTML += '<div style="margin-top: -10px;">';
+      commentResponse.elected_comment.forEach(comment => {
+        commentHTML += '<div style="margin-top: 25px;"><div style="display: flex;">';
+        if ([1, 2].includes(comment.identity_type)) {
+          commentHTML += `<img src="${comment.logo_url}" style="display: block;width: 30px;height: 30px;border-radius: 50%;margin-right: 8px;" alt="">`;
         } else {
-            wrp.parentNode?.removeChild(wrp);
+          commentHTML += `<img src="${comment.logo_url}" style="display: block;width: 30px;height: 30px;border-radius: 2px;margin-right: 8px;" alt="">`;
         }
-    }
-    const titleModifiedMatchResult = html.match(/window\.isTitleModified = "(?<data>\d*)" \* 1;/)
-    if (titleModifiedMatchResult && titleModifiedMatchResult.groups && titleModifiedMatchResult.groups.data) {
-        __setTitleModify(titleModifiedMatchResult.groups.data === '1')
-    }
+        commentHTML += '<div style="flex: 1;"><p style="display: flex;line-height: 16px;margin-bottom: 5px;">';
+        commentHTML += `<span style="margin-right: 5px;font-size: 15px;color: #949494;">${comment.nick_name}</span>`;
+        commentHTML += `<span style="margin-right: 5px;font-size: 12px;color: #b5b5b5;">${comment?.ip_wording?.province_name}</span>`;
+        commentHTML += `<span style="font-size: 12px;color: #b5b5b5;">${formatTimeStamp(comment.create_time)}</span>`;
+        commentHTML += '<span style="flex: 1;"></span><span style="display: inline-flex;align-items: center;">';
+        commentHTML += `<span class="sns_opr_btn sns_praise_btn" style="font-size: 12px;color: #8b8a8a;">${comment.like_num || ''}</span>`;
+        commentHTML += '</span></p>';
+        commentHTML += `<p style="font-size: 15px;color: #333;white-space: pre-line;">${comment.content}</p>`;
+        commentHTML += '</div></div>';
 
-    // 文章引用
-    const js_share_source = document.getElementById('js_share_source')
-    const contentTpl = document.getElementById('content_tpl')
-    if (js_share_source && contentTpl) {
-        const html = contentTpl.innerHTML
-            .replace(/<img[^>]*>/g, '<p>[图片]</p>')
-            .replace(/<iframe [^>]*?class=\"res_iframe card_iframe js_editor_card\"[^>]*?data-cardid=[\'\"][^\'\"]*[^>]*?><\/iframe>/ig, '<p>[卡券]</p>')
-            .replace(/<mpvoice([^>]*?)js_editor_audio([^>]*?)><\/mpvoice>/g, '<p>[语音]</p>')
-            .replace(/<mpgongyi([^>]*?)js_editor_gy([^>]*?)><\/mpgongyi>/g, '<p>[公益]</p>')
-            .replace(/<qqmusic([^>]*?)js_editor_qqmusic([^>]*?)><\/qqmusic>/g, '<p>[音乐]</p>')
-            .replace(/<mpshop([^>]*?)js_editor_shop([^>]*?)><\/mpshop>/g, '<p>[小店]</p>')
-            .replace(/<iframe([^>]*?)class=[\'\"][^\'\"]*video_iframe([^>]*?)><\/iframe>/g, '<p>[视频]</p>')
-            .replace(/(<iframe[^>]*?js_editor_vote_card[^<]*?<\/iframe>)/gi, '<p>[投票]</p>')
-            .replace(/<mp-weapp([^>]*?)weapp_element([^>]*?)><\/mp-weapp>/g, '<p>[小程序]</p>')
-            .replace(/<mp-miniprogram([^>]*?)><\/mp-miniprogram>/g, '<p>[小程序]</p>')
-            .replace(/<mpproduct([^>]*?)><\/mpproduct>/g, '<p>[商品]</p>')
-            .replace(/<mpcps([^>]*?)><\/mpcps>/g, '<p>[商品]</p>');
-        const div = document.createElement('div');
-        div.innerHTML = html;
-        let content = div.innerText;
-        content = content.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
-        if (content.length > 140) {
-            content = content.substr(0, 140) + '...';
-        }
-        const digest = content.split('\n').map(function(line) {
-            return '<p>' + line + '</p>';
-        })
-        document.getElementById('js_content')!.innerHTML = digest.join('');
-
-        // 替换url
-        const sourceURL = js_share_source.getAttribute('data-url')
-        if (sourceURL) {
-            const link = document.createElement('a')
-            link.href = sourceURL
-            link.className = js_share_source.className
-            link.innerHTML = js_share_source.innerHTML
-            js_share_source.replaceWith(link)
-        }
-    }
-
-    // 下载留言数据
-    let commentHTML = ''
-    const commentIdMatchResult = html.match(/var comment_id = '(?<comment_id>\d+)' \|\| '0';/)
-    if (commentIdMatchResult && commentIdMatchResult.groups && commentIdMatchResult.groups.comment_id) {
-        const comment_id = commentIdMatchResult.groups.comment_id
-        const commentResponse = await getComment(comment_id)
-        // 抓到了留言数据
-        if (commentResponse) {
-            // 留言总数
-            const totalCount = commentResponse.elected_comment.length + commentResponse.elected_comment.reduce((total, item) => {
-                return total + item.reply_new.reply_total_cnt
-            }, 0)
-
-            commentHTML += '<div style="max-width: 667px;margin: 0 auto;padding: 10px 10px 80px;">'
-            commentHTML += `<p style="font-size: 15px;color: #949494;">留言 ${totalCount}</p>`
-            commentHTML += '<div style="margin-top: -10px;">'
-            commentResponse.elected_comment.forEach((comment) => {
-                commentHTML += '<div style="margin-top: 25px;"><div style="display: flex;">'
-                if ([1, 2].includes(comment.identity_type)) {
-                    commentHTML += `<img src="${comment.logo_url}" style="display: block;width: 30px;height: 30px;border-radius: 50%;margin-right: 8px;" alt="">`
-                } else {
-                    commentHTML += `<img src="${comment.logo_url}" style="display: block;width: 30px;height: 30px;border-radius: 2px;margin-right: 8px;" alt="">`
-                }
-                commentHTML += '<div style="flex: 1;"><p style="display: flex;line-height: 16px;margin-bottom: 5px;">'
-                commentHTML += `<span style="margin-right: 5px;font-size: 15px;color: #949494;">${comment.nick_name}</span>`
-                commentHTML += `<span style="margin-right: 5px;font-size: 12px;color: #b5b5b5;">${comment?.ip_wording?.province_name}</span>`
-                commentHTML += `<span style="font-size: 12px;color: #b5b5b5;">${formatAlbumTime(comment.create_time)}</span>`
-                commentHTML += '<span style="flex: 1;"></span><span style="display: inline-flex;align-items: center;">'
-                commentHTML += `<span class="sns_opr_btn sns_praise_btn" style="font-size: 12px;color: #8b8a8a;">${comment.like_num || ''}</span>`
-                commentHTML += '</span></p>'
-                commentHTML += `<p style="font-size: 15px;color: #333;white-space: pre-line;">${comment.content}</p>`
-                commentHTML += '</div></div>'
-
-                if (comment.reply_new && comment.reply_new.reply_list.length > 0) {
-                    commentHTML += '<div style="padding-left: 38px;">'
-                    comment.reply_new.reply_list.forEach((reply) => {
-                        commentHTML += '<div style="display: flex;margin-top: 15px;">'
-                        if ([1, 2].includes(reply.identity_type)) {
-                            commentHTML += `<img src="${reply.logo_url}" style="display: block;width: 23px;height: 23px;border-radius: 50%;margin-right: 8px;" alt="">`
-                        } else {
-                            commentHTML += `<img src="${reply.logo_url}" style="display: block;width: 23px;height: 23px;border-radius: 2px;margin-right: 8px;" alt="">`
-                        }
-                        commentHTML += '<div style="flex: 1;"><p style="display: flex;line-height: 16px;margin-bottom: 5px;">'
-                        commentHTML += `<span style="margin-right: 5px;font-size: 15px;color: #949494;">${reply.nick_name}</span>`
-                        commentHTML += `<span style="margin-right: 5px;font-size: 12px;color: #b5b5b5;">${reply?.ip_wording?.province_name}</span>`
-                        commentHTML += `<span style="font-size: 12px;color: #b5b5b5;">${formatAlbumTime(reply.create_time)}</span>`
-                        commentHTML += '<span style="flex: 1;"></span><span style="display: inline-flex;align-items: center; font-size: 12px;color: #b5b5b5;">'
-                        commentHTML += `<span class="sns_opr_btn sns_praise_btn" style="font-size: 12px;color: #8b8a8a;">${reply.reply_like_num || ''}</span>`
-                        commentHTML += '</span></p>'
-                        commentHTML += `<p style="font-size: 15px;color: #333;white-space: pre-line;">${reply.content}</p>`
-                        commentHTML += '</div></div>'
-                    })
-                    commentHTML += '</div>'
-                }
-                if (comment.reply_new.reply_total_cnt - comment.reply_new.reply_list.length > 0) {
-                    commentHTML += '<p style="display: flex;align-items: center; font-size: 14px;color: #a3a0a0;padding-left: 38px;padding-top: 5px;">'
-                    commentHTML += `<span>${comment.reply_new.reply_total_cnt - comment.reply_new.reply_list.length}条回复</span>`
-                    commentHTML += '<img src="https://wxa.wxs.qq.com/images/wxapp/feedback_icon.png" alt="" style="filter: invert(1);width: 10px;height: 6px;margin-left: 5px;">'
-                    commentHTML += '</p>'
-                }
-                commentHTML += '</div>'
-            })
-            commentHTML += '</div></div>'
-        }
-    }
-
-    // 阅读量
-    let readNum = -1
-    const readNumMatchResult = html.match(/var read_num = ['"](?<read_num>\d+)['"] \* 1;/)
-    const readNumNewMatchResult = html.match(/var read_num_new = ['"](?<read_num_new>\d+)['"] \* 1;/)
-    if (readNumNewMatchResult && readNumNewMatchResult.groups && readNumNewMatchResult.groups.read_num_new) {
-        readNum = parseInt(readNumNewMatchResult.groups.read_num_new, 10)
-    } else if (readNumMatchResult && readNumMatchResult.groups && readNumMatchResult.groups.read_num) {
-        readNum = parseInt(readNumMatchResult.groups.read_num, 10)
-    }
-
-    const $js_image_desc = $jsArticleContent.querySelector('#js_image_desc')
-    // 图片分享消息
-    if ($js_image_desc) {
-        bodyCls += 'pages_skin_pc page_share_img'
-
-        function decode_html(data: string, encode: boolean) {
-            const replace = ["&#39;", "'", "&quot;", '"', "&nbsp;", " ", "&gt;", ">", "&lt;", "<", "&yen;", "¥", "&amp;", "&"];
-            const replaceReverse = ["&", "&amp;", "¥", "&yen;", "<", "&lt;", ">", "&gt;", " ", "&nbsp;", '"', "&quot;", "'", "&#39;"];
-
-            let target = encode ? replaceReverse : replace
-            let str = data
-            for (let i = 0; i < target.length; i += 2) {
-                str = str.replace(new RegExp(target[i], 'g'), target[i + 1])
+        if (comment.reply_new && comment.reply_new.reply_list.length > 0) {
+          commentHTML += '<div style="padding-left: 38px;">';
+          comment.reply_new.reply_list.forEach(reply => {
+            commentHTML += '<div style="display: flex;margin-top: 15px;">';
+            if ([1, 2].includes(reply.identity_type)) {
+              commentHTML += `<img src="${reply.logo_url}" style="display: block;width: 23px;height: 23px;border-radius: 50%;margin-right: 8px;" alt="">`;
+            } else {
+              commentHTML += `<img src="${reply.logo_url}" style="display: block;width: 23px;height: 23px;border-radius: 2px;margin-right: 8px;" alt="">`;
             }
-            return str
+            commentHTML += '<div style="flex: 1;"><p style="display: flex;line-height: 16px;margin-bottom: 5px;">';
+            commentHTML += `<span style="margin-right: 5px;font-size: 15px;color: #949494;">${reply.nick_name}</span>`;
+            commentHTML += `<span style="margin-right: 5px;font-size: 12px;color: #b5b5b5;">${reply?.ip_wording?.province_name}</span>`;
+            commentHTML += `<span style="font-size: 12px;color: #b5b5b5;">${formatTimeStamp(reply.create_time)}</span>`;
+            commentHTML +=
+              '<span style="flex: 1;"></span><span style="display: inline-flex;align-items: center; font-size: 12px;color: #b5b5b5;">';
+            commentHTML += `<span class="sns_opr_btn sns_praise_btn" style="font-size: 12px;color: #8b8a8a;">${reply.reply_like_num || ''}</span>`;
+            commentHTML += '</span></p>';
+            commentHTML += `<p style="font-size: 15px;color: #333;white-space: pre-line;">${reply.content}</p>`;
+            commentHTML += '</div></div>';
+          });
+          commentHTML += '</div>';
         }
+        if (comment.reply_new.reply_total_cnt - comment.reply_new.reply_list.length > 0) {
+          commentHTML +=
+            '<p style="display: flex;align-items: center; font-size: 14px;color: #a3a0a0;padding-left: 38px;padding-top: 5px;">';
+          commentHTML += `<span>${comment.reply_new.reply_total_cnt - comment.reply_new.reply_list.length}条回复</span>`;
+          commentHTML +=
+            '<img src="https://wxa.wxs.qq.com/images/wxapp/feedback_icon.png" alt="" style="filter: invert(1);width: 10px;height: 6px;margin-left: 5px;">';
+          commentHTML += '</p>';
+        }
+        commentHTML += '</div>';
+      });
+      commentHTML += '</div></div>';
+    }
+  }
 
-        const qmtplMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?)<\/script>/s)
-        if (qmtplMatchResult && qmtplMatchResult.groups && qmtplMatchResult.groups.code) {
-            const code = qmtplMatchResult.groups.code
-            eval(code)
-            const data = (window as any).__QMTPL_SSR_DATA__
-            let desc = data.desc.replace(/\r/g, '').replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;')
-            desc = decode_html(desc, false)
-            $js_image_desc.innerHTML = desc
+  // 阅读量
+  let readNum = -1;
+  const readNumMatchResult = html.match(/var read_num = ['"](?<read_num>\d+)['"] \* 1;/);
+  const readNumNewMatchResult = html.match(/var read_num_new = ['"](?<read_num_new>\d+)['"] \* 1;/);
+  if (readNumNewMatchResult && readNumNewMatchResult.groups && readNumNewMatchResult.groups.read_num_new) {
+    readNum = parseInt(readNumNewMatchResult.groups.read_num_new, 10);
+  } else if (readNumMatchResult && readNumMatchResult.groups && readNumMatchResult.groups.read_num) {
+    readNum = parseInt(readNumMatchResult.groups.read_num, 10);
+  }
 
-            $jsArticleContent.querySelector('#js_top_profile')!.classList.remove('profile_area_hide')
-        }
-        const pictureMatchResult = html.match(/(?<code>window\.picture_page_info_list\s*=.+\.slice\(0,\s*20\);)/s)
-        if (pictureMatchResult && pictureMatchResult.groups && pictureMatchResult.groups.code) {
-            const code = pictureMatchResult.groups.code
-            eval(code)
-            const picture_page_info_list = (window as any).picture_page_info_list
-            const containerEl = $jsArticleContent.querySelector('#js_share_content_page_hd')!
-            let innerHTML = '<div style="display: flex;flex-direction: column;align-items: center;gap: 10px;padding-block: 20px;">'
-            for (const picture of picture_page_info_list) {
-                innerHTML += `<img src="${picture.cdn_url}" alt="" style="display: block;border: 1px solid gray;border-radius: 5px;max-width: 90%;" onclick="window.open(this.src, '_blank', 'popup')" />`
-            }
-            innerHTML += '</div>'
-            containerEl.innerHTML = innerHTML
-        }
+  // 图片分享消息
+  const $js_image_desc = $jsArticleContent.querySelector('#js_image_desc');
+  if ($js_image_desc) {
+    bodyCls += 'pages_skin_pc page_share_img';
+
+    function decode_html(data: string, encode: boolean) {
+      const replace = [
+        '&#39;',
+        "'",
+        '&quot;',
+        '"',
+        '&nbsp;',
+        ' ',
+        '&gt;',
+        '>',
+        '&lt;',
+        '<',
+        '&yen;',
+        '¥',
+        '&amp;',
+        '&',
+      ];
+      const replaceReverse = [
+        '&',
+        '&amp;',
+        '¥',
+        '&yen;',
+        '<',
+        '&lt;',
+        '>',
+        '&gt;',
+        ' ',
+        '&nbsp;',
+        '"',
+        '&quot;',
+        "'",
+        '&#39;',
+      ];
+
+      let target = encode ? replaceReverse : replace;
+      let str = data;
+      for (let i = 0; i < target.length; i += 2) {
+        str = str.replace(new RegExp(target[i], 'g'), target[i + 1]);
+      }
+      return str;
     }
 
-    // 视频分享消息
-    const $js_common_share_desc = $jsArticleContent.querySelector('#js_common_share_desc')
-    if ($js_common_share_desc) {
-        // 分享视频摘要
-        bodyCls += 'zh_CN wx_wap_page wx_wap_desktop_fontsize_2 page_share_video white_video_page discuss_tab appmsg_skin_default appmsg_style_default pages_skin_pc'
-        const videoContentMatchResult = html.match(/(?<code>var\s+videoContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']+'))/s)
-        if (videoContentMatchResult && videoContentMatchResult.groups && videoContentMatchResult.groups.value) {
-            const code = 'window.videoContentNoEncode = ' + videoContentMatchResult.groups.value
-            eval(code)
-            let desc = (window as any).videoContentNoEncode
-            desc = desc.replace(/\r/g, '').replace(/\n/g, '<br>')
-            $js_common_share_desc.innerHTML = desc
-        }
+    const qmtplMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?)<\/script>/s);
+    if (qmtplMatchResult && qmtplMatchResult.groups && qmtplMatchResult.groups.code) {
+      const code = qmtplMatchResult.groups.code;
+      eval(code);
+      const data = (window as any).__QMTPL_SSR_DATA__;
+      let desc = data.desc.replace(/\r/g, '').replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;');
+      desc = decode_html(desc, false);
+      $js_image_desc.innerHTML = desc;
+
+      $jsArticleContent.querySelector('#js_top_profile')!.classList.remove('profile_area_hide');
     }
-    const $js_mpvedio = $jsArticleContent.querySelector('.js_video_channel_container > #js_mpvedio')
-    if ($js_mpvedio) {
-        // 分享视频
-        // poster
-        let poster = ''
-        const mpVideoCoverUrlMatchResult = html.match(/(?<code>window\.__mpVideoCoverUrl\s*=\s*'[^']*';)/s)
-        if (mpVideoCoverUrlMatchResult && mpVideoCoverUrlMatchResult.groups && mpVideoCoverUrlMatchResult.groups.code) {
-            const code = mpVideoCoverUrlMatchResult.groups.code
-            eval(code)
-            poster = (window as any).__mpVideoCoverUrl
-        }
+    const pictureMatchResult = html.match(/(?<code>window\.picture_page_info_list\s*=.+\.slice\(0,\s*20\);)/s);
+    if (pictureMatchResult && pictureMatchResult.groups && pictureMatchResult.groups.code) {
+      const code = pictureMatchResult.groups.code;
+      eval(code);
+      const picture_page_info_list = (window as any).picture_page_info_list;
+      const containerEl = $jsArticleContent.querySelector('#js_share_content_page_hd')!;
+      let innerHTML =
+        '<div style="display: flex;flex-direction: column;align-items: center;gap: 10px;padding-block: 20px;">';
+      for (const picture of picture_page_info_list) {
+        innerHTML += `<img src="${picture.cdn_url}" alt="" style="display: block;border: 1px solid gray;border-radius: 5px;max-width: 90%;" onclick="window.open(this.src, '_blank', 'popup')" />`;
+      }
+      innerHTML += '</div>';
+      containerEl.innerHTML = innerHTML;
+    }
+  }
 
-        // video info
-        let videoUrl = ''
-        const mpVideoTransInfoMatchResult = html.match(/(?<code>window\.__mpVideoTransInfo\s*=\s*\[.+?];)/s)
-        if (mpVideoTransInfoMatchResult && mpVideoTransInfoMatchResult.groups && mpVideoTransInfoMatchResult.groups.code) {
-            const code = mpVideoTransInfoMatchResult.groups.code
-            eval(code)
-            const mpVideoTransInfo = (window as any).__mpVideoTransInfo
-            if (Array.isArray(mpVideoTransInfo) && mpVideoTransInfo.length > 0) {
-                mpVideoTransInfo.forEach((trans: any) => {
-                    trans.url = trans.url.replace(/&amp;/g, '&')
-                })
-
-                // 这里为了节省流量需要控制清晰度
-                videoUrl = mpVideoTransInfo[mpVideoTransInfo.length - 1].url
-
-                // 下载资源
-                const videoURLMap = new Map<string, string>()
-                const resourceDownloadFn = async (url: string, proxy: string) => {
-                    const videoData = await downloadAssetWithProxy<Blob>(url, proxy, false,10)
-                    const uuid = new Date().getTime() + Math.random().toString()
-                    const ext = mime.getExtension(videoData.type)
-                    zip.file(`assets/${uuid}.${ext}`, videoData)
-
-                    videoURLMap.set(url, `./assets/${uuid}.${ext}`)
-                    return videoData.size
-                }
-
-                const urls: string[] = []
-                if (poster) {
-                    urls.push(poster)
-                }
-                urls.push(videoUrl)
-                await pool.downloads<string>(urls, resourceDownloadFn)
-
-                const div = document.createElement('div')
-                div.style.cssText = 'height: 381px;background: #000;border-radius: 4px; overflow: hidden;margin-bottom: 12px;'
-                div.innerHTML = `<video src="${videoURLMap.get(videoUrl)}" poster="${videoURLMap.get(poster)}" controls style="width: 100%;height: 100%;"></video>`
-                $js_mpvedio.appendChild(div)
-            }
-        }
+  // 视频分享消息
+  const $js_common_share_desc = $jsArticleContent.querySelector('#js_common_share_desc');
+  if ($js_common_share_desc) {
+    // 分享视频摘要
+    bodyCls +=
+      'zh_CN wx_wap_page wx_wap_desktop_fontsize_2 page_share_video white_video_page discuss_tab appmsg_skin_default appmsg_style_default pages_skin_pc';
+    const videoContentMatchResult = html.match(
+      /(?<code>var\s+videoContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']+'))/s
+    );
+    if (videoContentMatchResult && videoContentMatchResult.groups && videoContentMatchResult.groups.value) {
+      const code = 'window.videoContentNoEncode = ' + videoContentMatchResult.groups.value;
+      eval(code);
+      let desc = (window as any).videoContentNoEncode;
+      desc = desc.replace(/\r/g, '').replace(/\n/g, '<br>');
+      $js_common_share_desc.innerHTML = desc;
+    }
+  }
+  const $js_mpvedio = $jsArticleContent.querySelector('.js_video_channel_container > #js_mpvedio');
+  if ($js_mpvedio) {
+    // 分享视频
+    // poster
+    let poster = '';
+    const mpVideoCoverUrlMatchResult = html.match(/(?<code>window\.__mpVideoCoverUrl\s*=\s*'[^']*';)/s);
+    if (mpVideoCoverUrlMatchResult && mpVideoCoverUrlMatchResult.groups && mpVideoCoverUrlMatchResult.groups.code) {
+      const code = mpVideoCoverUrlMatchResult.groups.code;
+      eval(code);
+      poster = (window as any).__mpVideoCoverUrl;
     }
 
-    // 下载内嵌音频
-    const mpAudioEls = $jsArticleContent.querySelectorAll<HTMLElement>('mp-common-mpaudio')
-    if (mpAudioEls.length > 0) {
-        const audioResourceDownloadFn = async (asset: AudioResource, proxy: string) => {
-            const audioData = await downloadAssetWithProxy<Blob>(asset.url, proxy, false, 10)
-            const uuid = asset.uuid
-            const ext = mime.getExtension(audioData.type)
-            zip.file(`assets/${uuid}.${ext}`, audioData)
+    // video info
+    let videoUrl = '';
+    const mpVideoTransInfoMatchResult = html.match(/(?<code>window\.__mpVideoTransInfo\s*=\s*\[.+?];)/s);
+    if (mpVideoTransInfoMatchResult && mpVideoTransInfoMatchResult.groups && mpVideoTransInfoMatchResult.groups.code) {
+      const code = mpVideoTransInfoMatchResult.groups.code;
+      eval(code);
+      const mpVideoTransInfo = (window as any).__mpVideoTransInfo;
+      if (Array.isArray(mpVideoTransInfo) && mpVideoTransInfo.length > 0) {
+        mpVideoTransInfo.forEach((trans: any) => {
+          trans.url = trans.url.replace(/&amp;/g, '&');
+        });
 
-            let targetEl: HTMLElement | null = null
-            mpAudioEls.forEach(el => {
-                const id = el.getAttribute('data-uuid')
-                if (id === uuid) {
-                    targetEl = el
-                }
-            })
-            if (!targetEl) {
-                throw new Error('下载失败')
-            }
-
-            if (asset.type === 'cover') {
-                (targetEl as HTMLElement).setAttribute('cover', `./assets/${uuid}.${ext}`)
-            } else if (asset.type === 'audio') {
-                (targetEl as HTMLElement).setAttribute('src', `./assets/${uuid}.${ext}`)
-            }
-
-            return audioData.size
-        }
-
-        const assets: AudioResource[] = []
-        mpAudioEls.forEach(mpAudioEl => {
-            const uuid = new Date().getTime() + Math.random().toString()
-            mpAudioEl.setAttribute('data-uuid', uuid)
-            const cover = mpAudioEl.getAttribute('cover')!
-            const voice_encode_fileid = mpAudioEl.getAttribute('voice_encode_fileid')!
-            assets.push({
-                uuid: uuid,
-                type: 'cover',
-                url: cover,
-            })
-            assets.push({
-                uuid: uuid,
-                type: 'audio',
-                url: 'https://res.wx.qq.com/voice/getvoice?mediaid=' + voice_encode_fileid,
-            })
-        })
-
-        await pool.downloads<AudioResource>(assets, audioResourceDownloadFn)
-    }
-
-    // 下载内嵌视频
-    const videoPageInfosMatchResult = html.match(/(?<code>var videoPageInfos = \[.+?window.__videoPageInfos = videoPageInfos;)/s)
-    if (videoPageInfosMatchResult && videoPageInfosMatchResult.groups && videoPageInfosMatchResult.groups.code) {
-        const code = videoPageInfosMatchResult.groups.code
-        eval(code)
-        const videoPageInfos: VideoPageInfo[] = (window as any).__videoPageInfos
-        videoPageInfos.forEach(videoPageInfo => {
-            videoPageInfo.mp_video_trans_info.forEach(trans => {
-                trans.url = trans.url.replace(/&amp;/g, '&')
-            })
-        })
+        // 这里为了节省流量需要控制清晰度
+        videoUrl = mpVideoTransInfo[mpVideoTransInfo.length - 1].url;
 
         // 下载资源
-        const videoURLMap = new Map<string, string>()
+        const videoURLMap = new Map<string, string>();
         const resourceDownloadFn = async (url: string, proxy: string) => {
-            const videoData = await downloadAssetWithProxy<Blob>(url, proxy, false,10)
-            const uuid = new Date().getTime() + Math.random().toString()
-            const ext = mime.getExtension(videoData.type)
-            zip.file(`assets/${uuid}.${ext}`, videoData)
+          const videoData = await downloadAssetWithProxy<Blob>(url, proxy, false, 10);
+          const uuid = new Date().getTime() + Math.random().toString();
+          const ext = mime.getExtension(videoData.type);
+          zip.file(`assets/${uuid}.${ext}`, videoData);
 
-            videoURLMap.set(url, `./assets/${uuid}.${ext}`)
-            return videoData.size
+          videoURLMap.set(url, `./assets/${uuid}.${ext}`);
+          return videoData.size;
+        };
+
+        const urls: string[] = [];
+        if (poster) {
+          urls.push(poster);
         }
+        urls.push(videoUrl);
+        await pool.downloads<string>(urls, resourceDownloadFn);
 
-        const urls: string[] = []
-        videoPageInfos.forEach(videoPageInfo => {
-            if (videoPageInfo.cover_url) {
-                urls.push(videoPageInfo.cover_url)
-            }
-            if (videoPageInfo.is_mp_video === 1 && videoPageInfo.mp_video_trans_info.length > 0) {
-                urls.push(videoPageInfo.mp_video_trans_info[0].url)
-            }
-        })
-        await pool.downloads<string>(urls, resourceDownloadFn)
-
-        const videoIframes = $jsArticleContent.querySelectorAll('iframe.video_iframe')
-        videoIframes.forEach(videoIframe => {
-            const mpvid = videoIframe.getAttribute('data-mpvid')
-            if (mpvid) {
-                const videoInfo = videoPageInfos.find(info => info.video_id === mpvid)
-                if (videoInfo) {
-                    const div = document.createElement('div')
-                    div.style.cssText = 'height: 508px;background: #000;border-radius: 4px; overflow: hidden;margin-bottom: 12px;'
-                    div.innerHTML = `<video src="${videoURLMap.get(videoInfo.mp_video_trans_info[0]?.url)}" poster="${videoURLMap.get(videoInfo.cover_url)}" controls style="width: 100%;height: 100%;"></video>`
-                    videoIframe.replaceWith(div)
-                }
-            } else {
-                const src = videoIframe.getAttribute('data-src')!
-                const vidMatchResult = src.match(/v\.qq\.com\/iframe\/preview\.html\?vid=(?<vid>[\da-z]+)/i)
-                if (vidMatchResult && vidMatchResult.groups && vidMatchResult.groups.vid) {
-                    const vid = vidMatchResult.groups.vid
-                    videoIframe.setAttribute('src', 'https://v.qq.com/txp/iframe/player.html?vid=' + vid)
-                    videoIframe.setAttribute('width', '100%')
-                }
-            }
-        })
+        const div = document.createElement('div');
+        div.style.cssText = 'height: 381px;background: #000;border-radius: 4px; overflow: hidden;margin-bottom: 12px;';
+        div.innerHTML = `<video src="${videoURLMap.get(videoUrl)}" poster="${videoURLMap.get(poster)}" controls style="width: 100%;height: 100%;"></video>`;
+        $js_mpvedio.appendChild(div);
+      }
     }
+  }
 
+  // 下载内嵌音频
+  const mpAudioEls = $jsArticleContent.querySelectorAll<HTMLElement>('mp-common-mpaudio');
+  if (mpAudioEls.length > 0) {
+    const audioResourceDownloadFn = async (asset: AudioResource, proxy: string) => {
+      const audioData = await downloadAssetWithProxy<Blob>(asset.url, proxy, false, 10);
+      const uuid = asset.uuid;
+      const ext = mime.getExtension(audioData.type);
+      zip.file(`assets/${uuid}.${ext}`, audioData);
 
-    // 下载所有的图片
-    const imgDownloadFn = async (img: HTMLImageElement, proxy: string) => {
-        const url = img.getAttribute('src') || img.getAttribute('data-src')
-        if (!url) {
-            return 0
+      let targetEl: HTMLElement | null = null;
+      mpAudioEls.forEach(el => {
+        const id = el.getAttribute('data-uuid');
+        if (id === uuid) {
+          targetEl = el;
         }
+      });
+      if (!targetEl) {
+        throw new Error('下载失败');
+      }
 
-        const imgData = await downloadAssetWithProxy<Blob>(url, proxy, false, 10)
-        const uuid = new Date().getTime() + Math.random().toString()
-        const ext = mime.getExtension(imgData.type)
-        zip.file(`assets/${uuid}.${ext}`, imgData)
+      if (asset.type === 'cover') {
+        (targetEl as HTMLElement).setAttribute('cover', `./assets/${uuid}.${ext}`);
+      } else if (asset.type === 'audio') {
+        (targetEl as HTMLElement).setAttribute('src', `./assets/${uuid}.${ext}`);
+      }
 
-        // 改写html中的引用路径，指向本地图片文件
-        img.src = `./assets/${uuid}.${ext}`
+      return audioData.size;
+    };
 
-        return imgData.size
-    }
-    const imgs = $jsArticleContent.querySelectorAll<HTMLImageElement>('img')
-    if (imgs.length > 0) {
-        await pool.downloads<HTMLImageElement>([...imgs], imgDownloadFn)
-    }
+    const assets: AudioResource[] = [];
+    mpAudioEls.forEach(mpAudioEl => {
+      const uuid = new Date().getTime() + Math.random().toString();
+      mpAudioEl.setAttribute('data-uuid', uuid);
+      const cover = mpAudioEl.getAttribute('cover')!;
+      const voice_encode_fileid = mpAudioEl.getAttribute('voice_encode_fileid')!;
+      assets.push({
+        uuid: uuid,
+        type: 'cover',
+        url: cover,
+      });
+      assets.push({
+        uuid: uuid,
+        type: 'audio',
+        url: 'https://res.wx.qq.com/voice/getvoice?mediaid=' + voice_encode_fileid,
+      });
+    });
 
+    await pool.downloads<AudioResource>(assets, audioResourceDownloadFn);
+  }
 
-    // 下载背景图片 背景图片无法用选择器选中并修改，因此用正则进行匹配替换
-    let pageContentHTML = $jsArticleContent.outerHTML
-    const jsArticleBottomBarHTML = $jsArticleBottomBar?.outerHTML
+  // 下载内嵌视频
+  const videoPageInfosMatchResult = html.match(
+    /(?<code>var videoPageInfos = \[.+?window.__videoPageInfos = videoPageInfos;)/s
+  );
+  if (videoPageInfosMatchResult && videoPageInfosMatchResult.groups && videoPageInfosMatchResult.groups.code) {
+    const code = videoPageInfosMatchResult.groups.code;
+    eval(code);
+    const videoPageInfos: VideoPageInfo[] = (window as any).__videoPageInfos;
+    videoPageInfos.forEach(videoPageInfo => {
+      videoPageInfo.mp_video_trans_info.forEach(trans => {
+        trans.url = trans.url.replace(/&amp;/g, '&');
+      });
+    });
 
-    // 收集所有的背景图片地址
-    const bgImageURLs = new Set<string>()
-    pageContentHTML.replaceAll(/((?:background|background-image): url\((?:&quot;)?)((?:https?|\/\/)[^)]+?)((?:&quot;)?\))/gs, (_, p1, url, p3) => {
-        bgImageURLs.add(url)
-        return `${p1}${url}${p3}`
-    })
-    if (bgImageURLs.size > 0) {
-        // 下载背景图片
-        const bgImgDownloadFn = async (url: string, proxy: string) => {
-            const imgData = await downloadAssetWithProxy<Blob>(url, proxy, false,10)
-            const uuid = new Date().getTime() + Math.random().toString()
-            const ext = mime.getExtension(imgData.type)
+    // 下载资源
+    const videoURLMap = new Map<string, string>();
+    const resourceDownloadFn = async (url: string, proxy: string) => {
+      const videoData = await downloadAssetWithProxy<Blob>(url, proxy, false, 10);
+      const uuid = new Date().getTime() + Math.random().toString();
+      const ext = mime.getExtension(videoData.type);
+      zip.file(`assets/${uuid}.${ext}`, videoData);
 
-            zip.file(`assets/${uuid}.${ext}`, imgData)
-            url2pathMap.set(url, `assets/${uuid}.${ext}`)
-            return imgData.size
+      videoURLMap.set(url, `./assets/${uuid}.${ext}`);
+      return videoData.size;
+    };
+
+    const urls: string[] = [];
+    videoPageInfos.forEach(videoPageInfo => {
+      if (videoPageInfo.cover_url) {
+        urls.push(videoPageInfo.cover_url);
+      }
+      if (videoPageInfo.is_mp_video === 1 && videoPageInfo.mp_video_trans_info.length > 0) {
+        urls.push(videoPageInfo.mp_video_trans_info[0].url);
+      }
+    });
+    await pool.downloads<string>(urls, resourceDownloadFn);
+
+    const videoIframes = $jsArticleContent.querySelectorAll('iframe.video_iframe');
+    videoIframes.forEach(videoIframe => {
+      const mpvid = videoIframe.getAttribute('data-mpvid');
+      if (mpvid) {
+        const videoInfo = videoPageInfos.find(info => info.video_id === mpvid);
+        if (videoInfo) {
+          const div = document.createElement('div');
+          div.style.cssText =
+            'height: 508px;background: #000;border-radius: 4px; overflow: hidden;margin-bottom: 12px;';
+          div.innerHTML = `<video src="${videoURLMap.get(videoInfo.mp_video_trans_info[0]?.url)}" poster="${videoURLMap.get(videoInfo.cover_url)}" controls style="width: 100%;height: 100%;"></video>`;
+          videoIframe.replaceWith(div);
         }
-        const url2pathMap = new Map<string, string>()
+      } else {
+        const src = videoIframe.getAttribute('data-src')!;
+        const vidMatchResult = src.match(/v\.qq\.com\/iframe\/preview\.html\?vid=(?<vid>[\da-z]+)/i);
+        if (vidMatchResult && vidMatchResult.groups && vidMatchResult.groups.vid) {
+          const vid = vidMatchResult.groups.vid;
+          videoIframe.setAttribute('src', 'https://v.qq.com/txp/iframe/player.html?vid=' + vid);
+          videoIframe.setAttribute('width', '100%');
+        }
+      }
+    });
+  }
 
-        await pool.downloads<string>([...bgImageURLs], bgImgDownloadFn)
-
-        // 替换背景图片路径
-        pageContentHTML = pageContentHTML.replaceAll(/((?:background|background-image): url\((?:&quot;)?)((?:https?|\/\/)[^)]+?)((?:&quot;)?\))/gs, (_, p1, url, p3) => {
-            if (url2pathMap.has(url)) {
-                const path = url2pathMap.get(url)!
-                return `${p1}./${path}${p3}`
-            } else {
-                console.warn('背景图片丢失: ', url)
-                return `${p1}${url}${p3}`
-            }
-        })
+  // 下载所有的图片
+  const imgDownloadFn = async (img: HTMLImageElement, proxy: string) => {
+    const url = img.getAttribute('src') || img.getAttribute('data-src');
+    if (!url) {
+      return 0;
     }
 
+    const imgData = await downloadAssetWithProxy<Blob>(url, proxy, false, 10);
+    const uuid = new Date().getTime() + Math.random().toString();
+    const ext = mime.getExtension(imgData.type);
+    zip.file(`assets/${uuid}.${ext}`, imgData);
 
-    // 下载样式表
-    const linkDownloadFn = async (link: HTMLLinkElement) => {
-        const url = link.href
-        let stylesheetFile: Blob | null
+    // 改写html中的引用路径，指向本地图片文件
+    img.src = `./assets/${uuid}.${ext}`;
 
-        // 检查缓存
-        const cachedAsset = await getAssetCache(url)
-        if (cachedAsset) {
-            stylesheetFile = cachedAsset.file
+    return imgData.size;
+  };
+  const imgs = $jsArticleContent.querySelectorAll<HTMLImageElement>('img');
+  if (imgs.length > 0) {
+    await pool.downloads<HTMLImageElement>([...imgs], imgDownloadFn);
+  }
+
+  // 下载背景图片 背景图片无法用选择器选中并修改，因此用正则进行匹配替换
+  let pageContentHTML = $jsArticleContent.outerHTML;
+  const jsArticleBottomBarHTML = $jsArticleBottomBar?.outerHTML;
+
+  // 收集所有的背景图片地址
+  const bgImageURLs = new Set<string>();
+  pageContentHTML.replaceAll(
+    /((?:background|background-image): url\((?:&quot;)?)((?:https?|\/\/)[^)]+?)((?:&quot;)?\))/gs,
+    (_, p1, url, p3) => {
+      bgImageURLs.add(url);
+      return `${p1}${url}${p3}`;
+    }
+  );
+  if (bgImageURLs.size > 0) {
+    // 下载背景图片
+    const bgImgDownloadFn = async (url: string, proxy: string) => {
+      const imgData = await downloadAssetWithProxy<Blob>(url, proxy, false, 10);
+      const uuid = new Date().getTime() + Math.random().toString();
+      const ext = mime.getExtension(imgData.type);
+
+      zip.file(`assets/${uuid}.${ext}`, imgData);
+      url2pathMap.set(url, `assets/${uuid}.${ext}`);
+      return imgData.size;
+    };
+    const url2pathMap = new Map<string, string>();
+
+    await pool.downloads<string>([...bgImageURLs], bgImgDownloadFn);
+
+    // 替换背景图片路径
+    pageContentHTML = pageContentHTML.replaceAll(
+      /((?:background|background-image): url\((?:&quot;)?)((?:https?|\/\/)[^)]+?)((?:&quot;)?\))/gs,
+      (_, p1, url, p3) => {
+        if (url2pathMap.has(url)) {
+          const path = url2pathMap.get(url)!;
+          return `${p1}./${path}${p3}`;
         } else {
-            const stylesheet = await $fetch<string>(url, {retryDelay: 2000})
-            stylesheetFile = new Blob([stylesheet], { type: 'text/css' })
-            await updateAssetCache({url: url, file: stylesheetFile})
+          console.warn('背景图片丢失: ', url);
+          return `${p1}${url}${p3}`;
         }
+      }
+    );
+  }
 
-        const uuid = new Date().getTime() + Math.random().toString()
-        zip.file(`assets/${uuid}.css`, stylesheetFile)
-        localLinks += `<link rel="stylesheet" href="./assets/${uuid}.css">\n`
+  // 下载样式表
+  const linkDownloadFn = async (link: HTMLLinkElement) => {
+    const url = link.href;
+    let stylesheetFile: Blob | null;
 
-        return stylesheetFile.size
+    // 检查缓存
+    const cachedAsset = await getAssetCache(url);
+    if (cachedAsset) {
+      stylesheetFile = cachedAsset.file;
+    } else {
+      const stylesheet = await $fetch<string>(url, { retryDelay: 2000 });
+      stylesheetFile = new Blob([stylesheet], { type: 'text/css' });
+      await updateAssetCache({ url: url, file: stylesheetFile, fakeid: fakeid });
     }
-    let localLinks: string = ''
-    const links = document.querySelectorAll<HTMLLinkElement>('head link[rel="stylesheet"]')
-    if (links.length > 0) {
-        await pool.downloads<HTMLLinkElement>([...links], linkDownloadFn, false)
-    }
 
-    // 处理自定义组件
-    const hasMpAudio = $jsArticleContent.querySelector('mp-common-mpaudio') !== null
-    const mpAudioTemplate = `
+    const uuid = new Date().getTime() + Math.random().toString();
+    zip.file(`assets/${uuid}.css`, stylesheetFile);
+    localLinks += `<link rel="stylesheet" href="./assets/${uuid}.css">\n`;
+
+    return stylesheetFile.size;
+  };
+  let localLinks: string = '';
+  const links = document.querySelectorAll<HTMLLinkElement>('head link[rel="stylesheet"]');
+  if (links.length > 0) {
+    await pool.downloads<HTMLLinkElement>([...links], linkDownloadFn, false);
+  }
+
+  // 处理自定义组件
+  const hasMpAudio = $jsArticleContent.querySelector('mp-common-mpaudio') !== null;
+  const mpAudioTemplate = `
     <template id="mp-common-mpaudio">
     <style>
         :host {
@@ -753,24 +811,24 @@ export async function packHTMLAssets(html: string, title: string, zip?: JSZip) {
 
     <audio style="height:0;width:0;display:none" src=""></audio>
 </template>
-    `
-    let customElementTemplate = ''
-    if (hasMpAudio) {
-        customElementTemplate += mpAudioTemplate
-        customElementTemplate += '<script type="text/javascript" src="./assets/mp-common-mpaudio.js"></script>'
-        const url = '/custom-elements/mp-common-mpaudio.js?v=2'
-        let scriptFile: Blob | null
-        const mpCommonMpAudioJsCache = await getAssetCache(url)
-        if (mpCommonMpAudioJsCache) {
-            scriptFile = mpCommonMpAudioJsCache.file
-        } else {
-            scriptFile = await $fetch<Blob>(url, {retryDelay: 500})
-            await updateAssetCache({url: url, file: scriptFile})
-        }
-        zip.file(`assets/mp-common-mpaudio.js`, scriptFile)
+    `;
+  let customElementTemplate = '';
+  if (hasMpAudio) {
+    customElementTemplate += mpAudioTemplate;
+    customElementTemplate += '<script type="text/javascript" src="./assets/mp-common-mpaudio.js"></script>';
+    const url = '/custom-elements/mp-common-mpaudio.js?v=2';
+    let scriptFile: Blob | null;
+    const mpCommonMpAudioJsCache = await getAssetCache(url);
+    if (mpCommonMpAudioJsCache) {
+      scriptFile = mpCommonMpAudioJsCache.file;
+    } else {
+      scriptFile = await $fetch<Blob>(url, { retryDelay: 500 });
+      await updateAssetCache({ url: url, file: scriptFile, fakeid: fakeid });
     }
+    zip.file(`assets/mp-common-mpaudio.js`, scriptFile);
+  }
 
-    const indexHTML = `<!DOCTYPE html>
+  const indexHTML = `<!DOCTYPE html>
 <html lang="zh_CN">
 <head>
     <meta charset="utf-8">
@@ -806,9 +864,68 @@ ${readNum !== -1 ? '<p class="__page_content__">阅读量 ' + readNum + '</p>' :
 <!-- 评论数据 -->
 ${commentHTML}
 </body>
-</html>`
+</html>`;
 
-    zip.file('index.html', indexHTML)
+  zip.file('index.html', indexHTML);
 
-    return zip
+  return zip;
+}
+
+export function gotoLink(url: string) {
+  window.open(url);
+}
+
+export function formatElapsedTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  let result = '';
+  if (hours > 0) {
+    result += `${hours}小时`;
+  }
+  if (minutes > 0) {
+    result += `${minutes}分`;
+  }
+  if (secs > 0 || result === '') {
+    result += `${secs}秒`;
+  }
+  return result;
+}
+
+export function maxLen(text: string, max = 35): string {
+  if (text.length > max) {
+    return text.slice(0, max) + '...';
+  }
+  return text;
+}
+
+export function uniqueStrings(arr: string[]): string[] {
+  return [...new Set(arr)];
+}
+
+export function sleep(ms: number = 1000): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function timeout(ms: number = 1000): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout')), ms);
+  });
+}
+
+export function throwException(message: string) {
+  throw new Error(message);
+}
+
+// 计算最佳并发量
+export function bestConcurrencyCount(proxyCount: number): number {
+  return proxyCount > 5 ? proxyCount - 3 : Math.max(proxyCount - 2, 1);
+}
+
+// 过滤文件名中的非法字符
+export function filterInvalidFilenameChars(input: string): string {
+  // 只保留中文字符、英文字符、数字
+  const regex = /[^\u4e00-\u9fa5a-zA-Z0-9]/g;
+  return input.replace(regex, '').slice(0, 100).trim();
 }

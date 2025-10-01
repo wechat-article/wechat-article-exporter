@@ -1,0 +1,30 @@
+:root {
+    --ag-selected-row-background-color: transparent;
+
+    .ag-header-cell-label {
+        justify-content: center;
+    }
+
+    .deleted-row {
+        background-color: #fef9c3;
+    }
+}
+
+body {
+    overscroll-behavior: none; /* 阻止滚动到页面边缘的效果 */
+}
+::selection {
+    background-color: yellow;
+    color: black;
+}
+.highlight {
+    color: red;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
