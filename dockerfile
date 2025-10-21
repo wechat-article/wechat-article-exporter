@@ -40,6 +40,7 @@ EXPOSE 3000
 
 # 设置环境变量：生产模式，监听所有接口
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
+ENV NUXT_PRESET=docker
 
 # 添加健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
