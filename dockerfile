@@ -30,4 +30,4 @@ EXPOSE 3000
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
 
 # 启动命令：运行 Nitro 生成的服务器
-ENTRYPOINT ["node", ".output/public/boot.cjs"]
+ENTRYPOINT ["node", ".output/server/index.mjs"]
