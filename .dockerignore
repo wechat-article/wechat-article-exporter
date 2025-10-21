@@ -6,6 +6,8 @@ dist
 .nuxt-*
 .output
 .gen
+.yarn/cache  # Yarn 缓存
+yarn-error.log
 
 # Node dependencies
 node_modules
@@ -13,9 +15,15 @@ node_modules
 # System files
 *.log
 
+.git
+.github
+
+.env*
 .DS_Store
 .idea
 .data
 
 debug
+design
+docs
 scripts

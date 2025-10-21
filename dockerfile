@@ -1,27 +1,39 @@
 # 编译层
 FROM node:22-alpine AS build-env
 
+# 安装 Yarn（Alpine 包管理器方式，轻量）
+RUN apk add --no-cache yarn
+
 # 设置工作目录
 WORKDIR /app
 
 # 复制 package.json 和 lock 文件，安装依赖
-COPY package*.json ./
-RUN npm ci --quiet
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production=false && yarn cache clean
 
 # 复制源代码
 COPY . .
 
 # 构建 Nuxt 应用（生成 .output 目录）
-RUN npm run build:docker
+RUN yarn build:docker
 
 
 # 运行时层
 FROM node:22-alpine
 
+# 添加 LABEL 元数据
+LABEL maintainer="findsource@proton.me" \
+      version="1.0.0" \
+      description="wechat-article-exporter Docker Image"
+
 # 设置工作目录
 WORKDIR /app
 
-COPY --from=build-env /app/.output .output
+# 复制构建输出
+COPY --from=build-env /app/.output ./
+
+# 创建非 root 用户（使用内置 node 用户）
+USER node
 
 # 暴露端口
 EXPOSE 3000
@@ -29,5 +41,9 @@ EXPOSE 3000
 # 设置环境变量：生产模式，监听所有接口
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
 
+# 添加健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
 # 启动命令：运行 Nitro 生成的服务器
-ENTRYPOINT ["node", ".output/server/index.mjs"]
+ENTRYPOINT ["node", "server/index.mjs"]
