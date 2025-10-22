@@ -9,7 +9,10 @@
     "build:cf": "nuxt build -c nuxt-cloudflare.config.ts",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "generate:pwd": "node scripts/rand.js",
+    "docker:build": "docker build --build-arg VERSION=$npm_package_version -t ghcr.io/wechat-article/wechat-article-exporter:$npm_package_version .",
+    "docker:publish": "docker push ghcr.io/wechat-article/wechat-article-exporter:$npm_package_version"
   },
   "dependencies": {
     "@ag-grid-community/locale": "^34.0.0",

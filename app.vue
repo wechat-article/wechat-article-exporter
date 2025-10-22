@@ -12,7 +12,6 @@
 <script setup lang="ts">
 import { ModuleRegistry } from 'ag-grid-community';
 import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise';
-import { gridLicense } from '~/config';
 
 const isDev = !import.meta.env.PROD;
 const runtimeConfig = useRuntimeConfig();
@@ -20,7 +19,7 @@ const runtimeConfig = useRuntimeConfig();
 const websiteID = runtimeConfig.public.umamiWebsiteID;
 
 ModuleRegistry.registerModules([AllEnterpriseModule]);
-LicenseManager.setLicenseKey(gridLicense);
+LicenseManager.setLicenseKey(runtimeConfig.public.aggridLicense);
 
 useHead({
   script: [

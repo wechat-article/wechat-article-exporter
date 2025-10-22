@@ -27,10 +27,3 @@ curl -X POST \
     }
 }'
 ```
-
-## Docker
-
-```shell
-docker tag [local_image_id] dockerhub_username/repository_name:tag
-docker push dockerhub_username/repository_name:tag
-```

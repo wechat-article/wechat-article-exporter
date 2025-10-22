@@ -21,10 +21,13 @@ RUN yarn build:docker
 # 运行时层
 FROM node:22-alpine
 
+ARG VERSION=unknown
+
 # 添加 LABEL 元数据
 LABEL maintainer="findsource@proton.me" \
-      version="1.0.0" \
-      description="wechat-article-exporter Docker Image"
+      version="v${VERSION}" \
+      description="wechat-article-exporter Docker Image" \
+      org.opencontainers.image.source="https://github.com/wechat-article/wechat-article-exporter"
 
 # 设置工作目录
 WORKDIR /app

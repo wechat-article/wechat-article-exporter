@@ -335,11 +335,10 @@ export const apis = [
   },
 ];
 
-export const gridLicense = '[v3][0102]_MTc1NjY1NjAwMDAwMA==c5ac76aeee205aafd39087f0ad4063a5';
 
 // 图片代理服务 todo: 这个可以在设置里增加一个配置项，网站是否启用图片代理，否的话置空即可。相应的，可以与 no-referer 配置互斥。
-export const IMAGE_PROXY = 'https://image.baidu.com/search/down?thumburl=';
-// export const IMAGE_PROXY = '';
+// export const IMAGE_PROXY = 'https://image.baidu.com/search/down?thumburl=';
+export const IMAGE_PROXY = '';
 
 // 转发微信公众号请求时，使用的 user-agent 字符串
 export const USER_AGENT =
