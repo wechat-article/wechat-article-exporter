@@ -9,13 +9,14 @@ WORKDIR /app
 
 # 复制 package.json 和 lock 文件，安装依赖
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --production=false && yarn cache clean
+RUN yarn install --frozen-lockfile --production=true && yarn cache clean
 
 # 复制源代码
 COPY . .
 
 # 构建 Nuxt 应用（生成 .output 目录）
-RUN yarn build:docker
+ENV NODE_ENV=production NITRO_KV_DRIVER=fs NITRO_KV_BASE=.data/kv
+RUN yarn build
 
 
 # 运行时层
@@ -33,7 +34,7 @@ LABEL maintainer="findsource@proton.me" \
 WORKDIR /app
 
 # 复制构建输出
-COPY --from=build-env /app/.output ./
+COPY --from=build-env /app/.output /app/nuxt-options.json ./
 
 # 创建非 root 用户（使用内置 node 用户）
 USER node
@@ -42,8 +43,7 @@ USER node
 EXPOSE 3000
 
 # 设置环境变量：生产模式，监听所有接口
-ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
-ENV NUXT_PRESET=docker
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 NUXT_PRESET=docker
 
 # 添加健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
