@@ -66,9 +66,9 @@ jobs:
           push: true  # 直接推送
           platforms: linux/amd64,linux/arm64  # 目标架构
           tags: |
-            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}
             ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-amd64
             ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-arm64
+            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}  # 传递到 Dockerfile 的 ARG
           cache-from: type=gha  # 使用 GitHub Actions 缓存加速
