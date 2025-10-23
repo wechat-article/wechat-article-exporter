@@ -28,7 +28,9 @@ ARG VERSION=unknown
 LABEL maintainer="findsource@proton.me" \
       version="${VERSION}" \
       description="wechat-article-exporter Docker Image" \
-      org.opencontainers.image.source="https://github.com/wechat-article/wechat-article-exporter"
+      org.opencontainers.image.source="https://github.com/wechat-article/wechat-article-exporter" \
+      org.opencontainers.image.description="一个在线的微信公众号文章批量下载工具，支持下载阅读量与评论数据，支持私有化部署，通过浏览器进行使用，无需进行安装" \
+      org.opencontainers.image.licenses="MIT"
 
 # 设置工作目录
 WORKDIR /app
