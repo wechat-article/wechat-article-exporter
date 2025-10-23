@@ -1,0 +1,75 @@
+name: Build and Push Multi-Arch Docker Image
+
+# 触发条件：推送 v* 标签时（如 git tag v1.1.0 && git push --tags）
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 权限：允许 Actions 推送到 GHCR
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest  # AMD64 主机，用于交叉构建 ARM
+    steps:
+      # 检出代码
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 设置 Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+
+      # 安装依赖
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # 构建 Nuxt 项目
+      - name: Build Nuxt
+        run: yarn build
+
+      # 设置 Docker Buildx（启用多架构）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 登录 GHCR（使用 GitHub Token）
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 设置 QEMU（用于 ARM 交叉构建）
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 从标签提取版本（匹配 v1.0.0 格式）
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${{ github.ref_name }}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      # 构建并推送多架构镜像
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./dockerfile  # 你的 Dockerfile 路径
+          push: true  # 直接推送
+          platforms: linux/amd64,linux/arm64  # 目标架构
+          tags: |
+            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}
+            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-amd64
+            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-arm64
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}  # 传递到 Dockerfile 的 ARG
+          cache-from: type=gha  # 使用 GitHub Actions 缓存加速
+          cache-to: type=gha,mode=max
