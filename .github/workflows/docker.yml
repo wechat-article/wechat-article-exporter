@@ -19,21 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 设置 Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: yarn
-
-      # 安装依赖
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      # 构建 Nuxt 项目
-      - name: Build Nuxt
-        run: yarn build
-
       # 设置 Docker Buildx（启用多架构）
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -69,6 +54,7 @@ jobs:
             ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-amd64
             ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-arm64
             ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}
+            ghcr.io/wechat-article/wechat-article-exporter:latest
           build-args: |
             VERSION=${{ steps.version.outputs.version }}  # 传递到 Dockerfile 的 ARG
           cache-from: type=gha  # 使用 GitHub Actions 缓存加速
