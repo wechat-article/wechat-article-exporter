@@ -26,7 +26,7 @@ ARG VERSION=unknown
 
 # 添加 LABEL 元数据
 LABEL maintainer="findsource@proton.me" \
-      version="v${VERSION}" \
+      version="${VERSION}" \
       description="wechat-article-exporter Docker Image" \
       org.opencontainers.image.source="https://github.com/wechat-article/wechat-article-exporter"
 
