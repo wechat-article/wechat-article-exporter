@@ -23,7 +23,7 @@ node_modules
 .idea
 .data
 
-debug
 design
 docs
 scripts
+nuxt-options.json
