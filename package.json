@@ -37,8 +37,10 @@
     "jszip": "^3.10.1",
     "lucide-vue-next": "^0.441.0",
     "mime": "^4.0.4",
+    "monaco-editor": "^0.54.0",
     "nuxt": "^3.12.3",
     "nuxt-auth-utils": "^0.5.24",
+    "nuxt-monaco-editor": "1.4.0",
     "p-queue": "^8.0.1",
     "turndown": "^7.2.1",
     "uuid": "^11.0.3",
@@ -58,5 +60,6 @@
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }

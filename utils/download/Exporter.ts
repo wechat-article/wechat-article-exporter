@@ -231,7 +231,7 @@ export class Exporter extends BaseDownload {
       const article = await getArticleByLink(url);
       const exportedArticle: ExcelExportEntity = { ...article };
       if (preferences.value.exportConfig.exportExcelIncludeContent) {
-        exportedArticle.content = await this.getPureContent(url, 'text', parser);
+        exportedArticle.content = await Exporter.getPureContent(url, 'text', parser);
       }
       const metadata = await getMetadataCache(url);
       if (metadata) {
@@ -264,7 +264,7 @@ export class Exporter extends BaseDownload {
       const article = await getArticleByLink(url);
       const exportedArticle: ExcelExportEntity = { ...article };
       if (preferences.value.exportConfig.exportJsonIncludeContent) {
-        exportedArticle.content = await this.getPureContent(url, 'text', parser);
+        exportedArticle.content = await Exporter.getPureContent(url, 'text', parser);
       }
       const metadata = await getMetadataCache(url);
       if (metadata) {
@@ -345,7 +345,7 @@ export class Exporter extends BaseDownload {
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
-      const content = await this.getPureContent(url, 'text', parser);
+      const content = await Exporter.getPureContent(url, 'text', parser);
       if (!content) {
         continue;
       }
@@ -371,7 +371,7 @@ export class Exporter extends BaseDownload {
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
-      const content = await this.getPureContent(url, 'html', parser);
+      const content = await Exporter.getPureContent(url, 'html', parser);
       if (!content) {
         continue;
       }
@@ -397,7 +397,7 @@ export class Exporter extends BaseDownload {
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
-      const content = await this.getPureContent(url, 'html', parser);
+      const content = await Exporter.getPureContent(url, 'html', parser);
       if (!content) {
         continue;
       }
@@ -414,7 +414,11 @@ export class Exporter extends BaseDownload {
     // todo: 需要等待 wxdown-service 程序支持 html => pdf
   }
 
-  private async getPureContent(url: string, format: 'html' | 'text', parser: DOMParser): Promise<string> {
+  public static async getPureContent(
+    url: string,
+    format: 'html' | 'text',
+    parser: DOMParser = new DOMParser()
+  ): Promise<string> {
     const cached = await getHtmlCache(url);
     if (!cached) {
       console.warn(`文章(url: ${url} )的 html 还未下载，不能导出其内容`);

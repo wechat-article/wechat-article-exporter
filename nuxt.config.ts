@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   devtools: {
     enabled: process.env.NODE_ENV !== 'production',
   },
-  modules: ['@vueuse/nuxt', '@nuxt/ui', 'nuxt-auth-utils'],
+  modules: ['@vueuse/nuxt', '@nuxt/ui', 'nuxt-auth-utils', 'nuxt-monaco-editor'],
   ssr: false,
   runtimeConfig: {
     public: {
@@ -56,6 +56,13 @@ export default defineNuxtConfig({
   hooks: {
     ready(nuxt) {
       fs.writeFileSync('nuxt-options.json', JSON.stringify(nuxt.options, null, 2));
+    },
+  },
+  monacoEditor: {
+    locale: 'en', // 编辑器语言（支持 zh 等）
+    componentName: {
+      codeEditor: 'MonacoEditor', // 普通编辑器组件名
+      diffEditor: 'MonacoDiffEditor', // 差异编辑器组件名
     },
   },
 });
