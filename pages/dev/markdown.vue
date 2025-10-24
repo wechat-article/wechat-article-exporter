@@ -7,7 +7,7 @@
       </div>
       <div class="p-6 pt-0">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
+          <div class="editor-wrapper border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
               <h3 class="font-medium text-gray-800 dark:text-gray-200">HTML 输入</h3>
             </div>
@@ -24,20 +24,15 @@
               </div>
             </div>
             <div>
-              <MonacoEditor v-model="htmlCode" lang="html" class="h-[600px] py-3" :options="editorOptions" />
+              <MonacoEditor v-model="htmlCode" lang="html" class="h-[600px] py-3" :options="htmlEditorOptions" />
             </div>
           </div>
-          <div class="border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
+          <div class="editor-wrapper border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
               <h3 class="font-medium text-gray-800 dark:text-gray-200">Markdown 输出</h3>
             </div>
             <div>
-              <MonacoEditor
-                v-model="mdCode"
-                lang="markdown"
-                class="h-[600px] py-3"
-                :options="{ ...editorOptions, readOnly: true }"
-              />
+              <MonacoEditor v-model="mdCode" lang="markdown" class="h-[600px] py-3" :options="markdownEditorOptions" />
             </div>
           </div>
         </div>
@@ -72,11 +67,25 @@ watch(
 );
 
 // 编辑器通用选项
-const editorOptions: any = {
+const htmlEditorOptions: any = {
   minimap: { enabled: false },
   fontSize: 16,
   theme: 'vs-light',
   wordWrap: 'on',
+};
+const markdownEditorOptions: any = {
+  ...htmlEditorOptions,
+  readOnly: true,
+  scrollBeyondLastLine: false,
+  horizontalScrollbarSize: 0,
+  layoutInfo: {
+    horizontalScrollbarHeight: 0,
+  },
+  cursorBlinking: 'solid', // 不闪烁光标
+  renderLineHighlight: 'none', // 无行高亮
+  selectionHighlight: false, // 禁用选择高亮
+  overviewRulerLanes: 0, // 隐藏概览尺
+  hideCursorInOverviewRuler: true,
 };
 
 const url = ref('');
@@ -91,3 +100,17 @@ async function loadCacheHtml() {
   }
 }
 </script>
+
+<style scoped>
+/* 针对 Markdown 编辑器（第二个 .editor-wrapper）隐藏光标 */
+:deep(.editor-wrapper:nth-child(2) .monaco-editor .cursors-layer > .cursor) {
+  display: none !important;
+}
+
+/* 可选：进一步模拟预览（禁用文本选择） */
+:deep(.editor-wrapper:nth-child(2) .monaco-editor) {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+}
+</style>
