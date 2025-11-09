@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEventBus } from '@vueuse/core';
 import { importInfos, type Info } from '~/store/v2/info';
 import GlobalSearchAccount from '~/components/global/SearchAccount.vue';
 import { AgGridVue } from 'ag-grid-vue3';
@@ -33,6 +34,7 @@ import { IMAGE_PROXY, websiteName } from '~/config';
 import toastFactory from '~/composables/toast';
 import { exportAccountJsonFile } from '~/utils/exporter';
 import type { AccountManifest } from '~/types/account';
+import type { AccountEvent } from '~/types/events';
 
 useHead({
   title: `公众号管理 | ${websiteName}`,
@@ -48,6 +50,13 @@ const modal = useModal();
 
 const preferences = usePreferences();
 const loginAccount = useLoginAccount();
+// 账号事件总线，用于和 Credentials 面板保持列表同步
+const accountEventBus = useEventBus<AccountEvent>('account-event');
+const stopAccountEvent = accountEventBus.on(event => {
+  if (event.type === 'account-added' || event.type === 'account-removed') {
+    refresh();
+  }
+});
 
 const searchAccountRef = ref<typeof GlobalSearchAccount | null>(null);
 
@@ -72,6 +81,8 @@ async function onSelectAccount(account: Info) {
   await refresh();
   addBtnLoading.value = false;
   toast.success('公众号添加成功', `已成功添加公众号【${account.nickname}】，并拉取了第一页文章数据`);
+  // 通知 Credentials 面板按钮立即变更为“已添加”
+  accountEventBus.emit({ type: 'account-added', fakeid: account.fakeid });
 }
 
 const isCanceled = ref(false);
@@ -512,6 +523,8 @@ function deleteSelectedAccounts() {
       try {
         isDeleting.value = true;
         await deleteAccountData(ids);
+        // 通知 Credentials 面板这些公众号已被移除
+        ids.forEach(fakeid => accountEventBus.emit({ type: 'account-removed', fakeid }));
       } finally {
         isDeleting.value = false;
         await refresh();
@@ -519,6 +532,10 @@ function deleteSelectedAccounts() {
     },
   });
 }
+
+onBeforeUnmount(() => {
+  stopAccountEvent();
+});
 
 // 导入公众号
 const fileRef = ref<HTMLInputElement | null>(null);

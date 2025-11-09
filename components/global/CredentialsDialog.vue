@@ -98,8 +98,30 @@
             <p>公众号名称：{{ credential.nickname || '--' }}</p>
             <p>fakeid: {{ credential.biz }}</p>
             <p>获取时间: {{ credential.time }}</p>
-            <span v-if="credential.valid" class="font-sans font-bold text-green-500">有效</span>
-            <span v-else class="font-sans font-bold text-rose-500">已过期</span>
+            <div class="flex items-center justify-between mt-4">
+              <span
+                v-if="credential.valid"
+                class="font-sans font-bold text-green-500"
+              >
+                有效
+              </span>
+              <span
+                v-else
+                class="font-sans font-bold text-rose-500"
+              >
+                已过期
+              </span>
+              <UButton
+                size="xs"
+                :color="credential.added ? 'green' : 'blue'"
+                :variant="credential.added ? 'soft' : 'solid'"
+                :disabled="credential.added || addingBiz === credential.biz"
+                :loading="addingBiz === credential.biz"
+                @click="addAccount(credential)"
+              >
+                {{ credential.added ? '已添加' : '添加公众号' }}
+              </UButton>
+            </div>
           </li>
         </ul>
       </div>
@@ -108,10 +130,15 @@
 </template>
 
 <script setup lang="ts">
+import { useEventBus } from '@vueuse/core';
 import dayjs from 'dayjs';
+import { getArticleList } from '~/apis';
+import LoginModal from '~/components/modal/Login.vue';
+import toastFactory from '~/composables/toast';
+import { CREDENTIAL_API_HOST, CREDENTIAL_LIVE_MINUTES } from '~/config';
+import { getInfoCache, type Info } from '~/store/v2/info';
 import type { ParsedCredential } from '~/types/credential';
-import { getInfoCache } from '~/store/v2/info';
-import { CREDENTIAL_LIVE_MINUTES, CREDENTIAL_API_HOST } from '~/config';
+import type { AccountEvent } from '~/types/events';
 
 export type CredentialState = 'active' | 'inactive' | 'warning';
 
@@ -134,6 +161,43 @@ for (const item of credentials.value) {
   item.valid = Date.now() < item.timestamp + 1000 * 60 * CREDENTIAL_LIVE_MINUTES;
 }
 const validCredentialCount = computed(() => credentials.value.filter(c => c.valid).length);
+const toast = toastFactory();
+const modal = useModal();
+const loginAccount = useLoginAccount();
+const addingBiz = ref<string | null>(null);
+// 账号事件总线，用于和管理页面同步添加/删除状态
+const accountEventBus = useEventBus<AccountEvent>('account-event');
+
+function checkLogin() {
+  if (loginAccount.value === null) {
+    modal.open(LoginModal);
+    return false;
+  }
+  return true;
+}
+
+async function refreshCredentialAddedState() {
+  const pending = credentials.value.map(async credential => {
+    const info = await getInfoCache(credential.biz);
+    credential.added = Boolean(info);
+  });
+  await Promise.allSettled(pending);
+}
+
+// 监听账号事件，及时更新当前凭据项的按钮状态
+const stopAccountEvent = accountEventBus.on(event => {
+  if (event.type === 'account-added') {
+    const target = credentials.value.find(item => item.biz === event.fakeid);
+    if (target) {
+      target.added = true;
+    }
+  } else if (event.type === 'account-removed') {
+    const target = credentials.value.find(item => item.biz === event.fakeid);
+    if (target) {
+      target.added = false;
+    }
+  }
+});
 
 interface Credential {
   url: string;
@@ -169,6 +233,11 @@ onMounted(() => {
   if (monitoring.value) {
     start();
   }
+  refreshCredentialAddedState();
+});
+
+onUnmounted(() => {
+  stopAccountEvent();
 });
 
 // 下载 credential.py 插件
@@ -279,6 +348,7 @@ async function fetchCredentials() {
       timestamp: item.timestamp,
       time: dayjs(item.timestamp).format('YYYY-MM-DD HH:mm:ss'),
       valid: Date.now() < item.timestamp + 1000 * 60 * CREDENTIAL_LIVE_MINUTES,
+      added: Boolean(info),
     });
   }
   credentials.value = _credentials.sort((a, b) => b.timestamp - a.timestamp);
@@ -331,6 +401,7 @@ async function startListenService() {
         timestamp: item.timestamp,
         time: dayjs(item.timestamp).format('YYYY-MM-DD HH:mm:ss'),
         valid: Date.now() < item.timestamp + 1000 * 60 * CREDENTIAL_LIVE_MINUTES,
+        added: Boolean(info),
       });
     }
     credentials.value = _credentials.sort((a, b) => b.timestamp - a.timestamp);
@@ -347,6 +418,41 @@ async function startListenService() {
 async function stopListenService() {
   if (_ws) {
     _ws.close();
+  }
+}
+
+async function addAccount(credential: ParsedCredential) {
+  if (credential.added || addingBiz.value === credential.biz) {
+    return;
+  }
+  if (!checkLogin()) return;
+
+  addingBiz.value = credential.biz;
+  const nickname = credential.nickname || credential.biz;
+  const account: Info = {
+    fakeid: credential.biz,
+    completed: false,
+    count: 0,
+    articles: 0,
+    total_count: 0,
+    nickname: credential.nickname,
+    round_head_img: credential.avatar,
+  };
+
+  try {
+    await getArticleList(account, 0);
+    credential.added = true;
+    toast.success('公众号添加成功', `已成功添加公众号【${nickname}】`);
+    // 通知其他视图（如公众号管理列表）立即刷新
+    accountEventBus.emit({ type: 'account-added', fakeid: credential.biz });
+  } catch (error: any) {
+    if (error?.message === 'session expired') {
+      modal.open(LoginModal);
+    } else {
+      toast.error('添加公众号失败', error?.message || '未知错误');
+    }
+  } finally {
+    addingBiz.value = null;
   }
 }
 

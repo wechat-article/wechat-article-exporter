@@ -9,4 +9,5 @@ export interface ParsedCredential {
   timestamp: number;
   time?: string;
   valid: boolean;
+  added?: boolean;
 }
