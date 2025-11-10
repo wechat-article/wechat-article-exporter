@@ -505,7 +505,7 @@ async function addAccount(credential: ParsedCredential) {
 watchEffect(() => {
   if (!monitoring.value && !wsMonitoring.value) {
     state.value = 'inactive';
-  } else if (validCredentialCount.value > 0) {
+  } else if (monitoring.value || wsMonitoring.value) {
     state.value = 'active';
   } else {
     state.value = 'warning';
