@@ -33,7 +33,7 @@
                   :disabled="monitoring || wsMonitoring"
                   placeholder="请输入 ws 监听地址"
                 />
-                <UButton v-if="!wsMonitoring" :disabled="!wsURL || monitoring" color="blue" @click="startListenService"
+                <UButton v-if="!wsMonitoring" :disabled="!wsURL || monitoring" color="blue" @click="startListenService(true)"
                   >开始监控</UButton
                 >
                 <UButton v-else icon="i-line-md:loading-twotone-loop" color="green" @click="stopListenService"
@@ -213,6 +213,8 @@ interface Credential {
 }
 
 let timer: number;
+let manulStopped = false;
+let listenRetryTimer: number | null = null;
 const monitoring = ref(JSON.parse(localStorage.getItem('auto-detect-credentials:monitoring') as string) || false);
 
 function start() {
@@ -234,15 +236,39 @@ function stop() {
   window.clearInterval(timer);
 }
 
+// 监听服务重试机制
+function scheduleListenRetry() {
+  if (listenRetryTimer) {
+    window.clearTimeout(listenRetryTimer);
+  }
+  
+  // 如果是手动停止的，则不重试
+  if(manulStopped) return;
+
+  listenRetryTimer = window.setTimeout(() => {
+    startListenService();
+  }, 5000);
+}
+
+// 清除重试定时器
+function clearRetryTimer() {
+  if (listenRetryTimer) {
+    window.clearTimeout(listenRetryTimer);
+    listenRetryTimer = null;
+  }
+}
+
 onMounted(() => {
   if (monitoring.value) {
     start();
   }
   refreshCredentialAddedState();
+  startListenService();
 });
 
 onUnmounted(() => {
   stopAccountEvent();
+  clearRetryTimer();
 });
 
 // 下载 credential.py 插件
@@ -363,11 +389,21 @@ const wsURL = ref('ws://127.0.0.1:65001');
 const wsMonitoring = ref(false);
 let _ws: WebSocket | null = null;
 
-async function startListenService() {
-  const ws = new WebSocket(wsURL.value.trim());
+// 启动监听服务
+async function startListenService(isManual = false) {
+  const url = wsURL.value.trim();
+  if (!url) {
+    return;
+  }
+  if (isManual) {
+    // 手动启动时，取消手动停止标记
+    manulStopped = false;
+  }
+  const ws = new WebSocket(url);
   ws.addEventListener('open', () => {
     wsMonitoring.value = true;
     _ws = ws;
+    clearRetryTimer();
   });
   ws.addEventListener('message', async evt => {
     let result = [];
@@ -414,16 +450,21 @@ async function startListenService() {
   ws.addEventListener('close', () => {
     wsMonitoring.value = false;
     _ws = null;
+    scheduleListenRetry();
   });
   ws.addEventListener('error', evt => {
     console.error(evt);
-    alert('websocket连接失败');
+    scheduleListenRetry();
   });
 }
+
+// 停止监听服务
 async function stopListenService() {
+  manulStopped = true;
   if (_ws) {
     _ws.close();
   }
+  clearRetryTimer();
 }
 
 async function addAccount(credential: ParsedCredential) {
