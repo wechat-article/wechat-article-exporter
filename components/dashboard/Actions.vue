@@ -56,9 +56,16 @@ const authPanelOpen = ref(false);
           <UIcon
             @click="credentialsDialogOpen = true"
             name="i-lucide:dog"
-            :class="['action-icon', { 'action-icon--active': isCredentialActive }]"
+            :class="[
+              'size-7 cursor-pointer transition-colors',
+              { 'text-zinc-400 hover:text-blue-500': !isCredentialActive },
+              { 'text-green-500 hover:text-green-600': isCredentialActive },
+            ]"
           />
-          <span v-if="credentialBadgeText" class="credential-badge">
+          <span
+            v-if="credentialBadgeText"
+            class="absolute -top-1 -right-1 text-[10px] leading-none rounded-full bg-rose-500 text-white px-1.5 py-0.5 min-w-[16px] text-center"
+          >
             {{ credentialBadgeText }}
           </span>
         </div>
@@ -68,7 +75,11 @@ const authPanelOpen = ref(false);
     <!-- 文档 -->
     <li>
       <UTooltip text="文档">
-        <UIcon name="i-lucide:book-open" @click="gotoLink(docsWebSite)" class="action-icon" />
+        <UIcon
+          name="i-lucide:book-open"
+          @click="gotoLink(docsWebSite)"
+          class="size-7 text-zinc-400 hover:text-blue-500 cursor-pointer transition-colors"
+        />
       </UTooltip>
     </li>
 
@@ -78,7 +89,7 @@ const authPanelOpen = ref(false);
         <UIcon
           @click="gotoLink('https://github.com/wechat-article/wechat-article-exporter')"
           name="i-lucide:github"
-          class="action-icon"
+          class="size-7 text-zinc-400 hover:text-blue-500 cursor-pointer transition-colors"
         />
       </UTooltip>
     </li>
@@ -95,36 +106,3 @@ const authPanelOpen = ref(false);
     <!--    </li>-->
   </ul>
 </template>
-
-<style scoped>
-  .action-icon {
-    color: rgb(148 163 184);
-    transition: color 150ms ease-in-out;
-    cursor: pointer;
-    width: 1.75rem;
-    height: 1.75rem;
-  }
-  .action-icon:hover {
-    color: rgb(59 130 246);
-  }
-  .action-icon--active {
-    color: rgb(34 197 94);
-  }
-  .action-icon--active:hover {
-    color: rgb(22 163 74);
-  }
-
-  .credential-badge {
-    position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
-    font-size: 10px;
-    line-height: 1;
-    border-radius: 9999px;
-    background-color: rgb(244 63 94);
-    color: white;
-    padding: 0.125rem 0.375rem;
-    min-width: 16px;
-    text-align: center;
-  }
-</style>
