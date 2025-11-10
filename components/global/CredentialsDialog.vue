@@ -142,6 +142,10 @@ import type { AccountEvent } from '~/types/events';
 
 export type CredentialState = 'active' | 'inactive' | 'warning';
 
+const emit = defineEmits<{
+  (e: 'update:pendingCount', value: number): void;
+}>();
+
 const open = defineModel<boolean>('open', { default: false });
 const state = defineModel<CredentialState>('state', { default: 'inactive' });
 
@@ -161,6 +165,7 @@ for (const item of credentials.value) {
   item.valid = Date.now() < item.timestamp + 1000 * 60 * CREDENTIAL_LIVE_MINUTES;
 }
 const validCredentialCount = computed(() => credentials.value.filter(c => c.valid).length);
+const pendingCredentialCount = computed(() => credentials.value.filter(c => c.valid && !c.added).length);
 const toast = toastFactory();
 const modal = useModal();
 const loginAccount = useLoginAccount();
@@ -464,6 +469,10 @@ watchEffect(() => {
   } else {
     state.value = 'warning';
   }
+});
+
+watchEffect(() => {
+  emit('update:pendingCount', pendingCredentialCount.value);
 });
 
 const copied = ref(false);

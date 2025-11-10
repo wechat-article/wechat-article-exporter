@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { gotoLink } from '~/utils';
-import { docsWebSite } from '~/config';
-import CredentialsDialog, { type CredentialState } from '~/components/global/CredentialsDialog.vue';
-import AuthPopoverPanel from '~/components/dashboard/AuthPopoverPanel.vue';
 import type { ChipColor } from '#ui/types';
+import CredentialsDialog, { type CredentialState } from '~/components/global/CredentialsDialog.vue';
+import { docsWebSite } from '~/config';
+import { gotoLink } from '~/utils';
 
 // const { loggedIn } = useUserSession();
 
 // CredentialDialog 相关变量
 const credentialsDialogOpen = ref(false);
 const credentialState = ref<CredentialState>('inactive');
+const credentialPendingCount = ref(0);
 const credentialColor: ComputedRef<ChipColor> = computed<ChipColor>(() => {
   switch (credentialState.value) {
     case 'active':
@@ -22,6 +22,13 @@ const credentialColor: ComputedRef<ChipColor> = computed<ChipColor>(() => {
       return 'gray';
   }
 });
+
+const credentialBadgeText = computed(() => {
+  const count = credentialPendingCount.value;
+  if (count <= 0) return '';
+  return count > 9 ? '+' : `${count}`;
+});
+const isCredentialActive = computed(() => credentialState.value === 'active');
 
 const authPanelOpen = ref(false);
 </script>
@@ -39,12 +46,22 @@ const authPanelOpen = ref(false);
 
     <!-- Credential -->
     <li>
-      <CredentialsDialog v-model:open="credentialsDialogOpen" v-model:state="credentialState" />
+      <CredentialsDialog
+        v-model:open="credentialsDialogOpen"
+        v-model:state="credentialState"
+        @update:pending-count="credentialPendingCount = $event"
+      />
       <UTooltip text="抓取 Credentials">
-        <!-- todo: 优化图标的显示 -->
-        <!--        <UChip size="md" :color="credentialColor">-->
-        <!--        </UChip>-->
-        <UIcon @click="credentialsDialogOpen = true" name="i-lucide:dog" class="action-icon" />
+        <div class="relative">
+          <UIcon
+            @click="credentialsDialogOpen = true"
+            name="i-lucide:dog"
+            :class="['action-icon', { 'action-icon--active': isCredentialActive }]"
+          />
+          <span v-if="credentialBadgeText" class="credential-badge">
+            {{ credentialBadgeText }}
+          </span>
+        </div>
       </UTooltip>
     </li>
 
@@ -80,7 +97,34 @@ const authPanelOpen = ref(false);
 </template>
 
 <style scoped>
-.action-icon {
-  @apply text-zinc-400 hover:text-blue-500 cursor-pointer size-7;
-}
+  .action-icon {
+    color: rgb(148 163 184);
+    transition: color 150ms ease-in-out;
+    cursor: pointer;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .action-icon:hover {
+    color: rgb(59 130 246);
+  }
+  .action-icon--active {
+    color: rgb(34 197 94);
+  }
+  .action-icon--active:hover {
+    color: rgb(22 163 74);
+  }
+
+  .credential-badge {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    font-size: 10px;
+    line-height: 1;
+    border-radius: 9999px;
+    background-color: rgb(244 63 94);
+    color: white;
+    padding: 0.125rem 0.375rem;
+    min-width: 16px;
+    text-align: center;
+  }
 </style>
