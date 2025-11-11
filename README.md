@@ -15,10 +15,20 @@
 
 交流群(QQ): `991482155`
 
+## 重要告知：项目域名调整
+后续项目域名调整如下：
+
+|     | 下载站                            | 文档站                        |
+|-----|--------------------------------|----------------------------|
+| 调整前 | https://exporter.wxdown.online | https://docs.wxdown.online |
+| 调整后 | https://down.mptext.top        | https://docs.mptext.top    |
+
+具体细节可以查看 [这里](https://docs.mptext.top/misc/domain.html)。
+
 
 ## 文档
 
-[文档站点](https://docs.wxdown.online) 上线啦 🎉🎉🎉，后续使用教程会在此站点统一进行维护。
+[文档站点](https://docs.mptext.top) 上线啦 🎉🎉🎉，后续使用教程会在此站点统一进行维护。
 
 
 ## :dart: 特性
@@ -30,7 +40,7 @@
 - [x] 支持合集下载
 - [x] 支持图片分享消息
 - [x] 支持视频分享消息
-- [x] 支持导出评论、评论回复、阅读量、转发量等数据 (需要抓包获取 credentials 信息，[查看操作步骤](https://docs.wxdown.online/advanced/wxdown-service.html))
+- [x] 支持导出评论、评论回复、阅读量、转发量等数据 (需要抓包获取 credentials 信息，[查看操作步骤](https://docs.mptext.top/advanced/wxdown-service.html))
 - [x] 支持 Docker 部署
 - [x] 支持 Cloudflare 部署
 - [x] 开放 API 接口
@@ -89,4 +99,4 @@ MIT
 
 [Star History Chart Link]: https://star-history.com/#wechat-article/wechat-article-exporter&Timeline
 
-[在线网站]: https://exporter.wxdown.online
+[在线网站]: https://down.mptext.top

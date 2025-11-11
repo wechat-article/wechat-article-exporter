@@ -22,6 +22,57 @@ export const ACCOUNT_TYPE: Record<number, string> = {
 };
 
 /**
+ * https://00.workers-proxy.shop
+ * https://01.workers-proxy.shop
+ * https://02.workers-proxy.shop
+ * https://03.workers-proxy.shop
+ * https://04.workers-proxy.shop
+ * https://05.workers-proxy.shop
+ * https://06.workers-proxy.shop
+ * https://07.workers-proxy.shop
+ * https://08.workers-proxy.shop
+ * https://09.workers-proxy.shop
+ * https://10.workers-proxy.shop
+ * https://11.workers-proxy.shop
+ * https://12.workers-proxy.shop
+ * https://13.workers-proxy.shop
+ * https://14.workers-proxy.shop
+ * https://15.workers-proxy.shop
+ * https://00.workers-proxy.top
+ * https://01.workers-proxy.top
+ * https://02.workers-proxy.top
+ * https://03.workers-proxy.top
+ * https://04.workers-proxy.top
+ * https://05.workers-proxy.top
+ * https://06.workers-proxy.top
+ * https://07.workers-proxy.top
+ * https://08.workers-proxy.top
+ * https://09.workers-proxy.top
+ * https://10.workers-proxy.top
+ * https://11.workers-proxy.top
+ * https://12.workers-proxy.top
+ * https://13.workers-proxy.top
+ * https://14.workers-proxy.top
+ * https://15.workers-proxy.top
+ * https://00.workers-proxy.ggff.net
+ * https://01.workers-proxy.ggff.net
+ * https://02.workers-proxy.ggff.net
+ * https://03.workers-proxy.ggff.net
+ * https://04.workers-proxy.ggff.net
+ * https://05.workers-proxy.ggff.net
+ * https://06.workers-proxy.ggff.net
+ * https://07.workers-proxy.ggff.net
+ * https://08.workers-proxy.ggff.net
+ * https://09.workers-proxy.ggff.net
+ * https://10.workers-proxy.ggff.net
+ * https://11.workers-proxy.ggff.net
+ * https://12.workers-proxy.ggff.net
+ * https://13.workers-proxy.ggff.net
+ * https://14.workers-proxy.ggff.net
+ * https://15.workers-proxy.ggff.net
+ */
+
+/**
  * 公共代理
  */
 export const PUBLIC_PROXY_LIST: string[] = [
@@ -71,7 +122,7 @@ export const CREDENTIAL_LIVE_MINUTES: number = 25;
 export const CREDENTIAL_API_HOST = 'http://127.0.0.1:8088';
 
 // 文档站点地址
-export const docsWebSite = 'https://docs.wxdown.online';
+export const docsWebSite = 'https://docs.mptext.top';
 
 export const apis = [
   {
