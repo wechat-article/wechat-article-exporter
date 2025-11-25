@@ -6,6 +6,7 @@ import * as pool from '~/utils/pool';
 import type { DownloadableArticle } from '~/types/types';
 import type { AudioResource, VideoPageInfo } from '~/types/video';
 import { getComment } from '~/apis';
+import { extractCommentId } from './comment';
 
 export function formatTimeStamp(timestamp: number) {
   return dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm:ss');
@@ -293,9 +294,8 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
 
   // 下载留言数据
   let commentHTML = '';
-  const commentIdMatchResult = html.match(/var comment_id = '(?<comment_id>\d+)' \|\| '0';/);
-  if (commentIdMatchResult && commentIdMatchResult.groups && commentIdMatchResult.groups.comment_id) {
-    const comment_id = commentIdMatchResult.groups.comment_id;
+  const comment_id = extractCommentId(html);
+  if (comment_id) {
     const commentResponse = await getComment(comment_id);
     // 抓到了留言数据
     if (commentResponse) {

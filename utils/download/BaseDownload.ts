@@ -6,6 +6,7 @@ import { sleep, timeout, bestConcurrencyCount } from '~/utils';
 import usePreferences from '~/composables/usePreferences';
 import { PUBLIC_PROXY_LIST } from '~/config';
 import { DEFAULT_OPTIONS } from './constants';
+import { extractCommentId } from '~/utils/comment';
 
 const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials:credentials', []);
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
@@ -196,11 +197,7 @@ export class BaseDownload {
     const $layout = document.querySelector('#js_fullscreen_layout_padding');
     const $title = document.querySelector('head > title')!.textContent;
 
-    let commentID = null;
-    const commentIdMatchResult = html.match(/var comment_id = '(?<comment_id>\d+)' \|\| '0';/);
-    if (commentIdMatchResult && commentIdMatchResult.groups && commentIdMatchResult.groups.comment_id) {
-      commentID = commentIdMatchResult.groups.comment_id;
-    }
+    const commentID = extractCommentId(html);
 
     if ($jsContent) {
       return ['Success', commentID];
