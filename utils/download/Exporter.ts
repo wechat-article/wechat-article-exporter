@@ -434,6 +434,40 @@ export class Exporter extends BaseDownload {
     });
     $jsArticleContent.querySelector('#js_pc_qr_code')?.remove();
     $jsArticleContent.querySelector('#wx_stream_article_slide_tip')?.remove();
+
+    // 文本分享消息补充
+    const $js_text_desc = $jsArticleContent.querySelector('#js_text_desc') as HTMLElement | null;
+    if ($js_text_desc && !$js_text_desc.innerHTML.trim()) {
+      const textContentMatch = html.match(
+        /var\s+TextContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']*')/s
+      );
+      const contentMatch = html.match(
+        /var\s+ContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']*')/s
+      );
+
+      let desc: string | null = null;
+      const assignFromMatch = (match: RegExpMatchArray | null, key: string) => {
+        if (match && match.groups && match.groups.value) {
+          const code = `window.${key} = ${match.groups.value}`;
+          // eslint-disable-next-line no-eval
+          eval(code);
+          // @ts-ignore
+          return (window as any)[key] as string;
+        }
+        return null;
+      };
+
+      desc = assignFromMatch(textContentMatch, '__WX_TEXT_NO_ENCODE__');
+      if (!desc) {
+        desc = assignFromMatch(contentMatch, '__WX_CONTENT_NO_ENCODE__');
+      }
+
+      if (desc) {
+        desc = desc.replace(/\r/g, '').replace(/\n/g, '<br>');
+        $js_text_desc.innerHTML = desc;
+      }
+    }
+
     if (format === 'html') {
       return $jsArticleContent.outerHTML;
     } else if (format === 'text') {
@@ -528,6 +562,7 @@ export class Exporter extends BaseDownload {
     const ipWordingMatchResult = html.match(/window\.ip_wording = (?<data>{\s+countryName: '[^']+',[^}]+})/s);
     if (ipWrp && ipWording && ipWordingMatchResult && ipWordingMatchResult.groups && ipWordingMatchResult.groups.data) {
       const json = ipWordingMatchResult.groups.data;
+      // eslint-disable-next-line no-eval
       eval('window.ip_wording = ' + json);
       const ipWordingDisplay = getIpWoridng((window as any).ip_wording);
       if (ipWordingDisplay !== '') {
@@ -611,6 +646,60 @@ export class Exporter extends BaseDownload {
     let commentHTML = '';
     if ((preferences.value as Preferences).exportConfig.exportHtmlIncludeComments) {
       commentHTML = await renderComments(cachedHtml.url);
+    }
+
+    // 文本分享消息
+    const $js_text_desc = $jsArticleContent.querySelector('#js_text_desc') as HTMLElement | null;
+    if ($js_text_desc) {
+      // 文本分享页面样式
+      bodyCls += ' page_share_text';
+
+      // 顶部作者栏
+      const qmtplTextMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?};)/s);
+      if (qmtplTextMatchResult && qmtplTextMatchResult.groups && qmtplTextMatchResult.groups.code) {
+        const code = qmtplTextMatchResult.groups.code;
+        // eslint-disable-next-line no-eval
+        eval(code);
+        const data = (window as any).__QMTPL_SSR_DATA__;
+        if (data && typeof data.title === 'string' && !$js_text_desc.innerHTML.trim()) {
+          let text = data.title as string;
+          text = text.replace(/\r/g, '').replace(/\n/g, '<br>');
+          $js_text_desc.innerHTML = text;
+        }
+        $jsArticleContent.querySelector('#js_top_profile')?.classList.remove('profile_area_hide');
+      }
+
+      // 正文内容
+      if (!$js_text_desc.innerHTML.trim()) {
+        const textContentMatch = html.match(
+          /var\s+TextContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']*')/s
+        );
+        const contentMatch = html.match(
+          /var\s+ContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']*')/s
+        );
+
+        let desc: string | null = null;
+        const assignFromMatch = (match: RegExpMatchArray | null, key: string) => {
+          if (match && match.groups && match.groups.value) {
+            const code = `window.${key} = ${match.groups.value}`;
+            // eslint-disable-next-line no-eval
+            eval(code);
+            // @ts-ignore
+            return (window as any)[key] as string;
+          }
+          return null;
+        };
+
+        desc = assignFromMatch(textContentMatch, '__WX_TEXT_NO_ENCODE__');
+        if (!desc) {
+          desc = assignFromMatch(contentMatch, '__WX_CONTENT_NO_ENCODE__');
+        }
+
+        if (desc) {
+          desc = desc.replace(/\r/g, '').replace(/\n/g, '<br>');
+          $js_text_desc.innerHTML = desc;
+        }
+      }
     }
 
     // 图片分享消息
