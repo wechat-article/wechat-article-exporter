@@ -1,9 +1,8 @@
 <script setup lang="ts">
+import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
 import { useEventBus } from '@vueuse/core';
-import { importInfos, type Info } from '~/store/v2/info';
-import GlobalSearchAccount from '~/components/global/SearchAccount.vue';
-import { AgGridVue } from 'ag-grid-vue3';
 import {
+  themeQuartz,
   type ColDef,
   type GetRowIdParams,
   type GridApi,
@@ -12,29 +11,30 @@ import {
   type ICellRendererParams,
   type IDateFilterParams,
   type SelectionChangedEvent,
-  themeQuartz,
   type ValueFormatterParams,
   type ValueGetterParams,
 } from 'ag-grid-community';
-import { AG_GRID_LOCALE_CN } from '@ag-grid-community/locale';
-import GridLoading from '~/components/grid/Loading.vue';
-import GridNoRows from '~/components/grid/NoRows.vue';
-import { deleteAccountData } from '~/store/v2';
-import { getAllInfo, getInfoCache } from '~/store/v2/info';
+import { AgGridVue } from 'ag-grid-vue3';
+import dayjs from 'dayjs';
 import { getArticleList } from '~/apis';
-import { getArticleCache, hitCache } from '~/store/v2/article';
+import GlobalSearchAccount from '~/components/global/SearchAccount.vue';
 import GridAccountActions from '~/components/grid/AccountActions.vue';
+import GridLoading from '~/components/grid/Loading.vue';
 import GridLoadProgress from '~/components/grid/LoadProgress.vue';
+import GridNoRows from '~/components/grid/NoRows.vue';
 import ConfirmModal from '~/components/modal/Confirm.vue';
 import LoginModal from '~/components/modal/Login.vue';
-import { formatTimeStamp } from '~/utils';
-import type { Preferences } from '~/types/preferences';
-import dayjs from 'dayjs';
-import { IMAGE_PROXY, websiteName } from '~/config';
 import toastFactory from '~/composables/toast';
-import { exportAccountJsonFile } from '~/utils/exporter';
+import { IMAGE_PROXY, websiteName } from '~/config';
+import { deleteAccountData } from '~/store/v2';
+import { articleExistsByLink, getArticleCache, hitCache } from '~/store/v2/article';
+import { getAllInfo, getInfoCache, importInfos, markCompleted, type Info } from '~/store/v2/info';
 import type { AccountManifest } from '~/types/account';
 import type { AccountEvent } from '~/types/events';
+import type { Preferences } from '~/types/preferences';
+import type { AppMsgEx } from '~/types/types';
+import { formatTimeStamp } from '~/utils';
+import { exportAccountJsonFile } from '~/utils/exporter';
 
 useHead({
   title: `公众号管理 | ${websiteName}`,
@@ -47,6 +47,8 @@ interface PromiseInstance {
 
 const toast = toastFactory();
 const modal = useModal();
+// 记录常规方式成功同步的时间（ms），超过24h才重试常规，否则隐藏账号直接走凭据
+const lastNormalSync = useLocalStorage<Record<string, number>>('account-last-normal-sync', {});
 
 const preferences = usePreferences();
 const loginAccount = useLoginAccount();
@@ -111,7 +113,19 @@ const syncToTimestamp = computed(() => {
   }
 });
 
-async function _load(account: Info, begin: number, loadMore: boolean, promise: PromiseInstance) {
+/**
+ * 加载逻辑:
+ * 1. 首次使用常规方式加载, 如果失败则使用带登录信息的方式加载文章列表并设置localStorage中的account-last-normal-sync
+ * 2. 超过24小时候会再次尝试使用常规方式加载, 避免有些公众号重新打开搜索可见
+ * TODO 加载文章的时候需要检测是否会有重复的文章, 因为文章的URL格式不同, 正常加载是短连接, 带登录信息加载是长链接
+ * 
+ * @param account 
+ * @param begin 
+ * @param loadMore 
+ * @param promise 
+ * @param reconcile 
+ */
+async function _load(account: Info, begin: number, loadMore: boolean, promise: PromiseInstance, reconcile = false) {
   if (isCanceled.value) {
     isCanceled.value = false;
     promise.reject(new Error('已取消'));
@@ -121,13 +135,37 @@ async function _load(account: Info, begin: number, loadMore: boolean, promise: P
   syncingRowId.value = account.fakeid;
   isSyncing.value = true;
 
-  const [articles, completed] = await getArticleList(account, begin);
+  const now = Date.now();
+  const lastNormalMap = lastNormalSync.value || {};
+  const lastNormal = lastNormalMap[account.fakeid];
+  const hasRecord = Object.prototype.hasOwnProperty.call(lastNormalMap, account.fakeid);
+  const shouldTryNormal = !hasRecord || now - lastNormal > 24 * 3600 * 1000;
+
+  let articles: AppMsgEx[] = [];
+  let completed = false;
+  try {
+    if (shouldTryNormal) {
+      console.log('[sync] getArticleList normal', { fakeid: account.fakeid, begin, hidden: account.hidden });
+      // 先用常规方式抓取
+      [articles, completed] = await getArticleList({ ...account, hidden: false }, begin);
+    } else {
+      console.log('[sync] skip normal, use credential', { fakeid: account.fakeid, begin, hidden: account.hidden, lastNormal });
+      [articles, completed] = await getArticleList(account, begin);
+    }
+  } catch (err: any) {
+    lastNormalSync.value = { ...lastNormalSync.value, [account.fakeid]: now };
+    toast.warning('提示', '公众号已设置禁止搜索，改为带登录信息方式加载公众号文章列表');
+    console.log('[sync] getArticleList fallback credential', { fakeid: account.fakeid, begin });
+    // 使用 credential 方式，需强制 hidden=true 以走备用流程
+    [articles, completed] = await getArticleList({ ...account, hidden: true }, begin);
+  }
   if (isCanceled.value) {
     isCanceled.value = false;
     promise.reject(new Error('已取消'));
     return;
   }
   if (completed) {
+    await markCompleted(account.fakeid);
     await updateRow(account.fakeid);
     syncingRowId.value = null;
     isSyncing.value = false;
@@ -138,21 +176,38 @@ async function _load(account: Info, begin: number, loadMore: boolean, promise: P
   const count = articles.filter(article => article.itemidx === 1).length;
   begin += count;
 
-  // 加载可用的缓存
-  const lastArticle = articles.at(-1);
-  if (lastArticle && lastArticle.create_time < account.last_update_time!) {
-    // 检查是否存在比 lastArticle 更早的缓存数据
-    if (await hitCache(account.fakeid, lastArticle.create_time)) {
-      const cachedArticles = await getArticleCache(account.fakeid, lastArticle.create_time);
+  // 已完成账号的增量校验：若当前批次存在已入库文章则停止
+  if (reconcile) {
+    for (const art of articles) {
+      if (await articleExistsByLink(art.link)) {
+        await markCompleted(account.fakeid);
+        await updateRow(account.fakeid);
+        syncingRowId.value = null;
+        isSyncing.value = false;
+        promise.resolve(account);
+        return;
+      }
+    }
+  }
 
-      // 更新 begin 参数
-      const count = cachedArticles.filter(article => article.itemidx === 1).length;
-      begin += count;
-      articles.push(...cachedArticles);
+  if (!reconcile) {
+    // 加载可用的缓存
+    const lastArticle = articles.at(-1);
+    if (lastArticle && lastArticle.create_time < account.last_update_time!) {
+      // 检查是否存在比 lastArticle 更早的缓存数据
+      if (await hitCache(account.fakeid, lastArticle.create_time)) {
+        const cachedArticles = await getArticleCache(account.fakeid, lastArticle.create_time);
+
+        // 更新 begin 参数
+        const count = cachedArticles.filter(article => article.itemidx === 1).length;
+        begin += count;
+        articles.push(...cachedArticles);
+      }
     }
   }
   if (articles.at(-1)!.create_time < syncToTimestamp.value) {
     // 已同步到配置的时间范围
+    await markCompleted(account.fakeid);
     await updateRow(account.fakeid);
     syncingRowId.value = null;
     isSyncing.value = false;
@@ -170,7 +225,7 @@ async function _load(account: Info, begin: number, loadMore: boolean, promise: P
           promise.reject(new Error('已取消'));
           return;
         }
-        _load(account, begin, true, promise);
+        _load(account, begin, true, promise, reconcile);
       },
       ((preferences.value as unknown as Preferences).accountSyncSeconds || 5) * 1000
     );
@@ -183,10 +238,12 @@ async function _load(account: Info, begin: number, loadMore: boolean, promise: P
 
 // 同步指定公众号
 async function loadAccountArticle(account: Info, loadMore = true) {
+  isCanceled.value = false;
   return new Promise((resolve, reject) => {
     const promise: PromiseInstance = { resolve, reject };
+    const reconcile = Boolean(account.completed);
 
-    _load(account, 0, loadMore, promise).catch(e => {
+    _load(account, 0, loadMore, promise, reconcile).catch(e => {
       syncingRowId.value = null;
       isSyncing.value = false;
 
@@ -275,6 +332,26 @@ const columnDefs = ref<ColDef[]>([
     },
     tooltipField: 'nickname',
     minWidth: 200,
+  },
+  {
+    colId: 'hidden',
+    headerName: '隐私设置',
+    valueGetter: params => {
+      if (params.data?.hidden === undefined || params.data?.hidden === null) return '';
+      return params.data.hidden ? '禁止搜索' : '搜索可见';
+    },
+    cellDataType: 'text',
+    filter: 'agSetColumnFilter',
+    minWidth: 140,
+    cellStyle: params => {
+      if (params.data?.hidden === true) {
+        return { color: '#ef4444', fontWeight: '700' } as const;
+      }
+      if (params.data?.hidden === false) {
+        return { color: '#059669', fontWeight: '700' } as const;
+      }
+      return undefined;
+    },
   },
   {
     colId: 'create_time',

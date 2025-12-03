@@ -436,19 +436,41 @@ async function switchTableData(fakeid: string) {
   const articles: Article[] = [];
   const data = await getArticleCache(fakeid, Date.now());
   for (const article of data) {
-    const contentDownload = (await getHtmlCache(article.link)) !== undefined;
+    const htmlCache = await getHtmlCache(article.link);
+    const contentDownload = htmlCache !== undefined;
     const commentDownload = (await getCommentCache(article.link)) !== undefined;
     const metadata = await getMetadataCache(article.link);
+
+    // 如果已下载 HTML，从 HTML 中重新解析原创标志（更准确）
+    let copyrightStat = article.copyright_stat;
+    let copyrightType = article.copyright_type;
+    if (htmlCache) {
+      try {
+        const html = await htmlCache.file.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const isOriginal = doc.querySelector('#copyright_logo')?.textContent?.includes('原创');
+        copyrightStat = isOriginal ? 1 : 0;
+        copyrightType = isOriginal ? 1 : 0;
+      } catch (err) {
+        console.warn(`Failed to parse copyright from HTML for ${article.link}`, err);
+      }
+    }
+
     if (metadata) {
       articles.push({
         ...metadata,
         ...article,
+        copyright_stat: copyrightStat,
+        copyright_type: copyrightType,
         contentDownload: contentDownload,
         commentDownload: commentDownload,
       });
     } else {
       articles.push({
         ...article,
+        copyright_stat: copyrightStat,
+        copyright_type: copyrightType,
         contentDownload: contentDownload,
         commentDownload: commentDownload,
       });
@@ -493,7 +515,7 @@ async function downloadArticleHTML() {
   const urls: string[] = selectedRows.map(article => article.link);
 
   const manager = new Downloader(urls);
-  manager.on('download:progress', (url: string, success: boolean, status: DownloaderStatus) => {
+  manager.on('download:progress', async (url: string, success: boolean, status: DownloaderStatus) => {
     console.debug(
       `进度: (进行中:${status.pending.length} / 已完成:${status.completed.length} / 已失败:${status.failed.length} / 已删除:${status.deleted.length})`
     );
@@ -502,6 +524,22 @@ async function downloadArticleHTML() {
       const article = globalRowData.find(article => article.link === url);
       if (article) {
         article.contentDownload = true;
+
+        // 从下载的 HTML 中解析原创标志
+        try {
+          const htmlCache = await getHtmlCache(url);
+          if (htmlCache) {
+            const html = await htmlCache.file.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const isOriginal = doc.querySelector('#copyright_logo')?.textContent?.includes('原创');
+            article.copyright_stat = isOriginal ? 1 : 0;
+            article.copyright_type = isOriginal ? 1 : 0;
+          }
+        } catch (err) {
+          console.warn(`Failed to parse copyright from HTML for ${url}`, err);
+        }
+
         updateRow(article);
       } else {
         console.warn(`${url} not found in table data when update contentDownload`);

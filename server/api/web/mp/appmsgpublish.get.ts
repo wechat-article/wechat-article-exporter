@@ -2,8 +2,8 @@
  * 获取文章列表接口
  */
 
-import { proxyMpRequest } from '~/server/utils/proxy-request';
 import { getTokenFromStore } from '~/server/utils/CookieStore';
+import { proxyMpRequest } from '~/server/utils/proxy-request';
 
 interface AppMsgPublishQuery {
   begin?: number;
@@ -46,6 +46,7 @@ export default defineEventHandler(async event => {
     query: params,
     parseJson: true,
   }).catch(e => {
+    console.error('appmsgpublish.get.ts中获取文章列表出错');
     console.error(e);
     return {
       base_resp: {
