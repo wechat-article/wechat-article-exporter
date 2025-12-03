@@ -5,6 +5,8 @@ export interface Info {
   completed: boolean;
   count: number;
   articles: number;
+  // 是否被设置为搜索不可见
+  hidden?: boolean;
 
   // 公众号昵称
   nickname?: string;
@@ -35,8 +37,9 @@ export async function updateInfoCache(info: Info): Promise<boolean> {
       infoCache.articles += info.articles;
       infoCache.nickname = info.nickname;
       infoCache.round_head_img = info.round_head_img;
-      infoCache.total_count = info.total_count;
+      infoCache.total_count = Math.max(info.total_count, infoCache.total_count ?? 0);
       infoCache.update_time = Math.round(Date.now() / 1000);
+      infoCache.hidden = info.hidden ?? infoCache.hidden;
     } else {
       infoCache = {
         fakeid: info.fakeid,
@@ -45,9 +48,10 @@ export async function updateInfoCache(info: Info): Promise<boolean> {
         articles: info.articles,
         nickname: info.nickname,
         round_head_img: info.round_head_img,
-        total_count: info.total_count,
+        total_count: info.total_count ?? 0,
         create_time: Math.round(Date.now() / 1000),
         update_time: Math.round(Date.now() / 1000),
+        hidden: info.hidden,
       };
     }
     db.info.put(infoCache);
@@ -55,11 +59,32 @@ export async function updateInfoCache(info: Info): Promise<boolean> {
   });
 }
 
+/**
+ * 更新最后同步时间
+ * @param fakeid
+ * @returns
+ */
 export async function updateLastUpdateTime(fakeid: string): Promise<boolean> {
   return db.transaction('rw', 'info', async () => {
     let infoCache = await db.info.get(fakeid);
     if (infoCache) {
       infoCache.last_update_time = Math.round(Date.now() / 1000);
+      db.info.put(infoCache);
+    }
+    return true;
+  });
+}
+
+/**
+ * 标识为已加载完成
+ * @param fakeid
+ * @returns
+ */
+export async function markCompleted(fakeid: string): Promise<boolean> {
+  return db.transaction('rw', 'info', async () => {
+    const infoCache = await db.info.get(fakeid);
+    if (infoCache) {
+      infoCache.completed = true;
       db.info.put(infoCache);
     }
     return true;
@@ -99,6 +124,33 @@ export async function importInfos(infos: Info[]): Promise<void> {
     info.create_time = undefined;
     info.update_time = undefined;
     info.last_update_time = undefined;
+    info.hidden = undefined;
     await updateInfoCache(info);
   }
+}
+
+/**
+ * 将公众号标记为搜索不可见
+ * @param fakeid
+ */
+export async function markAccountHidden(fakeid: string): Promise<void> {
+  await db.transaction('rw', 'info', async () => {
+    const infoCache = await db.info.get(fakeid);
+    if (!infoCache) {
+      return;
+    }
+    await db.info.put({ ...infoCache, hidden: true, update_time: Math.round(Date.now() / 1000) });
+  });
+}
+
+/**
+ * 将公众号标记为搜索可见
+ * @param fakeid
+ */
+export async function markAccountVisible(fakeid: string): Promise<void> {
+  await db.transaction('rw', 'info', async () => {
+    const infoCache = await db.info.get(fakeid);
+    if (!infoCache) return;
+    await db.info.put({ ...infoCache, hidden: false, update_time: Math.round(Date.now() / 1000) });
+  });
 }

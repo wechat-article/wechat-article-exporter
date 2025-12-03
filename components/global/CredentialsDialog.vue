@@ -131,7 +131,7 @@ import { getArticleList } from '~/apis';
 import LoginModal from '~/components/modal/Login.vue';
 import toastFactory from '~/composables/toast';
 import { CREDENTIAL_API_HOST, CREDENTIAL_LIVE_MINUTES } from '~/config';
-import { getInfoCache, type Info } from '~/store/v2/info';
+import { getInfoCache, type Info, updateInfoCache } from '~/store/v2/info';
 import type { ParsedCredential } from '~/types/credential';
 import type { AccountEvent } from '~/types/events';
 
@@ -477,10 +477,20 @@ async function addAccount(credential: ParsedCredential) {
     total_count: 0,
     nickname: credential.nickname,
     round_head_img: credential.avatar,
+    hidden: undefined,
   };
 
   try {
-    await getArticleList(account, 0);
+    await updateInfoCache(account);
+    // 自动加载第一页文章
+    try {
+      // 先拉取第一页，触发正常统计与隐私状态落库
+      await getArticleList(account, 0);
+      // 再次写回 info，确保统计更新
+      await updateInfoCache({ ...account, count: 0, articles: 0 });
+    } catch (e: any) {
+      toast.warning('提示', '自动加载公众号失败,请手动重试!');
+    }
     credential.added = true;
     toast.success('公众号添加成功', `已成功添加公众号【${nickname}】`);
     // 通知其他视图（如公众号管理列表）立即刷新

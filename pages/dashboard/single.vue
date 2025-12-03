@@ -18,8 +18,11 @@ import GridLoading from '~/components/grid/Loading.vue';
 import GridNoRows from '~/components/grid/NoRows.vue';
 import PreviewArticle from '~/components/preview/Article.vue';
 import toastFactory from '~/composables/toast';
+import { articleExistsByTitleAndTime } from '~/store/v2/article';
 import { db } from '~/store/v2/db';
 import { getHtmlCache } from '~/store/v2/html';
+import { getInfoCache, updateInfoCache, type Info } from '~/store/v2/info';
+import { updateHtmlCache } from '~/store/v2/html';
 import type { AppMsgExWithFakeID } from '~/types/types';
 import { formatElapsedTime, formatTimeStamp } from '~/utils';
 import { Downloader } from '~/utils/download/Downloader';
@@ -44,6 +47,9 @@ interface SingleArticleRow extends Partial<ArticleMetadata> {
   contentDownload: boolean;
   commentDownload: boolean;
   accountName?: string | null;
+   // 版权信息
+  copyright_stat?: number;
+  copyright_type?: number;
   downloading?: boolean;
 }
 
@@ -64,6 +70,19 @@ const columnDefs = ref<ColDef[]>([
     tooltipField: 'title',
   },
   {
+    headerName: '作者',
+    field: 'author_name',
+    flex: 1,
+    minWidth: 140,
+  },
+  {
+    headerName: '公众号',
+    field: 'accountName',
+    flex: 1,
+    minWidth: 160,
+    tooltipField: 'accountName',
+  },
+  {
     headerName: '链接',
     field: 'link',
     flex: 3,
@@ -72,10 +91,15 @@ const columnDefs = ref<ColDef[]>([
       `<span class="text-xs font-mono break-all">${params.value}</span>`,
   },
   {
-    headerName: '作者',
-    field: 'author_name',
-    flex: 1,
-    minWidth: 140,
+    headerName: '原创',
+    field: 'copyright_stat',
+    minWidth: 100,
+    cellRenderer: (params: ICellRendererParams<SingleArticleRow, number>) =>
+      params.value === 1
+        ? '<input type="checkbox" disabled checked />'
+        : '<input type="checkbox" disabled />',
+    filter: 'agSetColumnFilter',
+    cellDataType: 'boolean',
   },
   {
     headerName: '发布时间',
@@ -235,7 +259,7 @@ function createRow(url: string): SingleArticleRow {
     fakeid,
     link: url,
     title: '未命名文章',
-    author_name: '--',
+    author_name: '',
     digest: '',
     create_time: timestamp,
     update_time: timestamp,
@@ -245,6 +269,8 @@ function createRow(url: string): SingleArticleRow {
     contentDownload: false,
     commentDownload: false,
     accountName: null,
+    copyright_stat: 0,
+    copyright_type: 0,
   };
 }
 
@@ -276,8 +302,8 @@ function buildVirtualArticle(row: SingleArticleRow): AppMsgExWithFakeID {
     author_name: row.author_name || '',
     ban_flag: 0,
     checking: 0,
-    copyright_stat: 0,
-    copyright_type: 0,
+    copyright_stat: row.copyright_stat ?? 0,
+    copyright_type: row.copyright_type ?? 0,
     cover: row.cover || '',
     cover_img: row.cover || '',
     cover_img_theme_color: undefined,
@@ -405,7 +431,9 @@ async function updateRowFromHtml(row: SingleArticleRow) {
   const doc = parser.parseFromString(html, 'text/html');
   const title = doc.querySelector('#activity-name')?.textContent?.trim();
   const author =
-    doc.querySelector('#js_author_name')?.textContent?.trim() || doc.querySelector('#js_name')?.textContent?.trim();
+    (doc.querySelector('#profileBt')?.previousElementSibling as HTMLElement | null)?.textContent?.trim() ||
+    doc.querySelector('#js_author_name')?.textContent?.trim() ||
+    '';
   const digest = doc.querySelector('#js_content')?.textContent?.trim()?.slice(0, 160) || row.digest;
   const cover =
     doc.querySelector<HTMLImageElement>('#js_cover')?.getAttribute('data-src') ||
@@ -416,8 +444,11 @@ async function updateRowFromHtml(row: SingleArticleRow) {
   const ctMatch = html.match(/var ct = "(?<ts>\d+)";/);
 
   if (title) row.title = title;
-  if (author) row.author_name = author;
+  row.author_name = author || '';
   row.accountName = doc.querySelector('#js_name')?.textContent?.trim() || row.accountName || null;
+  const isOriginal = doc.querySelector('#copyright_logo')?.textContent?.includes('原创');
+  row.copyright_stat = isOriginal ? 1 : 0;
+  row.copyright_type = isOriginal ? 1 : 0;
   row.digest = digest || '';
   row.cover = cover;
 
@@ -430,19 +461,146 @@ async function updateRowFromHtml(row: SingleArticleRow) {
     }
   }
 
-  await db.article.put(
-    {
-      ...buildVirtualArticle(row),
-      digest: row.digest,
-      cover: cover,
-      cover_img: cover,
-      pic_cdn_url_1_1: cover,
-      pic_cdn_url_3_4: cover,
-      pic_cdn_url_16_9: cover,
-      pic_cdn_url_235_1: cover,
-    },
-    `${row.fakeid}:${row.aid}`
-  );
+  // 如果该公众号已存在于数据库，且不存在同标题同小时的文章，则拷贝到文章表
+  let account: Info | undefined = await getInfoCache(row.fakeid);
+  if (!account && row.accountName) {
+    // 兜底按名称匹配（可能 fakeid 解析不一致），无索引时用 filter
+    account = await db.info
+      .filter(info => info.nickname === row.accountName?.trim())
+      .first()
+      .catch(() => undefined);
+  }
+  let targetFakeid = row.fakeid;
+  if (account?.fakeid) {
+    targetFakeid = account.fakeid;
+    row.fakeid = targetFakeid;
+  }
+
+  const hasAccount = Boolean(account);
+  if (hasAccount && row.title) {
+    const publishTime = row.update_time || row.create_time || Math.round(Date.now() / 1000);
+    const exists = await articleExistsByTitleAndTime(targetFakeid, row.title, publishTime);
+    const htmlCache = await getHtmlCache(row.link);
+    // 查找已存在的同标题同小时文章
+    const existing = await db.article
+      .filter(a => {
+        if (a.fakeid !== targetFakeid) return false;
+        const bucket = Math.floor((a.create_time || 0) / 3600);
+        return a.title === row.title && bucket === Math.floor(publishTime / 3600);
+      })
+      .first()
+      .catch(() => undefined);
+
+    console.log(
+      '[single] merge to main table',
+      JSON.stringify({
+        fakeid: targetFakeid,
+        account: account?.nickname,
+        title: row.title,
+        publishTime,
+        exists,
+        hasAccount,
+        foundExisting: Boolean(existing),
+      })
+    );
+    if (existing) {
+      const existingHtml = await getHtmlCache(existing.link);
+      const needMerge = !existingHtml;
+      if (needMerge) {
+        try {
+          // 将单篇行的数据覆盖到主表已有文章，同时带上已抓取的 HTML
+          const merged = {
+            ...existing,
+            ...buildVirtualArticle({
+              ...row,
+              fakeid: targetFakeid,
+              update_time: publishTime,
+              create_time: existing.create_time || publishTime,
+            }),
+            link: row.link,
+            digest: row.digest,
+            cover: cover,
+            cover_img: cover,
+            pic_cdn_url_1_1: cover,
+            pic_cdn_url_3_4: cover,
+            pic_cdn_url_16_9: cover,
+            pic_cdn_url_235_1: cover,
+          };
+          await db.article.put(merged, `${existing.fakeid}:${existing.aid}`);
+          if (htmlCache) {
+            await updateHtmlCache({
+              fakeid: targetFakeid,
+              url: row.link,
+              file: htmlCache.file,
+              title: row.title,
+              commentID: null,
+            });
+          }
+          console.log('[single] merged into existing main article', { fakeid: targetFakeid, title: row.title });
+        } catch (err) {
+          console.error('[single] merge failed (existing)', err);
+        }
+      } else {
+        console.log('[single] skip merge: existing has html', { link: existing.link });
+      }
+    } else if (!exists) {
+      try {
+        // 主表不存在同标题同小时的文章，创建一条新记录并同步 HTML
+        await db.article.put(
+          {
+            ...buildVirtualArticle({
+              ...row,
+              fakeid: targetFakeid,
+              update_time: publishTime,
+              create_time: publishTime,
+            }),
+            digest: row.digest,
+            cover: cover,
+            cover_img: cover,
+            pic_cdn_url_1_1: cover,
+            pic_cdn_url_3_4: cover,
+            pic_cdn_url_16_9: cover,
+            pic_cdn_url_235_1: cover,
+          },
+          `${targetFakeid}:${row.aid}`
+        );
+        if (htmlCache) {
+          await updateHtmlCache({
+            fakeid: targetFakeid,
+            url: row.link,
+            file: htmlCache.file,
+            title: row.title,
+            commentID: null,
+          });
+        }
+        const countInc = 1;
+        const articlesInc = 1;
+        await updateInfoCache({
+          fakeid: targetFakeid,
+          completed: account?.completed ?? false,
+          count: countInc,
+          articles: articlesInc,
+          nickname: account?.nickname,
+          round_head_img: account?.round_head_img,
+          total_count: (account?.total_count ?? 0) + 1,
+        });
+        console.log('[single] merged new article into main table', { fakeid: targetFakeid, title: row.title });
+      } catch (err) {
+        console.error('[single] merge failed (new)', err);
+      }
+    } else {
+      console.log('[single] skip duplicate by title+hour', { title: row.title, publishTime });
+    }
+  } else {
+    const infoCount = await db.info.count();
+    console.log('[single] merge skipped: account not found or missing title', {
+      fakeid: row.fakeid,
+      title: row.title,
+      accountName: row.accountName,
+      hasAccount,
+      infoCount,
+    });
+  }
 }
 
 function persistRow(row: SingleArticleRow) {
