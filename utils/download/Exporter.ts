@@ -12,6 +12,7 @@ import { getResourceMapCache, updateResourceMapCache } from '~/store/v2/resource
 import type { Preferences } from '~/types/preferences';
 import { getArticleComments, renderComments } from '~/utils/comment';
 import { BaseDownload } from '~/utils/download/BaseDownload';
+import { extractImageUrlsFromHtml, uploadImagesToHost } from '~/utils/download/imageUploader';
 import { type ExcelExportEntity, export2ExcelFile, export2JsonFile } from '~/utils/exporter';
 import type { DownloadOptions } from './types';
 
@@ -27,6 +28,9 @@ export class Exporter extends BaseDownload {
   // 导出的根目录
   private exportRootDirectoryHandle: FileSystemDirectoryHandle | null = null;
   private readonly resources: Set<{ url: string; fakeid: string }>;
+
+  // 图片URL映射表：原始URL -> 托管URL
+  private imageUrlMap: Map<string, string> = new Map();
 
   constructor(urls: string[], options: DownloadOptions = {}) {
     super(urls, options);
@@ -55,6 +59,11 @@ export class Exporter extends BaseDownload {
     this.emit('export:begin');
 
     this.allAccountInfo = await getAllInfo();
+
+    // 上传微信图片到图床（除html外，html格式单独下载资源）
+    if (['excel', 'json', 'txt', 'markdown', 'word', 'pdf'].includes(type)) {
+      await this.collectAndUploadImages();
+    }
 
     try {
       if (this.exportType === 'excel') {
@@ -86,6 +95,25 @@ export class Exporter extends BaseDownload {
       this.emit('export:finish', elapse);
       this.cancelAllPending();
     }
+  }
+
+  // 收集所有文章中的微信图片URL并上传到图床
+  private async collectAndUploadImages(): Promise<void> {
+    const allImageUrls: string[] = [];
+
+    for (const url of this.urls) {
+      const cached = await getHtmlCache(url);
+      if (!cached) {
+        continue;
+      }
+
+      const html = await cached.file.text();
+      const imageUrls = extractImageUrlsFromHtml(html);
+      allImageUrls.push(...imageUrls);
+    }
+
+    // 上传到图床并获取URL映射
+    this.imageUrlMap = await uploadImagesToHost(allImageUrls);
   }
 
   // 提取出 html 中的子资源，并保存在 resource-map 表中
@@ -412,7 +440,7 @@ export class Exporter extends BaseDownload {
   }
 
   // 导出 pdf 文件
-  private async exportPdfFiles() {}
+  private async exportPdfFiles() { }
 
   private async getPureContent(url: string, format: 'html' | 'text', parser: DOMParser): Promise<string> {
     const cached = await getHtmlCache(url);
@@ -424,6 +452,32 @@ export class Exporter extends BaseDownload {
     const html = await cached.file.text();
     const document = parser.parseFromString(html, 'text/html');
     const $jsArticleContent = document.querySelector('#js_article')!;
+
+    // 处理图片：将 data-src 复制到 src，并应用URL映射
+    const imgs = $jsArticleContent.querySelectorAll<HTMLImageElement>('img');
+    imgs.forEach(img => {
+      // 获取图片URL（优先 data-src，因为微信使用懒加载）
+      const dataSrc = img.getAttribute('data-src');
+      const originalSrc = img.getAttribute('src');
+      let imageUrl = dataSrc || originalSrc || '';
+
+      // 如果有URL映射，替换为托管URL
+      if (imageUrl && this.imageUrlMap.size > 0) {
+        const hostedUrl = this.imageUrlMap.get(imageUrl);
+        if (hostedUrl) {
+          imageUrl = hostedUrl;
+        }
+      }
+
+      // 设置 src 属性（Turndown 等工具需要 src 才能正确转换）
+      if (imageUrl) {
+        img.setAttribute('src', imageUrl);
+      }
+
+      // 移除 data-src 避免干扰
+      img.removeAttribute('data-src');
+    });
+
     // 删除无用dom元素
     $jsArticleContent.querySelector('#js_top_ad_area')?.remove();
     $jsArticleContent.querySelector('#js_tags_preview_toast')?.remove();
@@ -433,6 +487,7 @@ export class Exporter extends BaseDownload {
     });
     $jsArticleContent.querySelector('#js_pc_qr_code')?.remove();
     $jsArticleContent.querySelector('#wx_stream_article_slide_tip')?.remove();
+
 
     // 文本分享消息补充
     const $js_text_desc = $jsArticleContent.querySelector('#js_text_desc') as HTMLElement | null;
@@ -637,7 +692,7 @@ export class Exporter extends BaseDownload {
       $interaction_bar.insertAdjacentHTML(
         'afterbegin',
         '<button id="js_temp_sns_sc_readnum_btn" aria-labelledby="js_a11y_zan_btn_txt readNum" style="-webkit-text-size-adjust:  100% ;" class="sns_opr_btn sns_view_btn weui-wa-hotarea js_wx_tap_highlight wx_tap_link">' +
-          `<span class="sns_opr_gap" aria-hidden="true" id="js_bar_readnum_btn">${metadata?.readNum}</span></button>`
+        `<span class="sns_opr_gap" aria-hidden="true" id="js_bar_readnum_btn">${metadata?.readNum}</span></button>`
       );
     }
 
