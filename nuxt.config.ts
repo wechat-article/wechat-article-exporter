@@ -12,6 +12,8 @@ export default defineNuxtConfig({
       sentry: {
         dsn: process.env.NUXT_SENTRY_DSN,
       },
+      // 是否使用 MySQL 后端存储 (设置为 'true' 启用)
+      useMysql: process.env.NUXT_USE_MYSQL === 'true',
     },
     debugMpRequest: false,
   },

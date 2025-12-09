@@ -39,6 +39,7 @@
     "lucide-vue-next": "^0.441.0",
     "mime": "^4.0.4",
     "monaco-editor": "^0.54.0",
+    "mysql2": "^3.15.3",
     "nuxt": "^3.12.3",
     "nuxt-monaco-editor": "1.4.0",
     "nuxt-umami": "3.2.1",
