@@ -1,0 +1,195 @@
+{
+  "timestamp": "2025-12-08T12:19:14.000Z",
+  "scanCoverage": {
+    "totalFiles": 240,
+    "scannedFiles": 50,
+    "coveragePercentage": 20.8
+  },
+  "modules": {
+    "apis": {
+      "path": "apis",
+      "type": "API封装",
+      "entry": "index.ts",
+      "responsibility": "微信公众号API调用封装",
+      "files": ["index.ts"],
+      "hasDocumentation": true
+    },
+    "components": {
+      "path": "components",
+      "type": "Vue组件",
+      "subModules": [
+        "api", "base", "dashboard", "global", "grid",
+        "modal", "preview", "search", "selector", "setting"
+      ],
+      "hasDocumentation": true
+    },
+    "components/dashboard": {
+      "path": "components/dashboard",
+      "type": "Vue组件",
+      "parent": "components",
+      "files": [
+        "Actions.vue", "AuthPopoverPanel.vue", "BottomPanel.vue",
+        "NavMenus.vue", "SideBar.vue"
+      ],
+      "hasDocumentation": true
+    },
+    "composables": {
+      "path": "composables",
+      "type": "组合式函数",
+      "files": [
+        "toast.ts", "useAccountEventBus.ts", "useBatchDownload.ts",
+        "useDownloader.ts", "useExporter.ts", "useLoginAccount.ts",
+        "useLoginCheck.ts", "usePreferences.ts", "useSyncDeadline.ts"
+      ],
+      "hasDocumentation": true
+    },
+    "config": {
+      "path": "config",
+      "type": "配置文件",
+      "files": ["index.ts", "proxy.txt", "shared-grid-options.ts"],
+      "hasDocumentation": false
+    },
+    "pages": {
+      "path": "pages",
+      "type": "页面路由",
+      "subModules": ["dashboard", "dev"],
+      "files": ["index.vue"],
+      "hasDocumentation": true
+    },
+    "pages/dashboard": {
+      "path": "pages/dashboard",
+      "type": "页面路由",
+      "parent": "pages",
+      "files": [
+        "account.vue", "album.vue", "api.vue", "article.vue",
+        "proxy.vue", "settings.vue", "single.vue", "support.vue"
+      ],
+      "hasDocumentation": true
+    },
+    "server": {
+      "path": "server",
+      "type": "服务端代码",
+      "subModules": ["api", "kv", "utils"],
+      "hasDocumentation": true
+    },
+    "server/api": {
+      "path": "server/api",
+      "type": "API路由",
+      "parent": "server",
+      "subModules": ["public", "web"],
+      "files": ["_debug.get.ts"],
+      "hasDocumentation": true
+    },
+    "shared": {
+      "path": "shared",
+      "type": "共享代码",
+      "subModules": ["utils"],
+      "hasDocumentation": false
+    },
+    "store": {
+      "path": "store",
+      "type": "数据存储",
+      "subModules": ["v2"],
+      "hasDocumentation": true
+    },
+    "store/v2": {
+      "path": "store/v2",
+      "type": "数据存储",
+      "parent": "store",
+      "files": [
+        "db.ts", "api.ts", "article.ts", "assets.ts", "comment.ts",
+        "comment_reply.ts", "debug.ts", "html.ts", "info.ts",
+        "metadata.ts", "resource.ts", "resource-map.ts"
+      ],
+      "hasDocumentation": true
+    },
+    "types": {
+      "path": "types",
+      "type": "类型定义",
+      "files": [
+        "account.d.ts", "album.d.ts", "article.d.ts", "comment.d.ts",
+        "credential.d.ts", "env.d.ts", "preferences.d.ts",
+        "proxy.d.ts", "types.d.ts", "video.d.ts"
+      ],
+      "hasDocumentation": false
+    },
+    "utils": {
+      "path": "utils",
+      "type": "工具函数",
+      "subModules": ["download", "article"],
+      "files": [
+        "album.ts", "comment.ts", "exporter.ts", "grid.ts",
+        "index.ts", "pool.ts"
+      ],
+      "hasDocumentation": true
+    },
+    "utils/download": {
+      "path": "utils/download",
+      "type": "下载工具",
+      "parent": "utils",
+      "files": [
+        "BaseDownload.ts", "Downloader.ts", "Exporter.ts",
+        "ProxyManager.ts", "constants.ts", "types.d.ts"
+      ],
+      "hasDocumentation": true
+    },
+    "utils/article": {
+      "path": "utils/article",
+      "type": "文章处理",
+      "parent": "utils",
+      "files": ["index.ts", "share_img.ts"],
+      "hasDocumentation": false
+    }
+  },
+  "truncated": false,
+  "ignoredPatterns": [
+    ".output",
+    ".data",
+    ".nuxt",
+    ".nitro",
+    ".cache",
+    "dist",
+    "node_modules",
+    "logs",
+    "*.log",
+    ".DS_Store",
+    ".fleet",
+    ".idea",
+    "debug",
+    "design",
+    "docs",
+    ".env",
+    ".env.*",
+    "!.env.example",
+    ".wrangler"
+  ],
+  "gaps": {
+    "missingDocs": [
+      "components/api",
+      "components/base",
+      "components/global",
+      "components/grid",
+      "components/modal",
+      "components/preview",
+      "components/search",
+      "components/selector",
+      "components/setting",
+      "config",
+      "pages/dev",
+      "server/api/public",
+      "server/api/web",
+      "server/kv",
+      "server/utils",
+      "shared/utils",
+      "types",
+      "utils/article"
+    ],
+    "recommendations": [
+      "为 API 路由添加详细文档",
+      "为类型定义添加说明",
+      "为组件库添加使用示例",
+      "补充配置文件说明",
+      "添加测试覆盖说明"
+    ]
+  }
+}
