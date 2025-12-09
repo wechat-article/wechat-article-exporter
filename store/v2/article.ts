@@ -1,6 +1,7 @@
 import type { AppMsgExWithFakeID, PublishInfo, PublishPage } from '~/types/types';
 import { db } from './db';
 import { type Info, updateInfoCache } from './info';
+import { useMySQLBackend } from './index';
 
 export type ArticleAsset = AppMsgExWithFakeID;
 
@@ -10,6 +11,16 @@ export type ArticleAsset = AppMsgExWithFakeID;
  * @param publish_page
  */
 export async function updateArticleCache(account: Info, publish_page: PublishPage) {
+  // 如果使用 MySQL，调用 REST API
+  if (useMySQLBackend()) {
+    await $fetch('/api/db/article', {
+      method: 'POST',
+      body: { account, publishPage: publish_page },
+    });
+    return;
+  }
+
+  // 使用 IndexedDB
   db.transaction('rw', ['article', 'info'], async () => {
     const keys = await db.article.toCollection().keys();
 
@@ -57,6 +68,18 @@ export async function updateArticleCache(account: Info, publish_page: PublishPag
  * @param create_time 创建时间
  */
 export async function hitCache(fakeid: string, create_time: number): Promise<boolean> {
+  // 如果使用 MySQL，调用 REST API
+  if (useMySQLBackend()) {
+    try {
+      const result = await $fetch<{ code: number; data: { hit: boolean } }>(
+        `/api/db/article/hit-cache?fakeid=${fakeid}&createTime=${create_time}`
+      );
+      return result.code === 0 ? result.data.hit : false;
+    } catch {
+      return false;
+    }
+  }
+
   const count = await db.article
     .where('fakeid')
     .equals(fakeid)
@@ -71,6 +94,18 @@ export async function hitCache(fakeid: string, create_time: number): Promise<boo
  * @param create_time 创建时间
  */
 export async function getArticleCache(fakeid: string, create_time: number): Promise<AppMsgExWithFakeID[]> {
+  // 如果使用 MySQL，调用 REST API
+  if (useMySQLBackend()) {
+    try {
+      const result = await $fetch<{ code: number; data: AppMsgExWithFakeID[] }>(
+        `/api/db/article?fakeid=${fakeid}&createTime=${create_time}`
+      );
+      return result.code === 0 ? result.data : [];
+    } catch {
+      return [];
+    }
+  }
+
   return db.article
     .where('fakeid')
     .equals(fakeid)
@@ -84,6 +119,17 @@ export async function getArticleCache(fakeid: string, create_time: number): Prom
  * @param url
  */
 export async function getArticleByLink(url: string): Promise<AppMsgExWithFakeID> {
+  // 如果使用 MySQL，调用 REST API
+  if (useMySQLBackend()) {
+    const result = await $fetch<{ code: number; data: AppMsgExWithFakeID }>(
+      `/api/db/article/${encodeURIComponent(url)}?byLink=true`
+    );
+    if (result.code !== 0 || !result.data) {
+      throw new Error(`Article(${url}) does not exist`);
+    }
+    return result.data;
+  }
+
   const article = await db.article.where('link').equals(url).first();
   if (!article) {
     throw new Error(`Article(${url}) does not exist`);
@@ -96,6 +142,14 @@ export async function getArticleByLink(url: string): Promise<AppMsgExWithFakeID>
  * @param url
  */
 export async function articleDeleted(url: string): Promise<void> {
+  // 如果使用 MySQL，调用 REST API
+  if (useMySQLBackend()) {
+    await $fetch(`/api/db/article/${encodeURIComponent(url)}`, {
+      method: 'DELETE',
+    });
+    return;
+  }
+
   db.transaction('rw', 'article', async () => {
     db.article
       .where('link')
