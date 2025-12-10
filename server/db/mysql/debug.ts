@@ -22,7 +22,7 @@ interface DebugRow extends RowDataPacket {
 export async function updateDebugCache(debug: DebugAsset): Promise<boolean> {
     const urlHash = hashUrl(debug.url);
     const now = Math.round(Date.now() / 1000);
-    const fileBuffer = await blobToBuffer(debug.file);
+    const fileBuffer = blobToBuffer(debug.file);
 
     await execute(
         `INSERT INTO debug (url, url_hash, fakeid, type, title, file, create_time)
@@ -46,8 +46,9 @@ export async function updateDebugCache(debug: DebugAsset): Promise<boolean> {
 
 /**
  * 获取Debug缓存
+ * 注意: 返回的 file 是 Base64 字符串，供 REST API 传输使用
  */
-export async function getDebugCache(url: string): Promise<DebugAsset | undefined> {
+export async function getDebugCache(url: string): Promise<{ url: string; fakeid: string; type: string; title: string; file: string } | undefined> {
     const urlHash = hashUrl(url);
     const rows = await query<DebugRow[]>(
         'SELECT * FROM debug WHERE url_hash = ?',
@@ -57,12 +58,15 @@ export async function getDebugCache(url: string): Promise<DebugAsset | undefined
     if (rows.length === 0) return undefined;
 
     const row = rows[0];
+    // 将 Buffer 转为 Base64 字符串，供 REST API 传输
+    const base64File = row.file ? `data:application/octet-stream;base64,${row.file.toString('base64')}` : '';
+
     return {
         url: row.url,
         fakeid: row.fakeid,
         type: row.type,
         title: row.title,
-        file: bufferToBlob(row.file),
+        file: base64File,
     };
 }
 
