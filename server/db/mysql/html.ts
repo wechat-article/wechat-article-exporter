@@ -22,7 +22,7 @@ interface HtmlRow extends RowDataPacket {
 export async function updateHtmlCache(html: HtmlAsset): Promise<boolean> {
     const urlHash = hashUrl(html.url);
     const now = Math.round(Date.now() / 1000);
-    const fileBuffer = await blobToBuffer(html.file);
+    const fileBuffer = blobToBuffer(html.file);
 
     await execute(
         `INSERT INTO html (url, url_hash, fakeid, title, comment_id, file, create_time)
@@ -46,8 +46,9 @@ export async function updateHtmlCache(html: HtmlAsset): Promise<boolean> {
 
 /**
  * 获取HTML缓存
+ * 注意: 返回的 file 是 Base64 字符串，供 REST API 传输使用
  */
-export async function getHtmlCache(url: string): Promise<HtmlAsset | undefined> {
+export async function getHtmlCache(url: string): Promise<{ url: string; fakeid: string; title: string; commentID: string | null; file: string } | undefined> {
     const urlHash = hashUrl(url);
     const rows = await query<HtmlRow[]>(
         'SELECT * FROM html WHERE url_hash = ?',
@@ -57,12 +58,15 @@ export async function getHtmlCache(url: string): Promise<HtmlAsset | undefined> 
     if (rows.length === 0) return undefined;
 
     const row = rows[0];
+    // 将 Buffer 转为 Base64 字符串，供 REST API 传输
+    const base64File = row.file ? `data:text/html;base64,${row.file.toString('base64')}` : '';
+
     return {
         url: row.url,
         fakeid: row.fakeid,
         title: row.title,
         commentID: row.comment_id,
-        file: bufferToBlob(row.file, 'text/html'),
+        file: base64File,
     };
 }
 

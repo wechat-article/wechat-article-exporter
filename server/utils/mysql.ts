@@ -70,11 +70,21 @@ export async function closePool(): Promise<void> {
 }
 
 /**
- * Blob 数据转 Buffer (用于存储)
+ * Blob 数据或 Base64 字符串转 Buffer (用于存储)
+ * 服务端接收的可能是来自前端的 Base64 字符串
  */
-export async function blobToBuffer(blob: Blob): Promise<Buffer> {
-    const arrayBuffer = await blob.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+export function blobToBuffer(data: Blob | string): Buffer {
+    // 如果是 Base64 字符串 (来自前端 REST API)
+    if (typeof data === 'string') {
+        // 移除 data URL 前缀 (如 "data:text/html;base64,")
+        const base64Data = data.includes(',') ? data.split(',')[1] : data;
+        return Buffer.from(base64Data, 'base64');
+    }
+
+    // 如果是 Blob 对象 (服务端内部使用)
+    // 注意：在 Node.js 服务端，Blob 可能不支持 arrayBuffer
+    // 因此这种情况应该很少发生
+    throw new Error('Blob objects are not supported on server-side. Please convert to Base64 first.');
 }
 
 /**

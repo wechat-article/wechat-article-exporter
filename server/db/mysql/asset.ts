@@ -20,7 +20,7 @@ interface AssetRow extends RowDataPacket {
 export async function updateAssetCache(asset: Asset): Promise<boolean> {
     const urlHash = hashUrl(asset.url);
     const now = Math.round(Date.now() / 1000);
-    const fileBuffer = await blobToBuffer(asset.file);
+    const fileBuffer = blobToBuffer(asset.file);
 
     await execute(
         `INSERT INTO asset (url, url_hash, fakeid, file, create_time)
@@ -40,8 +40,9 @@ export async function updateAssetCache(asset: Asset): Promise<boolean> {
 
 /**
  * 获取Asset缓存
+ * 注意: 返回的 file 是 Base64 字符串，供 REST API 传输使用
  */
-export async function getAssetCache(url: string): Promise<Asset | undefined> {
+export async function getAssetCache(url: string): Promise<{ url: string; fakeid: string; file: string } | undefined> {
     const urlHash = hashUrl(url);
     const rows = await query<AssetRow[]>(
         'SELECT * FROM asset WHERE url_hash = ?',
@@ -51,10 +52,13 @@ export async function getAssetCache(url: string): Promise<Asset | undefined> {
     if (rows.length === 0) return undefined;
 
     const row = rows[0];
+    // 将 Buffer 转为 Base64 字符串，供 REST API 传输
+    const base64File = row.file ? `data:application/octet-stream;base64,${row.file.toString('base64')}` : '';
+
     return {
         url: row.url,
         fakeid: row.fakeid,
-        file: bufferToBlob(row.file),
+        file: base64File,
     };
 }
 
