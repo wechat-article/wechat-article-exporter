@@ -21,6 +21,14 @@ const defaultOptions: Partial<Preferences> = {
   accountSyncSeconds: 5,
   syncDateRange: 'all',
   syncDatePoint: MP_ORIGIN_TIMESTAMP,
+  autoTask: {
+    syncIntervalSeconds: 30,
+    downloadIntervalSeconds: 5,
+    exportIntervalSeconds: 1,
+    retryIntervalSeconds: 60,
+    maxConsecutiveErrors: 3,
+    exportFilenameTemplate: '${YYYY}-${MM}-${DD} ${title}',
+  },
 };
 
 export default () => {
