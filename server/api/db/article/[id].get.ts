@@ -4,9 +4,19 @@
  */
 
 import { getArticle, getArticleByLink } from '~/server/db/mysql';
+import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 
 export default defineEventHandler(async (event) => {
     try {
+        const ownerId = await getOwnerIdFromRequest(event);
+        if (!ownerId) {
+            return {
+                code: -1,
+                data: null,
+                message: 'Unauthorized: owner_id not found',
+            };
+        }
+
         const id = getRouterParam(event, 'id');
         const query = getQuery(event);
         const byLink = query.byLink === 'true';
@@ -21,8 +31,8 @@ export default defineEventHandler(async (event) => {
 
         // 支持通过链接查询
         const article = byLink
-            ? await getArticleByLink(decodeURIComponent(id))
-            : await getArticle(id);
+            ? await getArticleByLink(ownerId, decodeURIComponent(id))
+            : await getArticle(ownerId, id);
 
         if (!article) {
             return {

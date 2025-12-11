@@ -1,7 +1,15 @@
 import dayjs from 'dayjs';
+import crypto from 'crypto';
 import { request } from '#shared/utils/request';
-import { getCookieFromResponse, getCookiesFromRequest } from '~/server/utils/CookieStore';
+import { getCookieFromResponse, getCookiesFromRequest, cookieStore } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
+
+/**
+ * 计算 owner_id (nick_name 的 MD5 哈希)
+ */
+function computeOwnerId(nickName: string): string {
+  return crypto.createHash('md5').update(nickName).digest('hex');
+}
 
 export default defineEventHandler(async event => {
   const cookie = getCookiesFromRequest(event);
@@ -50,12 +58,18 @@ export default defineEventHandler(async event => {
     };
   }
 
+  // 计算 owner_id 并存储到 CookieStore
+  const ownerId = computeOwnerId(nick_name);
+  await cookieStore.setOwnerId(authKey, ownerId);
+
   const body = JSON.stringify({
     nickname: nick_name,
     avatar: head_img,
+    ownerId: ownerId,
     expires: dayjs().add(4, 'days').toString(),
   });
   const headers = new Headers(response.headers);
   headers.set('Content-Length', new TextEncoder().encode(body).length.toString());
   return new Response(body, { headers: headers });
 });
+

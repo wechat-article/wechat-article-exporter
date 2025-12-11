@@ -4,9 +4,19 @@
  */
 
 import { hitCache } from '~/server/db/mysql';
+import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 
 export default defineEventHandler(async (event) => {
     try {
+        const ownerId = await getOwnerIdFromRequest(event);
+        if (!ownerId) {
+            return {
+                code: -1,
+                data: null,
+                message: 'Unauthorized: owner_id not found',
+            };
+        }
+
         const query = getQuery(event);
         const fakeid = query.fakeid as string;
         const createTime = parseInt(query.createTime as string);
@@ -19,7 +29,7 @@ export default defineEventHandler(async (event) => {
             };
         }
 
-        const hit = await hitCache(fakeid, createTime);
+        const hit = await hitCache(ownerId, fakeid, createTime);
 
         return {
             code: 0,

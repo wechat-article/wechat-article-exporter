@@ -1,104 +1,107 @@
 /**
  * MySQL 存储层实现 - Debug 表
- * 调试数据缓存管理
+ * (支持多账号隔离)
  */
 
-import { query, execute, hashUrl, blobToBuffer, bufferToBlob } from '../../utils/mysql';
+import { query, execute, hashUrl } from '../../utils/mysql';
 import type { DebugAsset } from '../../../store/v3/types';
 import type { RowDataPacket } from 'mysql2/promise';
 
 interface DebugRow extends RowDataPacket {
+    owner_id: string;
     url: string;
     url_hash: string;
     fakeid: string;
     type: string;
     title: string;
     file: Buffer;
+    create_time: number;
 }
 
 /**
- * 更新Debug缓存
+ * 将 file 数据转换为 Buffer
+ * 支持 Buffer、Blob、Base64 字符串三种类型
  */
-export async function updateDebugCache(debug: DebugAsset): Promise<boolean> {
-    const urlHash = hashUrl(debug.url);
+async function toBuffer(file: Buffer | Blob | string): Promise<Buffer> {
+    if (file instanceof Buffer) {
+        return file;
+    }
+    if (typeof file === 'string') {
+        // Base64 字符串 (可能带 data:xxx;base64, 前缀)
+        const base64Data = file.includes(',') ? file.split(',')[1] : file;
+        return Buffer.from(base64Data, 'base64');
+    }
+    // Blob
+    return Buffer.from(await (file as Blob).arrayBuffer());
+}
+
+/**
+ * 更新调试缓存
+ */
+export async function updateDebugCache(ownerId: string, data: DebugAsset): Promise<void> {
+    const urlHash = hashUrl(data.url);
+    const fileBuffer = await toBuffer(data.file as Buffer | Blob | string);
     const now = Math.round(Date.now() / 1000);
-    const fileBuffer = blobToBuffer(debug.file);
+
+    // 将 undefined 转换为 null，避免 MySQL 错误
+    const fakeid = data.fakeid ?? null;
+    const type = data.type ?? null;
+    const title = data.title ?? null;
 
     await execute(
-        `INSERT INTO debug (url, url_hash, fakeid, type, title, file, create_time)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       type = VALUES(type),
-       title = VALUES(title),
-       file = VALUES(file)`,
-        [
-            debug.url,
-            urlHash,
-            debug.fakeid,
-            debug.type,
-            debug.title,
-            fileBuffer,
-            now,
-        ]
+        `INSERT INTO debug (owner_id, url, url_hash, fakeid, type, title, file, create_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         fakeid = VALUES(fakeid),
+         type = VALUES(type),
+         title = VALUES(title),
+         file = VALUES(file)`,
+        [ownerId, data.url, urlHash, fakeid, type, title, fileBuffer, now]
     );
-    return true;
 }
 
 /**
- * 获取Debug缓存
- * 注意: 返回的 file 是 Base64 字符串，供 REST API 传输使用
+ * 获取调试缓存
+ * 注意：返回的 file 是 Base64 字符串，以便通过 JSON 传输到前端
  */
-export async function getDebugCache(url: string): Promise<{ url: string; fakeid: string; type: string; title: string; file: string } | undefined> {
+export async function getDebugCache(ownerId: string, url: string): Promise<(Omit<DebugAsset, 'file'> & { file: string }) | undefined> {
     const urlHash = hashUrl(url);
     const rows = await query<DebugRow[]>(
-        'SELECT * FROM debug WHERE url_hash = ?',
-        [urlHash]
+        'SELECT * FROM debug WHERE owner_id = ? AND url_hash = ?',
+        [ownerId, urlHash]
     );
-
     if (rows.length === 0) return undefined;
 
     const row = rows[0];
-    // 将 Buffer 转为 Base64 字符串，供 REST API 传输
-    const base64File = row.file ? `data:application/octet-stream;base64,${row.file.toString('base64')}` : '';
-
     return {
         url: row.url,
         fakeid: row.fakeid,
         type: row.type,
         title: row.title,
-        file: base64File,
+        file: `data:text/html;base64,${row.file.toString('base64')}`,
     };
 }
 
 /**
- * 获取所有Debug信息
+ * 获取调试信息
  */
-export async function getDebugInfo(): Promise<DebugAsset[]> {
-    const rows = await query<DebugRow[]>('SELECT * FROM debug');
-
-    return rows.map(row => ({
-        url: row.url,
-        fakeid: row.fakeid,
-        type: row.type,
-        title: row.title,
-        file: bufferToBlob(row.file),
-    }));
+export async function getDebugInfo(ownerId: string, url: string): Promise<(Omit<DebugAsset, 'file'> & { file: string }) | undefined> {
+    return getDebugCache(ownerId, url);
 }
 
 /**
- * 根据公众号ID获取所有Debug
+ * 根据公众号ID获取所有调试数据
  */
-export async function getDebugByFakeid(fakeid: string): Promise<DebugAsset[]> {
+export async function getDebugByFakeid(ownerId: string, fakeid: string): Promise<(Omit<DebugAsset, 'file'> & { file: string })[]> {
     const rows = await query<DebugRow[]>(
-        'SELECT * FROM debug WHERE fakeid = ?',
-        [fakeid]
+        'SELECT * FROM debug WHERE owner_id = ? AND fakeid = ?',
+        [ownerId, fakeid]
     );
-
     return rows.map(row => ({
         url: row.url,
         fakeid: row.fakeid,
         type: row.type,
         title: row.title,
-        file: bufferToBlob(row.file),
+        file: `data:text/html;base64,${row.file.toString('base64')}`,
     }));
 }

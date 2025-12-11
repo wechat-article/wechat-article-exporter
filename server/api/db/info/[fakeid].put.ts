@@ -4,10 +4,20 @@
  */
 
 import { updateInfo } from '~/server/db/mysql';
+import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 import type { Info } from '~/store/v3/types';
 
 export default defineEventHandler(async (event) => {
     try {
+        const ownerId = await getOwnerIdFromRequest(event);
+        if (!ownerId) {
+            return {
+                code: -1,
+                data: null,
+                message: 'Unauthorized: owner_id not found',
+            };
+        }
+
         const fakeid = getRouterParam(event, 'fakeid');
 
         if (!fakeid) {
@@ -30,7 +40,7 @@ export default defineEventHandler(async (event) => {
             total_count: body.total_count ?? 0,
         };
 
-        await updateInfo(info);
+        await updateInfo(ownerId, info);
 
         return {
             code: 0,
