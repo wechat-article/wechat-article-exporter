@@ -1,9 +1,9 @@
 {
-  "timestamp": "2025-12-08T12:19:14.000Z",
+  "timestamp": "2025-12-11T12:00:00.000Z",
   "scanCoverage": {
     "totalFiles": 240,
-    "scannedFiles": 50,
-    "coveragePercentage": 20.8
+    "scannedFiles": 55,
+    "coveragePercentage": 22.9
   },
   "modules": {
     "apis": {
@@ -191,5 +191,36 @@
       "补充配置文件说明",
       "添加测试覆盖说明"
     ]
+  },
+  "updates": {
+    "lastScan": "2025-12-11T12:00:00.000Z",
+    "newFindings": {
+      "mysql_support": {
+        "description": "发现MySQL后端存储支持",
+        "config": "NUXT_USE_MYSQL=true",
+        "relevant_files": [
+          "nuxt.config.ts",
+          "server/api/db/*.ts"
+        ]
+      },
+      "docker_optimization": {
+        "description": "Docker配置使用多阶段构建",
+        "features": [
+          "Alpine Linux基础镜像",
+          "非root用户运行",
+          "数据持久化支持"
+        ]
+      },
+      "monitoring_integrations": {
+        "sentry": "错误监控和性能追踪",
+        "umami": "访问统计",
+        "telemetry": "可选遥测数据收集"
+      }
+    },
+    "architecture_insights": {
+      "data_flow": "前端(Nuxt3) -> API路由(Nitro) -> 微信公众号API",
+      "storage_strategy": "客户端IndexedDB + 服务端KV存储 + 可选MySQL",
+      "authentication": "Cookie-based session管理 + 扫码登录"
+    }
   }
 }
