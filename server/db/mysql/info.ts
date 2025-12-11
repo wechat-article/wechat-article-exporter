@@ -13,34 +13,119 @@ interface InfoRow extends RowDataPacket, Omit<Info, 'completed'> {
 }
 
 /**
- * 获取单个公众号信息
+ * 获取单个公众号信息（从 article 表实时计算 count 和 articles）
  */
 export async function getInfo(ownerId: string, fakeid: string): Promise<Info | undefined> {
-    const rows = await query<InfoRow[]>(
-        'SELECT * FROM info WHERE owner_id = ? AND fakeid = ?',
-        [ownerId, fakeid]
+    // 使用 LEFT JOIN 从 article 表实时计算 count 和 articles
+    const rows = await query<RowDataPacket[]>(
+        `SELECT 
+            i.owner_id,
+            i.fakeid,
+            i.completed,
+            i.nickname,
+            i.round_head_img,
+            i.create_time,
+            i.update_time,
+            i.last_update_time,
+            i.total_count,
+            COALESCE(stats.article_count, 0) as articles,
+            COALESCE(stats.msg_count, 0) as count
+         FROM info i
+         LEFT JOIN (
+            SELECT 
+                fakeid,
+                COUNT(*) as article_count,
+                COUNT(CASE WHEN JSON_EXTRACT(data, '$.itemidx') = 1 THEN 1 END) as msg_count
+            FROM article
+            WHERE owner_id = ? AND fakeid = ?
+            GROUP BY fakeid
+         ) stats ON i.fakeid = stats.fakeid
+         WHERE i.owner_id = ? AND i.fakeid = ?`,
+        [ownerId, fakeid, ownerId, fakeid]
     );
+
     if (rows.length === 0) return undefined;
 
     const row = rows[0];
+    const count = Number(row.count) || 0;
+    const isCompleted = row.completed === 1;
+    let totalCount = Number(row.total_count) || 0;
+
+    // 对于已完成账号，如果 total_count 为 0（旧数据问题），使用 count 作为 total_count
+    if (isCompleted && totalCount === 0 && count > 0) {
+        totalCount = count;
+    }
+
     return {
-        ...row,
-        completed: row.completed === 1,
+        fakeid: row.fakeid,
+        completed: isCompleted,
+        count: count,
+        articles: Number(row.articles) || 0,
+        total_count: totalCount,
+        nickname: row.nickname,
+        round_head_img: row.round_head_img,
+        create_time: row.create_time,
+        update_time: row.update_time,
+        last_update_time: row.last_update_time,
     };
 }
 
 /**
- * 获取所有公众号信息
+ * 获取所有公众号信息（从 article 表实时计算 count 和 articles）
  */
 export async function getAllInfo(ownerId: string): Promise<Info[]> {
-    const rows = await query<InfoRow[]>(
-        'SELECT * FROM info WHERE owner_id = ? ORDER BY update_time DESC',
-        [ownerId]
+    // 使用 LEFT JOIN 从 article 表实时计算 count 和 articles
+    // total_count 保留 info 表的值（来自微信 API）
+    const rows = await query<RowDataPacket[]>(
+        `SELECT 
+            i.owner_id,
+            i.fakeid,
+            i.completed,
+            i.nickname,
+            i.round_head_img,
+            i.create_time,
+            i.update_time,
+            i.last_update_time,
+            i.total_count,
+            COALESCE(stats.article_count, 0) as articles,
+            COALESCE(stats.msg_count, 0) as count
+         FROM info i
+         LEFT JOIN (
+            SELECT 
+                fakeid,
+                COUNT(*) as article_count,
+                COUNT(CASE WHEN JSON_EXTRACT(data, '$.itemidx') = 1 THEN 1 END) as msg_count
+            FROM article
+            WHERE owner_id = ?
+            GROUP BY fakeid
+         ) stats ON i.fakeid = stats.fakeid
+         WHERE i.owner_id = ?
+         ORDER BY i.update_time DESC`,
+        [ownerId, ownerId]
     );
-    return rows.map(row => ({
-        ...row,
-        completed: row.completed === 1,
-    }));
+    return rows.map(row => {
+        const count = Number(row.count) || 0;
+        const isCompleted = row.completed === 1;
+        let totalCount = Number(row.total_count) || 0;
+
+        // 对于已完成账号，如果 total_count 为 0（旧数据问题），使用 count 作为 total_count
+        if (isCompleted && totalCount === 0 && count > 0) {
+            totalCount = count;
+        }
+
+        return {
+            fakeid: row.fakeid,
+            completed: isCompleted,
+            count: count,
+            articles: Number(row.articles) || 0,
+            total_count: totalCount,
+            nickname: row.nickname,
+            round_head_img: row.round_head_img,
+            create_time: row.create_time,
+            update_time: row.update_time,
+            last_update_time: row.last_update_time,
+        } as Info;
+    });
 }
 
 /**

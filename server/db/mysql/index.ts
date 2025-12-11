@@ -22,7 +22,10 @@ export {
     articleDeleted,
     getArticlesByFakeid,
     getArticle,
+    getArticleCacheWithStatus,
 } from './article';
+export type { ArticleWithStatus } from './article';
+
 
 // Metadata 操作
 export {

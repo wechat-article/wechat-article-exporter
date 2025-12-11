@@ -42,7 +42,14 @@ interface ExportConfig {
 interface DownloadConfig {
   // 抓取文章内容时，不检查缓存，强制下载最新内容
   forceDownloadContent: boolean;
+
+  // 抓取阅读量等元数据时，不检查缓存，强制重新抓取
+  forceDownloadMetadata: boolean;
+
+  // 抓取留言时，不检查缓存，强制重新抓取
+  forceDownloadComment: boolean;
 }
+
 
 interface APIAuth {
   token: string;

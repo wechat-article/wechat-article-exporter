@@ -111,21 +111,29 @@ async function _load(account: Info, begin: number, loadMore: boolean, promise: P
   const count = articles.filter(article => article.itemidx === 1).length; // 消息数
   begin += count;
 
-  // 检查是否可以「快进」，也就是存在比 lastArticle 更早的缓存数据
-  // todo: 这里还可以继续优化，防止出现多段不连续的范围
+  // 检查是否可以「快进」或「停止」
   const lastArticle = articles.at(-1);
-  if (lastArticle && lastArticle.create_time < account.last_update_time!) {
+  
+  // 对于已完成账号：直接检查本次拉取的文章是否已在缓存中
+  if (account.completed && lastArticle) {
+    // 检查最后一篇文章的时间点是否有缓存数据
     if (await hitCache(account.fakeid, lastArticle.create_time)) {
-      const cachedArticles = await getArticleCache(account.fakeid, lastArticle.create_time);
-
-      // 更新 begin 参数
-      const count = cachedArticles.filter(article => article.itemidx === 1).length;
-      begin += count;
-      articles.push(...cachedArticles);
+      console.debug('增量同步：已完成账号检测到缓存边界，停止同步');
+      loadMore = false;
+    }
+  } else if (!account.completed && lastArticle && account.last_update_time) {
+    // 对于未完成账号：快进，跳过已缓存的部分
+    if (lastArticle.create_time < account.last_update_time) {
+      if (await hitCache(account.fakeid, lastArticle.create_time)) {
+        const cachedArticles = await getArticleCache(account.fakeid, lastArticle.create_time);
+        const cachedCount = cachedArticles.filter(article => article.itemidx === 1).length;
+        begin += cachedCount;
+        articles.push(...cachedArticles);
+      }
     }
   }
 
-  if (articles.at(-1)!.create_time < syncToTimestamp) {
+  if (loadMore && articles.at(-1)!.create_time < syncToTimestamp) {
     // 已同步到配置的时间范围
     loadMore = false;
   }
@@ -151,12 +159,23 @@ async function _load(account: Info, begin: number, loadMore: boolean, promise: P
   }
 }
 
-// 同步指定公众号
+// 同步指定公众号（支持增量同步）
 async function loadAccountArticle(account: Info, loadMore = true) {
   return new Promise((resolve, reject) => {
     const promise: PromiseInstance = { resolve, reject };
 
-    _load(account, 0, loadMore, promise).catch(e => {
+    // 增量同步：根据状态决定起始位置
+    let startOffset = 0;
+    if (account.completed) {
+      // 已完成：从头开始检查新文章（_load 会在遇到缓存时自动停止）
+      startOffset = 0;
+    } else {
+      // 未完成：从已加载位置继续
+      startOffset = account.count || 0;
+      console.debug(`增量同步：从偏移量 ${startOffset} 继续同步`);
+    }
+
+    _load(account, startOffset, loadMore, promise).catch(e => {
       syncingRowId.value = null;
       isSyncing.value = false;
 
@@ -167,6 +186,7 @@ async function loadAccountArticle(account: Info, loadMore = true) {
     });
   });
 }
+
 
 // 同步所有公众号
 async function loadSelectedAccountArticle() {
@@ -281,7 +301,15 @@ const columnDefs = ref<ColDef[]>([
   {
     colId: 'load_percent',
     headerName: '加载进度',
-    valueGetter: params => (params.data.total_count === 0 ? 0 : params.data.count / params.data.total_count),
+    valueGetter: params => {
+      const count = params.data.count || 0;
+      const totalCount = params.data.total_count || 0;
+      // 如果 total_count=0 但 count>0，说明是已完成账号的旧数据，显示 100%
+      if (totalCount === 0) {
+        return count > 0 ? 1 : 0;
+      }
+      return count / totalCount;
+    },
     cellDataType: 'number',
     cellRenderer: GridLoadProgress,
     filter: 'agNumberColumnFilter',

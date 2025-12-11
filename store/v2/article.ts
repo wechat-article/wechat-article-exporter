@@ -145,7 +145,7 @@ export async function articleDeleted(url: string): Promise<void> {
   // 如果使用 MySQL，调用 REST API
   if (useMySQLBackend()) {
     await $fetch(`/api/db/article/${encodeURIComponent(url)}`, {
-      method: 'DELETE',
+      method: 'DELETE' as const,
     });
     return;
   }
@@ -158,4 +158,47 @@ export async function articleDeleted(url: string): Promise<void> {
         article.is_deleted = true;
       });
   });
+}
+
+/**
+ * 带状态的文章缓存（解决 N+1 问题）
+ * 一次性获取文章及其 html/comment/metadata 状态
+ */
+export interface ArticleWithStatus extends AppMsgExWithFakeID {
+  contentDownload: boolean;
+  commentDownload: boolean;
+  readNum?: number;
+  oldLikeNum?: number;
+  shareNum?: number;
+  likeNum?: number;
+  commentNum?: number;
+}
+
+export async function getArticleCacheWithStatus(fakeid: string, create_time: number): Promise<ArticleWithStatus[]> {
+  // 如果使用 MySQL，调用 REST API（使用 JOIN 查询）
+  if (useMySQLBackend()) {
+    try {
+      const result = await $fetch<{ code: number; data: ArticleWithStatus[] }>(
+        `/api/db/article/with-status?fakeid=${fakeid}&createTime=${create_time}`
+      );
+      return result.code === 0 ? result.data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // IndexedDB 回退：需要单独查询每个表（不支持 JOIN）
+  const articles = await db.article
+    .where('fakeid')
+    .equals(fakeid)
+    .and(article => article.create_time < create_time)
+    .reverse()
+    .sortBy('create_time');
+
+  // 对于 IndexedDB，暂时返回不带状态的数据，由调用方单独查询
+  return articles.map(article => ({
+    ...article,
+    contentDownload: false,
+    commentDownload: false,
+  }));
 }
