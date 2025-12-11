@@ -20,6 +20,9 @@ export interface Preferences {
 
   syncDateRange: '1d' | '3d' | '7d' | '1m' | '3m' | '6m' | '1y' | 'all' | 'point';
   syncDatePoint: number;
+
+  // 自动任务配置
+  autoTask: AutoTaskConfig;
 }
 
 interface ExportConfig {
@@ -54,4 +57,20 @@ interface DownloadConfig {
 interface APIAuth {
   token: string;
   nickname: string;
+}
+
+// 自动任务配置
+export interface AutoTaskConfig {
+  // 同步间隔（秒）
+  syncIntervalSeconds: number;
+  // 下载间隔（秒）
+  downloadIntervalSeconds: number;
+  // 导出间隔（秒）
+  exportIntervalSeconds: number;
+  // 错误重试间隔（秒）
+  retryIntervalSeconds: number;
+  // 最大连续错误次数
+  maxConsecutiveErrors: number;
+  // 导出文件名格式
+  exportFilenameTemplate: string;
 }

@@ -519,6 +519,9 @@ const { getActualDateRange } = useSyncDeadline();
     </Teleport>
 
     <div class="flex flex-col h-full divide-y divide-gray-200">
+      <!-- 自动任务控制面板 -->
+      <DashboardAutoTaskPanel class="m-3" />
+
       <!-- 顶部操作区 -->
       <header class="flex items-stretch gap-3 px-3 py-3">
         <UButton icon="i-lucide:user-plus" color="blue" :disabled="isDeleting || addBtnLoading" @click="addAccount">
