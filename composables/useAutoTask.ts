@@ -10,6 +10,7 @@ import { getAllInfo, getInfoCache, type Info } from '~/store/v2/info';
 import type { Preferences, AutoTaskConfig } from '~/types/preferences';
 import type { AppMsgEx } from '~/types/types';
 import { Downloader } from '~/utils/download/Downloader';
+import { extractImageUrlsFromHtml, uploadImagesToHost, replaceImageUrlsInDom } from '~/utils/download/imageUploader';
 
 // 日志条目
 export interface LogEntry {
@@ -228,10 +229,16 @@ export function useAutoTask() {
 
             currentAccount.value = account;
             syncProgress.detail = account.nickname;
+            syncProgress.current++;
 
             try {
-                await syncAccountArticles(account);
+                const synced = await syncAccountArticles(account);
                 consecutiveErrors = 0; // 成功则重置错误计数
+
+                // 只有实际进行了同步才等待（避免空等待）
+                if (synced) {
+                    await sleep(config.value.syncIntervalSeconds * 1000);
+                }
             } catch (e: any) {
                 if (e.message === 'session expired') {
                     log('error', 'Session已过期，请重新登录');
@@ -241,37 +248,67 @@ export function useAutoTask() {
                 }
                 log('warn', `同步 ${account.nickname} 失败: ${e.message}`);
             }
-
-            syncProgress.current++;
-            await sleep(config.value.syncIntervalSeconds * 1000);
         }
 
         log('success', `同步阶段完成，共处理 ${accounts.length} 个公众号`);
     }
 
-    async function syncAccountArticles(account: Info): Promise<void> {
-        // 增量同步逻辑
+    async function syncAccountArticles(account: Info): Promise<boolean> {
+        // 对于已完成的账号，只检查是否有新文章（快速检查）
+        if (account.completed) {
+            // 获取第一页，检查最新文章是否已在缓存中
+            const [articles, _] = await getArticleList(account, 0);
+
+            if (articles.length === 0) {
+                log('info', `${account.nickname}: 无新文章`);
+                return true; // 返回true表示调用了API
+            }
+
+            const firstArticle = articles[0];
+            const cached = await getArticleCache(account.fakeid, firstArticle.create_time);
+
+            if (cached && cached.length > 0) {
+                log('info', `${account.nickname}: 无新文章（已是最新）`);
+                // 直接收集文章URL，不逐条检查HTML缓存（减少数据库请求）
+                for (const article of articles) {
+                    pendingDownloads.value.push(article.link);
+                }
+                return true;
+            }
+
+            // 有新文章，继续增量同步
+            log('info', `${account.nickname}: 检测到新文章，开始增量同步`);
+        }
+
+        // 未完成账号或有新文章：从断点继续同步
         let begin = account.completed ? 0 : (account.count || 0);
         let hasMore = true;
+        let syncedCount = 0;
 
         while (hasMore && !stopRequested && !isPaused.value) {
+            // 第一次请求已在上面完成（对于completed账号），跳过
+            if (account.completed && begin === 0 && syncedCount === 0) {
+                // 已在上面完成第一次请求
+                begin += 5; // 假设每页5条，跳过第一页
+                syncedCount++;
+                continue;
+            }
+
             const [articles, completed] = await getArticleList(account, begin);
+            syncedCount++;
 
             if (completed || articles.length === 0) {
                 hasMore = false;
                 break;
             }
 
-            // 对于已完成账号，检查是否遇到了已缓存的文章
-            if (account.completed) {
-                const lastArticle = articles.at(-1);
-                if (lastArticle) {
-                    const cached = await getArticleCache(account.fakeid, lastArticle.create_time);
-                    if (cached && cached.length > 0) {
-                        log('info', `${account.nickname}: 检测到缓存边界，停止增量同步`);
-                        hasMore = false;
-                        break;
-                    }
+            // 检查是否遇到已缓存的文章边界
+            const lastArticle = articles.at(-1);
+            if (lastArticle) {
+                const cached = await getArticleCache(account.fakeid, lastArticle.create_time);
+                if (cached && cached.length > 0) {
+                    log('info', `${account.nickname}: 检测到缓存边界，停止同步`);
+                    hasMore = false;
                 }
             }
 
@@ -280,17 +317,21 @@ export function useAutoTask() {
 
             log('info', `${account.nickname}: 已同步 ${begin} 条消息`);
 
-            // 收集需要下载HTML的文章
+            // 直接收集文章URL，不逐条检查HTML缓存（减少数据库请求）
+            // HTML缓存检查延迟到下载阶段进行
             for (const article of articles) {
-                const htmlCached = await getHtmlCache(article.link);
-                if (!htmlCached) {
-                    pendingDownloads.value.push(article.link);
-                }
+                pendingDownloads.value.push(article.link);
             }
 
-            await sleep(config.value.syncIntervalSeconds * 1000);
+            // 仅在继续请求时等待（避免频率限制）
+            if (hasMore) {
+                await sleep(config.value.syncIntervalSeconds * 1000);
+            }
         }
+
+        return syncedCount > 0;
     }
+
 
     // ------ 阶段2：下载HTML ------
     async function runDownloadPhase(): Promise<void> {
@@ -412,13 +453,39 @@ export function useAutoTask() {
                     continue;
                 }
 
-                // 处理图片
+                // 处理图片：收集URL并上传到图床
+                const imageUrls = extractImageUrlsFromHtml(content.outerHTML);
+                let imageUrlMap = new Map<string, string>();
+
+                if (imageUrls.length > 0) {
+                    log('info', `${article.title}: 上传 ${imageUrls.length} 张图片...`);
+                    try {
+                        imageUrlMap = await uploadImagesToHost(imageUrls);
+                        log('info', `${article.title}: 图片上传完成 ${imageUrlMap.size}/${imageUrls.length}`);
+                    } catch (uploadError: any) {
+                        log('warn', `${article.title}: 图片上传失败: ${uploadError.message}`);
+                    }
+                }
+
+                // 替换图片URL（包含data-src处理）
                 const imgs = content.querySelectorAll<HTMLImageElement>('img');
                 imgs.forEach(img => {
                     const dataSrc = img.getAttribute('data-src');
-                    if (dataSrc) {
-                        img.setAttribute('src', dataSrc);
+                    const src = img.getAttribute('src');
+
+                    // 优先使用 data-src
+                    let originalUrl = dataSrc || src || '';
+
+                    // 检查是否有上传后的URL
+                    const hostedUrl = imageUrlMap.get(originalUrl);
+                    if (hostedUrl) {
+                        img.setAttribute('src', hostedUrl);
+                    } else if (originalUrl) {
+                        img.setAttribute('src', originalUrl);
                     }
+
+                    // 移除 data-src 避免干扰
+                    img.removeAttribute('data-src');
                 });
 
                 // 删除无用元素
