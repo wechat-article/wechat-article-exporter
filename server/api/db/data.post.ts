@@ -2,7 +2,7 @@
  * 通用数据 CRUD API
  * POST /api/db/data
  * 
- * 支持所有表的增删改查操作
+ * 支持所有表的增删改查操作 (支持多账号隔离)
  */
 
 import {
@@ -16,6 +16,7 @@ import {
     updateDebugCache, getDebugCache,
     updateAPICache, queryAPICall,
 } from '~/server/db/mysql';
+import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 
 type TableName = 'metadata' | 'html' | 'asset' | 'resource' | 'resource_map' | 'comment' | 'comment_reply' | 'debug' | 'api';
 type ActionType = 'get' | 'set';
@@ -30,6 +31,15 @@ interface DataRequest {
 
 export default defineEventHandler(async (event) => {
     try {
+        const ownerId = await getOwnerIdFromRequest(event);
+        if (!ownerId) {
+            return {
+                code: -1,
+                data: null,
+                message: 'Unauthorized: owner_id not found',
+            };
+        }
+
         const body = await readBody<DataRequest>(event);
 
         if (!body.table || !body.action) {
@@ -45,73 +55,73 @@ export default defineEventHandler(async (event) => {
         switch (body.table) {
             case 'metadata':
                 if (body.action === 'get') {
-                    result = await getMetadataCache(body.key!);
+                    result = await getMetadataCache(ownerId, body.key!);
                 } else {
-                    result = await updateMetadataCache(body.data);
+                    result = await updateMetadataCache(ownerId, body.data);
                 }
                 break;
 
             case 'html':
                 if (body.action === 'get') {
-                    result = await getHtmlCache(body.key!);
+                    result = await getHtmlCache(ownerId, body.key!);
                 } else {
-                    result = await updateHtmlCache(body.data);
+                    result = await updateHtmlCache(ownerId, body.data);
                 }
                 break;
 
             case 'asset':
                 if (body.action === 'get') {
-                    result = await getAssetCache(body.key!);
+                    result = await getAssetCache(ownerId, body.key!);
                 } else {
-                    result = await updateAssetCache(body.data);
+                    result = await updateAssetCache(ownerId, body.data);
                 }
                 break;
 
             case 'resource':
                 if (body.action === 'get') {
-                    result = await getResourceCache(body.key!);
+                    result = await getResourceCache(ownerId, body.key!);
                 } else {
-                    result = await updateResourceCache(body.data);
+                    result = await updateResourceCache(ownerId, body.data);
                 }
                 break;
 
             case 'resource_map':
                 if (body.action === 'get') {
-                    result = await getResourceMapCache(body.key!);
+                    result = await getResourceMapCache(ownerId, body.key!);
                 } else {
-                    result = await updateResourceMapCache(body.data);
+                    result = await updateResourceMapCache(ownerId, body.data);
                 }
                 break;
 
             case 'comment':
                 if (body.action === 'get') {
-                    result = await getCommentCache(body.key!);
+                    result = await getCommentCache(ownerId, body.key!);
                 } else {
-                    result = await updateCommentCache(body.data);
+                    result = await updateCommentCache(ownerId, body.data);
                 }
                 break;
 
             case 'comment_reply':
                 if (body.action === 'get') {
-                    result = await getCommentReplyCache(body.key!, body.contentID!);
+                    result = await getCommentReplyCache(ownerId, body.key!, body.contentID!);
                 } else {
-                    result = await updateCommentReplyCache(body.data);
+                    result = await updateCommentReplyCache(ownerId, body.data);
                 }
                 break;
 
             case 'debug':
                 if (body.action === 'get') {
-                    result = await getDebugCache(body.key!);
+                    result = await getDebugCache(ownerId, body.key!);
                 } else {
-                    result = await updateDebugCache(body.data);
+                    result = await updateDebugCache(ownerId, body.data);
                 }
                 break;
 
             case 'api':
                 if (body.action === 'get') {
-                    result = await queryAPICall(body.data.account, body.data.start, body.data.end);
+                    result = await queryAPICall(ownerId, body.data.name, body.data.account);
                 } else {
-                    result = await updateAPICache(body.data);
+                    result = await updateAPICache(ownerId, body.data);
                 }
                 break;
 

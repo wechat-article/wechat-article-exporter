@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "debug": "nuxt dev --inspect",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --host 0.0.0.0",
     "build": "nuxt build",
     "preview": "NITRO_PRESET=cloudflare_pages nuxt build && npx wrangler --cwd dist pages dev",
     "format": "biome check --write",

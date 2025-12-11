@@ -1,79 +1,90 @@
 /**
  * MySQL 存储层实现 - Asset 表
- * 资源文件缓存管理
+ * (支持多账号隔离)
  */
 
-import { query, execute, hashUrl, blobToBuffer, bufferToBlob } from '../../utils/mysql';
+import { query, execute, hashUrl } from '../../utils/mysql';
 import type { Asset } from '../../../store/v3/types';
 import type { RowDataPacket } from 'mysql2/promise';
 
 interface AssetRow extends RowDataPacket {
+    owner_id: string;
     url: string;
     url_hash: string;
     fakeid: string;
     file: Buffer;
+    create_time: number;
 }
 
 /**
- * 更新Asset缓存
+ * 将 file 数据转换为 Buffer
+ * 支持 Buffer、Blob、Base64 字符串三种类型
  */
-export async function updateAssetCache(asset: Asset): Promise<boolean> {
-    const urlHash = hashUrl(asset.url);
+async function toBuffer(file: Buffer | Blob | string): Promise<Buffer> {
+    if (file instanceof Buffer) {
+        return file;
+    }
+    if (typeof file === 'string') {
+        // Base64 字符串 (可能带 data:xxx;base64, 前缀)
+        const base64Data = file.includes(',') ? file.split(',')[1] : file;
+        return Buffer.from(base64Data, 'base64');
+    }
+    // Blob
+    return Buffer.from(await (file as Blob).arrayBuffer());
+}
+
+/**
+ * 更新资源缓存
+ */
+export async function updateAssetCache(ownerId: string, data: Asset): Promise<void> {
+    const urlHash = hashUrl(data.url);
+    const fileBuffer = await toBuffer(data.file as Buffer | Blob | string);
     const now = Math.round(Date.now() / 1000);
-    const fileBuffer = blobToBuffer(asset.file);
+
+    // 将 undefined 转换为 null，避免 MySQL 错误
+    const fakeid = data.fakeid ?? null;
 
     await execute(
-        `INSERT INTO asset (url, url_hash, fakeid, file, create_time)
-     VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       file = VALUES(file)`,
-        [
-            asset.url,
-            urlHash,
-            asset.fakeid,
-            fileBuffer,
-            now,
-        ]
+        `INSERT INTO asset (owner_id, url, url_hash, fakeid, file, create_time)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         fakeid = VALUES(fakeid),
+         file = VALUES(file)`,
+        [ownerId, data.url, urlHash, fakeid, fileBuffer, now]
     );
-    return true;
 }
 
 /**
- * 获取Asset缓存
- * 注意: 返回的 file 是 Base64 字符串，供 REST API 传输使用
+ * 获取资源缓存
+ * 注意：返回的 file 是 Base64 字符串，以便通过 JSON 传输到前端
  */
-export async function getAssetCache(url: string): Promise<{ url: string; fakeid: string; file: string } | undefined> {
+export async function getAssetCache(ownerId: string, url: string): Promise<(Omit<Asset, 'file'> & { file: string }) | undefined> {
     const urlHash = hashUrl(url);
     const rows = await query<AssetRow[]>(
-        'SELECT * FROM asset WHERE url_hash = ?',
-        [urlHash]
+        'SELECT * FROM asset WHERE owner_id = ? AND url_hash = ?',
+        [ownerId, urlHash]
     );
-
     if (rows.length === 0) return undefined;
 
     const row = rows[0];
-    // 将 Buffer 转为 Base64 字符串，供 REST API 传输
-    const base64File = row.file ? `data:application/octet-stream;base64,${row.file.toString('base64')}` : '';
-
     return {
         url: row.url,
         fakeid: row.fakeid,
-        file: base64File,
+        file: `data:application/octet-stream;base64,${row.file.toString('base64')}`,
     };
 }
 
 /**
- * 根据公众号ID获取所有Asset
+ * 根据公众号ID获取所有资源
  */
-export async function getAssetsByFakeid(fakeid: string): Promise<Asset[]> {
+export async function getAssetsByFakeid(ownerId: string, fakeid: string): Promise<(Omit<Asset, 'file'> & { file: string })[]> {
     const rows = await query<AssetRow[]>(
-        'SELECT * FROM asset WHERE fakeid = ?',
-        [fakeid]
+        'SELECT * FROM asset WHERE owner_id = ? AND fakeid = ?',
+        [ownerId, fakeid]
     );
-
     return rows.map(row => ({
         url: row.url,
         fakeid: row.fakeid,
-        file: bufferToBlob(row.file),
+        file: `data:application/octet-stream;base64,${row.file.toString('base64')}`,
     }));
 }

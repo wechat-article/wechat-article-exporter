@@ -4,10 +4,20 @@
  */
 
 import { getAllInfo } from '~/server/db/mysql';
+import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 
 export default defineEventHandler(async (event) => {
     try {
-        const infos = await getAllInfo();
+        const ownerId = await getOwnerIdFromRequest(event);
+        if (!ownerId) {
+            return {
+                code: -1,
+                data: null,
+                message: 'Unauthorized: owner_id not found',
+            };
+        }
+
+        const infos = await getAllInfo(ownerId);
         return {
             code: 0,
             data: infos,

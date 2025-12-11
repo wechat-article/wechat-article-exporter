@@ -4,10 +4,20 @@
  */
 
 import { importInfos } from '~/server/db/mysql';
+import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 import type { Info } from '~/store/v3/types';
 
 export default defineEventHandler(async (event) => {
     try {
+        const ownerId = await getOwnerIdFromRequest(event);
+        if (!ownerId) {
+            return {
+                code: -1,
+                data: null,
+                message: 'Unauthorized: owner_id not found',
+            };
+        }
+
         const body = await readBody<{ infos: Info[] }>(event);
 
         if (!body.infos || !Array.isArray(body.infos)) {
@@ -18,7 +28,7 @@ export default defineEventHandler(async (event) => {
             };
         }
 
-        await importInfos(body.infos);
+        await importInfos(ownerId, body.infos);
 
         return {
             code: 0,
