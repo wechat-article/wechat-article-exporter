@@ -19,7 +19,6 @@ logs
 .idea
 debug
 design
-docs
 
 # Local env files
 !.env.example
