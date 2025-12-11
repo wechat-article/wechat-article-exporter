@@ -54,16 +54,16 @@ export async function updateArticleCache(ownerId: string, account: Info, publish
         for (const article of publishInfo.appmsgex) {
             const id = `${fakeid}:${article.aid}`;
 
-            // 检查是否已存在
+            // 基于 (fakeid, title) 检查是否已存在（link 可能会变，title 更稳定）
             const existing = await query<RowDataPacket[]>(
-                'SELECT id FROM article WHERE owner_id = ? AND id = ?',
-                [ownerId, id]
+                'SELECT id FROM article WHERE owner_id = ? AND fakeid = ? AND title = ?',
+                [ownerId, fakeid, article.title]
             );
 
             if (existing.length === 0) {
-                // 插入新文章
+                // 插入新文章，使用 INSERT IGNORE 防止并发重复
                 await execute(
-                    `INSERT INTO article (owner_id, id, fakeid, aid, title, link, cover, digest, author_name, create_time, update_time, is_deleted, data)
+                    `INSERT IGNORE INTO article (owner_id, id, fakeid, aid, title, link, cover, digest, author_name, create_time, update_time, is_deleted, data)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         ownerId,
@@ -170,4 +170,67 @@ export async function getArticle(ownerId: string, id: string): Promise<AppMsgExW
     );
     if (rows.length === 0) return undefined;
     return rowToArticle(rows[0]);
+}
+
+/**
+ * 带状态的文章列表查询（解决 N+1 问题）
+ * 使用 LEFT JOIN 一次性获取文章的 html/comment/metadata 状态
+ */
+export interface ArticleWithStatus extends AppMsgExWithFakeID {
+    contentDownload: boolean;
+    commentDownload: boolean;
+    readNum?: number;
+    oldLikeNum?: number;
+    shareNum?: number;
+    likeNum?: number;
+    commentNum?: number;
+}
+
+interface ArticleWithStatusRow extends ArticleRow {
+    content_download: number;
+    comment_download: number;
+    read_num: number | null;
+    old_like_num: number | null;
+    share_num: number | null;
+    like_num: number | null;
+    comment_num: number | null;
+}
+
+export async function getArticleCacheWithStatus(
+    ownerId: string,
+    fakeid: string,
+    createTime: number
+): Promise<ArticleWithStatus[]> {
+    const rows = await query<ArticleWithStatusRow[]>(
+        `SELECT 
+            a.*,
+            CASE WHEN h.url IS NOT NULL THEN 1 ELSE 0 END AS content_download,
+            CASE WHEN c.url IS NOT NULL THEN 1 ELSE 0 END AS comment_download,
+            m.read_num,
+            m.old_like_num,
+            m.share_num,
+            m.like_num,
+            m.comment_num
+        FROM article a
+        LEFT JOIN html h ON a.owner_id = h.owner_id AND a.link = h.url
+        LEFT JOIN comment c ON a.owner_id = c.owner_id AND a.link = c.url
+        LEFT JOIN metadata m ON a.owner_id = m.owner_id AND a.link = m.url
+        WHERE a.owner_id = ? AND a.fakeid = ? AND a.create_time < ?
+        ORDER BY a.create_time DESC`,
+        [ownerId, fakeid, createTime]
+    );
+
+    return rows.map(row => {
+        const article = rowToArticle(row);
+        return {
+            ...article,
+            contentDownload: row.content_download === 1,
+            commentDownload: row.comment_download === 1,
+            readNum: row.read_num ?? undefined,
+            oldLikeNum: row.old_like_num ?? undefined,
+            shareNum: row.share_num ?? undefined,
+            likeNum: row.like_num ?? undefined,
+            commentNum: row.comment_num ?? undefined,
+        };
+    });
 }

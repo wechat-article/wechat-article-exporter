@@ -1,9 +1,9 @@
 /**
- * GET /api/db/info/:fakeid
- * 获取单个公众号信息
+ * 获取带状态的文章列表（解决 N+1 问题）
+ * GET /api/db/article/with-status?fakeid=xxx&createTime=xxx
  */
 
-import { getInfo } from '~/server/db/mysql';
+import { getArticleCacheWithStatus } from '~/server/db/mysql';
 import { getOwnerIdFromRequest } from '~/server/utils/CookieStore';
 
 export default defineEventHandler(async (event) => {
@@ -17,7 +17,9 @@ export default defineEventHandler(async (event) => {
             };
         }
 
-        const fakeid = getRouterParam(event, 'fakeid');
+        const query = getQuery(event);
+        const fakeid = query.fakeid as string;
+        const createTime = parseInt(query.createTime as string) || Date.now();
 
         if (!fakeid) {
             return {
@@ -27,28 +29,19 @@ export default defineEventHandler(async (event) => {
             };
         }
 
-        const info = await getInfo(ownerId, fakeid);
-        console.log(`[DEBUG] GET /api/db/info/${fakeid} - ownerId: ${ownerId}, found: ${!!info}`);
-
-        if (!info) {
-            return {
-                code: -1,
-                data: null,
-                message: `Info not found for fakeid: ${fakeid}`,
-            };
-        }
+        const articles = await getArticleCacheWithStatus(ownerId, fakeid, createTime);
 
         return {
             code: 0,
-            data: info,
+            data: articles,
             message: 'success',
         };
     } catch (error: any) {
-        console.error('Failed to get info:', error);
+        console.error('Failed to get articles with status:', error);
         return {
             code: -1,
             data: null,
-            message: error.message || 'Failed to get info',
+            message: error.message || 'Failed to get articles with status',
         };
     }
 });
