@@ -38,6 +38,13 @@ export async function getMpCookie(key: CookieKVKey): Promise<CookieKVValue | nul
 
   if (!data) return null;
 
+  // 为旧会话补充 createdAt 字段（向后兼容）
+  if (!data.createdAt) {
+    data.createdAt = Date.now();
+    await kv.set(`cookie:${key}`, data);
+    console.log(`Backfilled createdAt for session ${key.substring(0, 8)}...`);
+  }
+
   // 检查会话是否已过期（针对 fs 驱动等不支持 TTL 的存储）
   if (data.createdAt) {
     const elapsed = Date.now() - data.createdAt;
