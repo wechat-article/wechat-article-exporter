@@ -24,9 +24,27 @@ export function maxLen(text: string, max = 35): string {
 
 // 过滤文件名中的非法字符
 export function filterInvalidFilenameChars(input: string): string {
-  // 只保留中文字符、英文字符、数字
-  const regex = /[^\u4e00-\u9fa5a-zA-Z0-9()（）]/g;
-  return input.replace(regex, '_').slice(0, 100).trim();
+  // Windows/Mac/Linux 文件名非法字符: \ / : * ? " < > |
+  // 保留：中文字符、英文字符、数字、空格、括号、破折号、下划线、点
+  const regex = /[\\/:*?"<>|]/g;
+  let result = input.replace(regex, '_');
+
+  // 清理连续的下划线和空格
+  result = result.replace(/_+/g, '_');
+  result = result.replace(/\s+/g, ' ');
+
+  // 去掉首尾的下划线和空格
+  result = result.replace(/^[_\s]+|[_\s]+$/g, '');
+
+  // 限制长度（考虑文件扩展名，保守限制为200字符）
+  result = result.slice(0, 200);
+
+  // 如果结果为空，返回默认值
+  if (!result) {
+    result = 'untitled';
+  }
+
+  return result;
 }
 
 // 格式化消耗时间
