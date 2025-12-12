@@ -375,7 +375,6 @@ export function useAutoTask() {
 
         currentPhase.value = 'idle';
     }
-
     // ------ 下载单个公众号的文章 ------
     async function downloadAccountArticles(urls: string[]): Promise<void> {
         if (urls.length === 0) {
@@ -391,6 +390,18 @@ export function useAutoTask() {
         // 使用 Downloader 下载HTML
         const downloader = new Downloader(urls);
 
+        // 监听暂停状态，暂停时立即停止下载
+        const stopWatcher = watch(
+            () => isPaused.value || stopRequested,
+            (shouldStop) => {
+                if (shouldStop) {
+                    downloader.stop();
+                    log('info', '下载任务已中断');
+                }
+            },
+            { immediate: true }
+        );
+
         downloader.on('download:progress', (url: string, success: boolean) => {
             downloadProgress.current++;
             downloadProgress.detail = url.slice(0, 50) + '...';
@@ -398,9 +409,14 @@ export function useAutoTask() {
 
         try {
             await downloader.startDownload('html');
-            log('success', `下载完成，成功 ${downloadProgress.current}/${urls.length} 篇`);
+            if (!isPaused.value && !stopRequested) {
+                log('success', `下载完成，成功 ${downloadProgress.current}/${urls.length} 篇`);
+            }
         } catch (e: any) {
             log('error', `下载出错: ${e.message}`);
+        } finally {
+            // 停止监听
+            stopWatcher();
         }
     }
 
