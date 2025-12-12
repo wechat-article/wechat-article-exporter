@@ -99,6 +99,13 @@ export class Exporter extends BaseDownload {
 
   // 收集所有文章中的微信图片URL并上传到图床
   private async collectAndUploadImages(): Promise<void> {
+    // 检查是否启用图床上传
+    const imageHostConfig = preferences.value.imageHost;
+    if (!imageHostConfig.enabled) {
+      console.log('[Exporter] 图床上传已禁用，跳过图片上传');
+      return;
+    }
+
     const allImageUrls: string[] = [];
 
     for (const url of this.urls) {
@@ -113,7 +120,10 @@ export class Exporter extends BaseDownload {
     }
 
     // 上传到图床并获取URL映射
-    this.imageUrlMap = await uploadImagesToHost(allImageUrls);
+    this.imageUrlMap = await uploadImagesToHost(allImageUrls, {
+      apiUrl: imageHostConfig.apiUrl,
+      batchSize: imageHostConfig.batchSize,
+    });
   }
 
   // 提取出 html 中的子资源，并保存在 resource-map 表中

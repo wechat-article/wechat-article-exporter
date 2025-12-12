@@ -10,6 +10,7 @@
         <SettingExport />
         <SettingMisc />
       </div>
+      <SettingImageHost />
       <!--      <div>-->
       <!--        <SettingDisplay />-->
       <!--      </div>-->

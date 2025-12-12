@@ -7,9 +7,13 @@
  * Response: { "success": true, "result": ["newUrl1", "newUrl2", ...] }
  */
 
-// Image hosting service configuration
-const IMAGE_UPLOAD_API = 'http://127.0.0.1:36677/upload';
-const BATCH_SIZE = 20; // Maximum images per batch request
+/**
+ * Image host configuration interface
+ */
+export interface ImageHostOptions {
+    apiUrl: string;
+    batchSize: number;
+}
 
 /**
  * API response interface
@@ -37,9 +41,10 @@ export function isWeChatImageUrl(url: string): boolean {
 /**
  * Upload a batch of images to the hosting service
  * @param urls Array of image URLs to upload
+ * @param apiUrl The API endpoint for image upload
  * @returns Promise<Map<string, string>> Map of original URL to hosted URL
  */
-async function uploadBatch(urls: string[]): Promise<Map<string, string>> {
+async function uploadBatch(urls: string[], apiUrl: string): Promise<Map<string, string>> {
     const urlMap = new Map<string, string>();
 
     if (urls.length === 0) {
@@ -47,7 +52,7 @@ async function uploadBatch(urls: string[]): Promise<Map<string, string>> {
     }
 
     try {
-        const response = await fetch(IMAGE_UPLOAD_API, {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -85,9 +90,10 @@ async function uploadBatch(urls: string[]): Promise<Map<string, string>> {
  * Images are processed in batches to avoid overwhelming the server
  *
  * @param urls Array of image URLs to upload (will filter for WeChat images only)
+ * @param config Image host configuration options
  * @returns Promise<Map<string, string>> Map of original URL to hosted URL
  */
-export async function uploadImagesToHost(urls: string[]): Promise<Map<string, string>> {
+export async function uploadImagesToHost(urls: string[], config: ImageHostOptions): Promise<Map<string, string>> {
     // Filter to only WeChat image URLs
     const wechatUrls = urls.filter(isWeChatImageUrl);
 
@@ -101,13 +107,14 @@ export async function uploadImagesToHost(urls: string[]): Promise<Map<string, st
     console.log(`[ImageUploader] Uploading ${uniqueUrls.length} WeChat images to hosting service...`);
 
     const resultMap = new Map<string, string>();
+    const batchSize = config.batchSize;
 
     // Process in batches
-    for (let i = 0; i < uniqueUrls.length; i += BATCH_SIZE) {
-        const batch = uniqueUrls.slice(i, i + BATCH_SIZE);
-        console.log(`[ImageUploader] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(uniqueUrls.length / BATCH_SIZE)}`);
+    for (let i = 0; i < uniqueUrls.length; i += batchSize) {
+        const batch = uniqueUrls.slice(i, i + batchSize);
+        console.log(`[ImageUploader] Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(uniqueUrls.length / batchSize)}`);
 
-        const batchResult = await uploadBatch(batch);
+        const batchResult = await uploadBatch(batch, config.apiUrl);
 
         // Merge batch results
         for (const [originalUrl, hostedUrl] of batchResult) {

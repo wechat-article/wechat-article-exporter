@@ -552,15 +552,21 @@ export function useAutoTask() {
                     continue;
                 }
 
-                // 处理图片：收集URL并上传到图床
-                const imageUrls = extractImageUrlsFromHtml(content.outerHTML);
+                // 处理图片：收集URL并上传到图床（如果启用）
                 let imageUrlMap = new Map<string, string>();
+                const imageHostConfig = (preferences.value as unknown as Preferences).imageHost;
 
-                if (imageUrls.length > 0) {
-                    try {
-                        imageUrlMap = await uploadImagesToHost(imageUrls);
-                    } catch (uploadError: any) {
-                        log('warn', `${article.title}: 图片上传失败: ${uploadError.message}`);
+                if (imageHostConfig.enabled) {
+                    const imageUrls = extractImageUrlsFromHtml(content.outerHTML);
+                    if (imageUrls.length > 0) {
+                        try {
+                            imageUrlMap = await uploadImagesToHost(imageUrls, {
+                                apiUrl: imageHostConfig.apiUrl,
+                                batchSize: imageHostConfig.batchSize,
+                            });
+                        } catch (uploadError: any) {
+                            log('warn', `${article.title}: 图片上传失败: ${uploadError.message}`);
+                        }
                     }
                 }
 
