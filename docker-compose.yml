@@ -29,7 +29,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-wechat-docs}
       
       # 启用 MySQL 存储
-      NUXT_USE_MYSQL: ${NUXT_USE_MYSQL:-true}
+      NUXT_PUBLIC_USE_MYSQL: ${NUXT_USE_MYSQL:-true}
       
       # AG-Grid 许可证（可选）
       NUXT_AGGRID_LICENSE: ${NUXT_AGGRID_LICENSE:-}
