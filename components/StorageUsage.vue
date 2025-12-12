@@ -32,67 +32,31 @@ async function fetchLocalStorageUsage() {
   isLoading.value = false;
 }
 
-async function fetchMysqlStorageUsage() {
-  try {
-    const response = await $fetch<{
-      success: boolean;
-      data: { totalBytes: number; message?: string };
-      error?: string;
-    }>('/api/db/storage-size');
-
-    if (response.success) {
-      if (response.data.message) {
-        // 未登录或其他提示
-        usage.value = response.data.message;
-        isError.value = false;
-      } else {
-        usage.value = formatBytes(response.data.totalBytes);
-        isError.value = false;
-      }
-    } else {
-      console.error('Failed to get MySQL storage usage:', response.error);
-      usage.value = '查询失败';
-      isError.value = true;
-    }
-  } catch (e) {
-    console.error('Failed to fetch MySQL storage usage:', e);
-    usage.value = '连接失败';
-    isError.value = true;
-  }
-  isLoading.value = false;
-}
-
-async function init() {
-  if (useMysql) {
-    await fetchMysqlStorageUsage();
-  } else {
-    await fetchLocalStorageUsage();
-  }
-}
-
 let timer: number;
 onMounted(() => {
-  init();
-  // MySQL 模式下降低刷新频率（5秒），本地存储保持1秒
-  const interval = useMysql ? 5000 : 1000;
+  // MySQL 模式下不显示存储占用统计
+  if (useMysql) {
+    isLoading.value = false;
+    return;
+  }
+  
+  fetchLocalStorageUsage();
   timer = window.setInterval(() => {
-    init();
-  }, interval);
+    fetchLocalStorageUsage();
+  }, 1000);
 });
 
 onUnmounted(() => {
-  window.clearInterval(timer);
+  if (timer) {
+    window.clearInterval(timer);
+  }
 });
 </script>
 
 <template>
-  <p class="text-sm">
-    <template v-if="useMysql">
-      MySQL 数据库占用约为 
-    </template>
-    <template v-else>
-      本地数据库占用约为 
-    </template>
+  <!-- MySQL 模式下不显示存储占用 -->
+  <p v-if="!useMysql" class="text-sm">
+    本地数据库占用约为 
     <span v-if="isLoading" class="text-gray-400">加载中...</span>
     <span v-else :class="isError ? 'text-orange-500' : 'text-rose-500'">{{ usage }}</span>
   </p>
