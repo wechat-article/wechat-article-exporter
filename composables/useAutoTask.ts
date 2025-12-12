@@ -285,6 +285,14 @@ export function useAutoTask() {
                     syncProgress.current++;
                     syncProgress.detail = account.nickname;
 
+                    // 切换公众号时，重置下载和导出进度
+                    downloadProgress.current = 0;
+                    downloadProgress.total = 0;
+                    downloadProgress.detail = undefined;
+                    exportProgress.current = 0;
+                    exportProgress.total = 0;
+                    exportProgress.detail = undefined;
+
                     log('info', `开始处理公众号: ${account.nickname}`);
 
                     try {
