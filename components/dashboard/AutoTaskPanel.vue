@@ -17,6 +17,8 @@ const {
   pause,
   resume,
   clearLogs,
+  needsResume,
+  markAsPaused,
 } = useAutoTask();
 
 // 阶段名称映射
@@ -56,6 +58,34 @@ function formatTime(date: Date): string {
 
 // 展开/收起日志
 const showLogs = ref(false);
+
+// 页面离开警告
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+  if (isRunning.value && !isPaused.value) {
+    // 标记为暂停状态以便恢复
+    markAsPaused();
+    e.preventDefault();
+    e.returnValue = '自动任务正在运行，刷新页面将导致任务中断。确定离开吗？';
+    return e.returnValue;
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
+
+// 恢复任务：先选择目录再恢复
+async function handleResume() {
+  if (!exportDirectoryPath.value) {
+    const selected = await selectExportDirectory();
+    if (!selected) return;
+  }
+  resume();
+}
 </script>
 
 <template>
@@ -87,7 +117,7 @@ const showLogs = ref(false);
       <div class="flex items-center gap-2">
         <!-- 目录选择 -->
         <UButton
-          v-if="!isRunning"
+          v-if="!isRunning || isPaused"
           size="sm"
           color="gray"
           variant="ghost"
@@ -122,7 +152,7 @@ const showLogs = ref(false);
             color="blue"
             variant="soft"
             icon="i-lucide:play"
-            @click="resume"
+            @click="handleResume"
           >
             恢复
           </UButton>
@@ -138,6 +168,16 @@ const showLogs = ref(false);
       </div>
     </div>
     
+    <!-- 恢复任务提示 -->
+    <div v-if="needsResume && isPaused" class="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+      <div class="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+        <UIcon name="i-lucide:alert-triangle" class="w-5 h-5 shrink-0" />
+        <span class="text-sm">
+          检测到未完成的任务。请重新选择导出目录，然后点击"恢复"继续执行。
+        </span>
+      </div>
+    </div>
+
     <!-- 进度区域 -->
     <div v-if="isRunning" class="space-y-3 mb-4">
       <!-- 同步进度 -->

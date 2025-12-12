@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
         const query = getQuery(event);
         const fakeid = query.fakeid as string;
-        const createTime = parseInt(query.createTime as string) || Date.now() / 1000;
+        const createTime = query.createTime !== undefined ? parseInt(query.createTime as string) : Date.now() / 1000;
 
         if (!fakeid) {
             return {

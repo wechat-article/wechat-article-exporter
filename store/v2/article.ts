@@ -106,6 +106,15 @@ export async function getArticleCache(fakeid: string, create_time: number): Prom
     }
   }
 
+  // create_time = 0 表示获取所有文章
+  if (create_time === 0) {
+    return db.article
+      .where('fakeid')
+      .equals(fakeid)
+      .reverse()
+      .sortBy('create_time');
+  }
+
   return db.article
     .where('fakeid')
     .equals(fakeid)
@@ -145,8 +154,8 @@ export async function articleDeleted(url: string): Promise<void> {
   // 如果使用 MySQL，调用 REST API
   if (useMySQLBackend()) {
     await $fetch(`/api/db/article/${encodeURIComponent(url)}`, {
-      method: 'DELETE' as const,
-    });
+      method: 'DELETE',
+    } as any);
     return;
   }
 
