@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # =============================================
+  # WeChat Article Exporter 应用服务
+  # =============================================
+  wechat-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-latest}
+    image: wechat-article-exporter:${VERSION:-latest}
+    container_name: wechat-exporter
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Node.js 环境
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      
+      # MySQL 数据库配置
+      MYSQL_HOST: ${MYSQL_HOST:-mysql}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_USER: ${MYSQL_USER:-wechat-docs}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-your_password_here}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wechat-docs}
+      
+      # 启用 MySQL 存储
+      NUXT_USE_MYSQL: ${NUXT_USE_MYSQL:-true}
+      
+      # AG-Grid 许可证（可选）
+      NUXT_AGGRID_LICENSE: ${NUXT_AGGRID_LICENSE:-}
+      
+      # Sentry 错误追踪（可选）
+      NUXT_SENTRY_DSN: ${NUXT_SENTRY_DSN:-}
+      NUXT_SENTRY_ORG: ${NUXT_SENTRY_ORG:-}
+      NUXT_SENTRY_PROJECT: ${NUXT_SENTRY_PROJECT:-}
+      NUXT_SENTRY_AUTH_TOKEN: ${NUXT_SENTRY_AUTH_TOKEN:-}
+      
+      # Umami 统计分析（可选）
+      NUXT_UMAMI_ID: ${NUXT_UMAMI_ID:-}
+      NUXT_UMAMI_HOST: ${NUXT_UMAMI_HOST:-}
+      
+      # KV 存储配置
+      NITRO_KV_DRIVER: ${NITRO_KV_DRIVER:-fs}
+      NITRO_KV_BASE: ${NITRO_KV_BASE:-.data/kv}
+      
+      # 遥测配置
+      NUXT_TELEMETRY: ${NUXT_TELEMETRY:-false}
+      NUXT_TELEMETRY_URL: ${NUXT_TELEMETRY_URL:-}
+    volumes:
+      # 持久化 KV 存储数据
+      - ./kv_data:/app/.data/kv
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - wechat-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================
+  # MySQL 数据库服务
+  # =============================================
+  mysql:
+    image: mysql:8.0
+    container_name: wechat-mysql
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_EXTERNAL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_here}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wechat-docs}
+      MYSQL_USER: ${MYSQL_USER:-wechat-docs}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-your_password_here}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      # 持久化数据库数据
+      - ./mysql_data:/var/lib/mysql
+      # 初始化脚本（首次启动时执行）
+      - ./docs/database/DDL.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_allowed_packet=64M
+      - --innodb_buffer_pool_size=256M
+      - --innodb_log_file_size=64M
+    networks:
+      - wechat-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_password_here}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# =============================================
+# 网络配置
+# =============================================
+networks:
+  wechat-network:
+    driver: bridge
+
+# =============================================
+# 数据卷配置
+# =============================================
+volumes:
+  mysql_data:
+    driver: local
+  kv_data:
+    driver: local
