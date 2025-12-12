@@ -29,6 +29,11 @@ const defaultOptions: Partial<Preferences> = {
     maxConsecutiveErrors: 3,
     exportFilenameTemplate: '${YYYY}-${MM}-${DD} ${title}',
   },
+  imageHost: {
+    enabled: true,
+    apiUrl: 'http://127.0.0.1:36677/upload',
+    batchSize: 20,
+  },
 };
 
 export default () => {

@@ -23,6 +23,9 @@ export interface Preferences {
 
   // 自动任务配置
   autoTask: AutoTaskConfig;
+
+  // 图床配置
+  imageHost: ImageHostConfig;
 }
 
 interface ExportConfig {
@@ -73,4 +76,14 @@ export interface AutoTaskConfig {
   maxConsecutiveErrors: number;
   // 导出文件名格式
   exportFilenameTemplate: string;
+}
+
+// 图床配置
+export interface ImageHostConfig {
+  // 是否启用图床上传
+  enabled: boolean;
+  // 图床 API 地址
+  apiUrl: string;
+  // 每批上传图片数量
+  batchSize: number;
 }
