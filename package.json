@@ -9,8 +9,9 @@
     "preview": "NITRO_PRESET=cloudflare_pages nuxt build && npx wrangler --cwd dist pages dev",
     "format": "biome check --write",
     "postinstall": "nuxt prepare",
-    "docker:build": "docker build  -t wechat-article-exporter:latest .",
-    "docker:publish": "docker push wechat-article-exporter:$latest"
+    "docker:local:build": "docker build  -t wechat-article-exporter:latest .",
+    "docker:build": "docker build --build-arg VERSION=$npm_package_version -t ghcr.io/wechat-article/wechat-article-exporter:$npm_package_version .",
+    "docker:publish": "docker push ghcr.io/wechat-article/wechat-article-exporter:$npm_package_version"
   },
   "dependencies": {
     "@ag-grid-community/locale": "^34.0.0",
