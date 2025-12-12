@@ -14,7 +14,7 @@ docs/
 ├── api/                                # API 文档
 │   └── REST_API.md                     # REST API 参考
 ├── database/                           # 数据库文档
-│   └── SCHEMA.md                       # 数据库表结构说明
+│   └── README.md                       # 数据库表结构说明
 ├── deployment/                         # 部署文档
 │   └── SETUP.md                        # 部署与配置指南
 └── troubleshooting/                    # 故障排查
@@ -38,7 +38,7 @@ docs/
 ### 🗄️ 数据库
 | 文档 | 说明 |
 |-----|------|
-| [数据库 Schema](./database/SCHEMA.md) | 表结构设计、字段说明、多账号隔离 |
+| [数据库 Schema](./database/README.md) | 表结构设计、字段说明、多账号隔离 |
 
 ### 🚀 部署
 | 文档 | 说明 |
@@ -57,6 +57,5 @@ docs/
 | 文件 | 位置 | 说明 |
 |-----|------|------|
 | CLAUDE.md | 项目根目录 | 项目整体架构说明（AI 友好） |
-| schema.sql | server/db/ | 完整的表结构 SQL |
-| 各模块 CLAUDE.md | 各子目录 | 模块级别的代码说明 |
+| DDL.sql | docs/database/DDL.sql | 完整的表结构 SQL |
 

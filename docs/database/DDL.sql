@@ -1,10 +1,37 @@
 -- ============================================
--- WeChat Article Exporter - MySQL Schema
--- 从 IndexedDB (Dexie) 迁移的完整表结构
--- 支持多账号数据隔离 (owner_id)
+-- WeChat Article Exporter - DDL (Data Definition Language)
+-- 数据结构定义脚本
+-- 包含：数据库创建、用户授权、所有表结构定义
 -- ============================================
 
--- 公众号信息表
+-- =============================================
+-- 第一部分：数据库与用户初始化
+-- =============================================
+
+-- 创建数据库
+CREATE DATABASE IF NOT EXISTS `wechat-docs` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 创建用户并设置密码（请将'your_password_here'替换为实际密码）
+CREATE USER IF NOT EXISTS 'wechat-docs'@'%' IDENTIFIED BY 'your_password_here';
+
+-- 为用户授予数据库的全部权限
+GRANT ALL PRIVILEGES ON `wechat-docs`.* TO 'wechat-docs'@'%';
+
+-- 刷新权限
+FLUSH PRIVILEGES;
+
+-- 使用数据库
+USE `wechat-docs`;
+
+-- =============================================
+-- 第二部分：表结构定义
+-- 从 IndexedDB (Dexie) 迁移的完整表结构
+-- 支持多账号数据隔离 (owner_id)
+-- =============================================
+
+-- =====================
+-- 1. 公众号信息表
+-- =====================
 CREATE TABLE IF NOT EXISTS `info` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识(nick_name的MD5哈希)',
   `fakeid` VARCHAR(64) NOT NULL COMMENT '公众号唯一标识',
@@ -23,13 +50,15 @@ CREATE TABLE IF NOT EXISTS `info` (
   INDEX `idx_update_time` (`update_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公众号信息表';
 
--- 文章表
+-- =====================
+-- 2. 文章表
+-- =====================
 CREATE TABLE IF NOT EXISTS `article` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `id` VARCHAR(128) NOT NULL COMMENT '主键: fakeid:aid',
   `fakeid` VARCHAR(64) NOT NULL COMMENT '公众号标识',
   `aid` VARCHAR(64) DEFAULT NULL COMMENT '文章ID',
-  `title` VARCHAR(500) DEFAULT NULL COMMENT '文章标题',
+  `title` VARCHAR(1000) DEFAULT NULL COMMENT '文章标题',
   `link` TEXT COMMENT '文章链接',
   `cover` TEXT COMMENT '封面图URL',
   `digest` TEXT COMMENT '文章摘要',
@@ -42,16 +71,19 @@ CREATE TABLE IF NOT EXISTS `article` (
   INDEX `idx_owner` (`owner_id`),
   INDEX `idx_fakeid` (`owner_id`, `fakeid`),
   INDEX `idx_create_time` (`owner_id`, `fakeid`, `create_time`),
-  INDEX `idx_link` (`link`(255))
+  INDEX `idx_link` (`link`(255)),
+  UNIQUE INDEX `idx_article_unique_title` (`owner_id`, `fakeid`, `title`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
 
--- 元数据表
+-- =====================
+-- 3. 元数据表
+-- =====================
 CREATE TABLE IF NOT EXISTS `metadata` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '文章URL',
   `url_hash` VARCHAR(64) NOT NULL COMMENT 'URL的MD5哈希值',
   `fakeid` VARCHAR(64) DEFAULT NULL COMMENT '公众号标识',
-  `title` VARCHAR(500) DEFAULT NULL COMMENT '文章标题',
+  `title` VARCHAR(1000) DEFAULT NULL COMMENT '文章标题',
   `read_num` INT DEFAULT 0 COMMENT '阅读数',
   `old_like_num` INT DEFAULT 0 COMMENT '点赞数(旧)',
   `share_num` INT DEFAULT 0 COMMENT '分享数',
@@ -65,13 +97,15 @@ CREATE TABLE IF NOT EXISTS `metadata` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章元数据表';
 
--- HTML内容表
+-- =====================
+-- 4. HTML内容表
+-- =====================
 CREATE TABLE IF NOT EXISTS `html` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '文章URL',
   `url_hash` VARCHAR(64) NOT NULL COMMENT 'URL的MD5哈希值',
   `fakeid` VARCHAR(64) DEFAULT NULL COMMENT '公众号标识',
-  `title` VARCHAR(500) DEFAULT NULL COMMENT '文章标题',
+  `title` VARCHAR(1000) DEFAULT NULL COMMENT '文章标题',
   `comment_id` VARCHAR(64) DEFAULT NULL COMMENT '评论ID',
   `file` LONGBLOB COMMENT 'HTML内容(Blob)',
   `create_time` INT UNSIGNED DEFAULT NULL COMMENT '创建时间戳',
@@ -81,7 +115,9 @@ CREATE TABLE IF NOT EXISTS `html` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='HTML内容表';
 
--- 资源表(asset)
+-- =====================
+-- 5. 资源表(asset)
+-- =====================
 CREATE TABLE IF NOT EXISTS `asset` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '资源URL',
@@ -95,7 +131,9 @@ CREATE TABLE IF NOT EXISTS `asset` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资源表';
 
--- 资源文件表(resource)
+-- =====================
+-- 6. 资源文件表(resource)
+-- =====================
 CREATE TABLE IF NOT EXISTS `resource` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '资源URL',
@@ -109,7 +147,9 @@ CREATE TABLE IF NOT EXISTS `resource` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资源文件表';
 
--- 资源映射表
+-- =====================
+-- 7. 资源映射表
+-- =====================
 CREATE TABLE IF NOT EXISTS `resource_map` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '文章URL',
@@ -123,13 +163,15 @@ CREATE TABLE IF NOT EXISTS `resource_map` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资源映射表';
 
--- 评论表
+-- =====================
+-- 8. 评论表
+-- =====================
 CREATE TABLE IF NOT EXISTS `comment` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '文章URL',
   `url_hash` VARCHAR(64) NOT NULL COMMENT 'URL的MD5哈希值',
   `fakeid` VARCHAR(64) DEFAULT NULL COMMENT '公众号标识',
-  `title` VARCHAR(500) DEFAULT NULL COMMENT '文章标题',
+  `title` VARCHAR(1000) DEFAULT NULL COMMENT '文章标题',
   `data` JSON COMMENT '评论数据',
   `create_time` INT UNSIGNED DEFAULT NULL COMMENT '创建时间戳',
   PRIMARY KEY (`owner_id`, `url_hash`),
@@ -138,14 +180,16 @@ CREATE TABLE IF NOT EXISTS `comment` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';
 
--- 评论回复表
+-- =====================
+-- 9. 评论回复表
+-- =====================
 CREATE TABLE IF NOT EXISTS `comment_reply` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `id` VARCHAR(256) NOT NULL COMMENT '主键: url_hash:contentID',
   `url` VARCHAR(2048) NOT NULL COMMENT '文章URL',
   `url_hash` VARCHAR(64) NOT NULL COMMENT 'URL的MD5哈希值',
   `fakeid` VARCHAR(64) DEFAULT NULL COMMENT '公众号标识',
-  `title` VARCHAR(500) DEFAULT NULL COMMENT '文章标题',
+  `title` VARCHAR(1000) DEFAULT NULL COMMENT '文章标题',
   `content_id` VARCHAR(64) NOT NULL COMMENT '评论内容ID',
   `data` JSON COMMENT '回复数据',
   `create_time` INT UNSIGNED DEFAULT NULL COMMENT '创建时间戳',
@@ -156,14 +200,16 @@ CREATE TABLE IF NOT EXISTS `comment_reply` (
   INDEX `idx_content_id` (`content_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论回复表';
 
--- 调试数据表
+-- =====================
+-- 10. 调试数据表
+-- =====================
 CREATE TABLE IF NOT EXISTS `debug` (
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
   `url` VARCHAR(2048) NOT NULL COMMENT '调试URL',
   `url_hash` VARCHAR(64) NOT NULL COMMENT 'URL的MD5哈希值',
   `fakeid` VARCHAR(64) DEFAULT NULL COMMENT '公众号标识',
   `type` VARCHAR(64) DEFAULT NULL COMMENT '类型',
-  `title` VARCHAR(500) DEFAULT NULL COMMENT '标题',
+  `title` VARCHAR(1000) DEFAULT NULL COMMENT '标题',
   `file` LONGBLOB COMMENT '调试文件(Blob)',
   `create_time` INT UNSIGNED DEFAULT NULL COMMENT '创建时间戳',
   PRIMARY KEY (`owner_id`, `url_hash`),
@@ -172,7 +218,9 @@ CREATE TABLE IF NOT EXISTS `debug` (
   INDEX `idx_url` (`url`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调试数据表';
 
--- API调用记录表
+-- =====================
+-- 11. API调用记录表
+-- =====================
 CREATE TABLE IF NOT EXISTS `api_call` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
   `owner_id` VARCHAR(64) NOT NULL COMMENT '登录账号标识',
@@ -186,3 +234,8 @@ CREATE TABLE IF NOT EXISTS `api_call` (
   INDEX `idx_account` (`account`),
   INDEX `idx_call_time` (`owner_id`, `account`, `call_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='API调用记录表';
+
+-- =============================================
+-- DDL 执行完成
+-- =============================================
+SELECT 'DDL 执行完成! 共创建 11 张表.' AS status;
