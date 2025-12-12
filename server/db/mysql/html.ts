@@ -100,3 +100,51 @@ export async function getHtmlByFakeid(ownerId: string, fakeid: string): Promise<
         file: `data:text/html;base64,${row.file.toString('base64')}`,
     }));
 }
+
+/**
+ * 批量检查 URL 是否已下载 HTML
+ * 返回已存在的 URL 列表（不返回内容，节省带宽）
+ */
+export async function checkHtmlExistsBatch(ownerId: string, urls: string[]): Promise<string[]> {
+    if (urls.length === 0) return [];
+
+    // 计算所有 URL 的 hash
+    const urlHashes = urls.map(url => hashUrl(url));
+
+    // 使用 IN 查询批量检查
+    const placeholders = urlHashes.map(() => '?').join(',');
+    const rows = await query<(RowDataPacket & { url: string })[]>(
+        `SELECT url FROM html WHERE owner_id = ? AND url_hash IN (${placeholders})`,
+        [ownerId, ...urlHashes]
+    );
+
+    return rows.map(row => row.url);
+}
+
+/**
+ * 批量获取多个 URL 的 HTML 内容
+ * 注意：返回的 file 是 Base64 字符串
+ */
+export async function getHtmlByUrls(ownerId: string, urls: string[]): Promise<Map<string, Omit<HtmlAsset, 'file'> & { file: string }>> {
+    if (urls.length === 0) return new Map();
+
+    const urlHashes = urls.map(url => hashUrl(url));
+    const placeholders = urlHashes.map(() => '?').join(',');
+
+    const rows = await query<HtmlRow[]>(
+        `SELECT * FROM html WHERE owner_id = ? AND url_hash IN (${placeholders})`,
+        [ownerId, ...urlHashes]
+    );
+
+    const result = new Map<string, Omit<HtmlAsset, 'file'> & { file: string }>();
+    for (const row of rows) {
+        result.set(row.url, {
+            url: row.url,
+            fakeid: row.fakeid,
+            title: row.title,
+            commentID: row.comment_id,
+            file: `data:text/html;base64,${row.file.toString('base64')}`,
+        });
+    }
+    return result;
+}

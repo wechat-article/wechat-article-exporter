@@ -4,8 +4,16 @@ import { filterInvalidFilenameChars } from '#shared/utils/helpers';
 import { getArticleList } from '~/apis';
 import toastFactory from '~/composables/toast';
 import usePreferences from '~/composables/usePreferences';
+import {
+    loadPersistedState,
+    savePersistedState,
+    clearPersistedState,
+    hasResumableTask,
+    markAsPaused,
+    type PersistedAutoTaskState,
+} from '~/composables/useAutoTaskPersistence';
 import { getArticleCache, getArticleByLink } from '~/store/v2/article';
-import { getHtmlCache } from '~/store/v2/html';
+import { getHtmlCache, checkHtmlExistsBatch, getHtmlBatch } from '~/store/v2/html';
 import { getAllInfo, getInfoCache, type Info } from '~/store/v2/info';
 import type { Preferences, AutoTaskConfig } from '~/types/preferences';
 import type { AppMsgEx } from '~/types/types';
@@ -61,13 +69,83 @@ export function useAutoTask() {
     let syncTimer: ReturnType<typeof setTimeout> | null = null;
     let consecutiveErrors = 0;
 
-    // 待处理队列
-    const pendingDownloads = ref<string[]>([]); // 待下载HTML的文章URL
-    const pendingExports = ref<string[]>([]); // 待导出的文章URL
+    // 断点续传：已处理的公众号 fakeid 列表
+    const processedAccountIds = ref<string[]>([]);
+
+    // 是否需要恢复任务
+    const needsResume = ref(false);
 
     // 配置快捷访问
     const config = computed<AutoTaskConfig>(() =>
         (preferences.value as unknown as Preferences).autoTask
+    );
+
+    // ------ 状态持久化 ------
+    function restoreFromPersistedState(): void {
+        const persisted = loadPersistedState();
+        if (!persisted) return;
+
+        // 恢复状态
+        isRunning.value = persisted.isRunning;
+        isPaused.value = persisted.isPaused;
+        currentPhase.value = persisted.currentPhase;
+        syncProgress.current = persisted.syncProgress.current;
+        syncProgress.total = persisted.syncProgress.total;
+        downloadProgress.current = persisted.downloadProgress.current;
+        downloadProgress.total = persisted.downloadProgress.total;
+        exportProgress.current = persisted.exportProgress.current;
+        exportProgress.total = persisted.exportProgress.total;
+        processedAccountIds.value = persisted.processedAccountIds || [];
+
+        // 恢复日志
+        if (persisted.logs && persisted.logs.length > 0) {
+            logs.value = persisted.logs.map(l => ({
+                time: new Date(l.time),
+                level: l.level,
+                message: l.message,
+            }));
+        }
+
+        // 如果任务正在运行，标记需要恢复
+        if (persisted.isRunning) {
+            needsResume.value = true;
+            // 先暂停，等待用户重新选择目录后恢复
+            isPaused.value = true;
+            log('warn', '检测到未完成的任务，请重新选择导出目录后点击恢复');
+        }
+    }
+
+    function persistCurrentState(): void {
+        const state: Partial<PersistedAutoTaskState> = {
+            isRunning: isRunning.value,
+            isPaused: isPaused.value,
+            currentPhase: currentPhase.value,
+            currentAccountFakeid: currentAccount.value?.fakeid || null,
+            syncProgress: { ...syncProgress },
+            downloadProgress: { ...downloadProgress },
+            exportProgress: { ...exportProgress },
+            processedAccountIds: processedAccountIds.value,
+            logs: logs.value.slice(0, 20).map(l => ({
+                time: l.time.toISOString(),
+                level: l.level,
+                message: l.message,
+            })),
+        };
+        savePersistedState(state);
+    }
+
+    // 初始化时恢复状态
+    restoreFromPersistedState();
+
+    // 监听状态变化并自动保存
+    watch(
+        [isRunning, isPaused, currentPhase, () => syncProgress.current, () => downloadProgress.current, () => exportProgress.current],
+        () => {
+            if (isRunning.value) {
+                persistCurrentState();
+            }
+        },
+        { deep: true }
     );
 
     // ------ 日志功能 ------
@@ -148,6 +226,11 @@ export function useAutoTask() {
         isPaused.value = false;
         currentPhase.value = 'idle';
         currentAccount.value = null;
+        processedAccountIds.value = [];
+        needsResume.value = false;
+
+        // 清除持久化状态
+        clearPersistedState();
 
         log('info', '自动任务已停止');
         toast.info('自动任务', '已停止');
@@ -175,21 +258,97 @@ export function useAutoTask() {
             }
 
             try {
-                // 阶段1：同步文章列表
-                await runSyncPhase();
-                if (stopRequested) break;
+                // 获取所有公众号
+                const accounts = await getAllInfo();
 
-                // 阶段2：下载HTML内容
-                await runDownloadPhase();
-                if (stopRequested) break;
+                // 按优先级排序：未完成的优先
+                accounts.sort((a, b) => {
+                    if (a.completed === b.completed) return 0;
+                    return a.completed ? 1 : -1;
+                });
 
-                // 阶段3：导出Markdown
-                await runExportPhase();
-                if (stopRequested) break;
+                syncProgress.total = accounts.length;
+                syncProgress.current = 0;
 
-                // 一轮完成，等待后开始下一轮
-                log('info', `一轮任务完成，${config.value.syncIntervalSeconds}秒后开始下一轮`);
-                await sleep(config.value.syncIntervalSeconds * 1000);
+                // 按公众号逐个处理：同步 -> 下载 -> 导出
+                for (const account of accounts) {
+                    if (stopRequested || isPaused.value) break;
+
+                    // 断点续传：跳过已处理的公众号
+                    if (processedAccountIds.value.includes(account.fakeid)) {
+                        log('info', `跳过已处理的公众号: ${account.nickname}`);
+                        syncProgress.current++;
+                        continue;
+                    }
+
+                    currentAccount.value = account;
+                    syncProgress.current++;
+                    syncProgress.detail = account.nickname;
+
+                    log('info', `开始处理公众号: ${account.nickname}`);
+
+                    try {
+                        // 步骤1：同步该公众号的文章列表（获取新文章）
+                        currentPhase.value = 'sync';
+                        await syncAccountArticles(account);
+                        if (stopRequested || isPaused.value) break;
+
+                        // 步骤2：获取所有文章，检查并下载缺失的HTML
+                        currentPhase.value = 'download';
+                        const allArticles = await getArticleCache(account.fakeid, 0);
+
+                        if (allArticles && allArticles.length > 0) {
+                            // 批量检查已下载的 HTML（一次请求）
+                            const allUrls = allArticles.map(a => a.link);
+                            log('info', `${account.nickname}: 批量检查 ${allUrls.length} 篇文章的下载状态...`);
+
+                            const existingUrls = await checkHtmlExistsBatch(allUrls);
+                            const existingUrlSet = new Set(existingUrls);
+
+                            // 找出缺失的 URL
+                            const missingHtmlUrls = allUrls.filter(url => !existingUrlSet.has(url));
+
+                            if (missingHtmlUrls.length > 0) {
+                                log('info', `${account.nickname}: 需要下载 ${missingHtmlUrls.length} 篇文章的HTML`);
+                                await downloadAccountArticles(missingHtmlUrls);
+                            } else {
+                                log('info', `${account.nickname}: 所有文章HTML已下载`);
+                            }
+
+                            if (stopRequested || isPaused.value) break;
+                        }
+
+                        // 步骤3：导出该公众号的Markdown
+                        currentPhase.value = 'export';
+                        await exportAccountArticles(account);
+
+                        log('success', `公众号 ${account.nickname} 处理完成`);
+                        consecutiveErrors = 0;
+
+                        // 记录已处理的公众号
+                        processedAccountIds.value.push(account.fakeid);
+                        persistCurrentState();
+
+                        // 公众号间等待，防止被限流
+                        await sleep(config.value.syncIntervalSeconds * 1000);
+
+                    } catch (e: any) {
+                        if (e.message === 'session expired') {
+                            log('error', 'Session已过期，请重新登录');
+                            isPaused.value = true;
+                            toast.error('自动任务', 'Session已过期，请重新登录后恢复任务');
+                            throw e;
+                        }
+                        log('warn', `处理公众号 ${account.nickname} 失败: ${e.message}`);
+                    }
+                }
+
+                if (!stopRequested && !isPaused.value) {
+                    // 一轮完成，清除已处理列表，准备下一轮
+                    processedAccountIds.value = [];
+                    log('info', `一轮任务完成，${config.value.syncIntervalSeconds}秒后开始下一轮`);
+                    await sleep(config.value.syncIntervalSeconds * 1000);
+                }
 
             } catch (e: any) {
                 consecutiveErrors++;
@@ -209,51 +368,38 @@ export function useAutoTask() {
         currentPhase.value = 'idle';
     }
 
-    // ------ 阶段1：同步文章列表 ------
-    async function runSyncPhase(): Promise<void> {
-        currentPhase.value = 'sync';
-        log('info', '开始同步阶段');
-
-        const accounts = await getAllInfo();
-        syncProgress.total = accounts.length;
-        syncProgress.current = 0;
-
-        // 按优先级排序：未完成的优先
-        accounts.sort((a, b) => {
-            if (a.completed === b.completed) return 0;
-            return a.completed ? 1 : -1;
-        });
-
-        for (const account of accounts) {
-            if (stopRequested || isPaused.value) break;
-
-            currentAccount.value = account;
-            syncProgress.detail = account.nickname;
-            syncProgress.current++;
-
-            try {
-                const synced = await syncAccountArticles(account);
-                consecutiveErrors = 0; // 成功则重置错误计数
-
-                // 只有实际进行了同步才等待（避免空等待）
-                if (synced) {
-                    await sleep(config.value.syncIntervalSeconds * 1000);
-                }
-            } catch (e: any) {
-                if (e.message === 'session expired') {
-                    log('error', 'Session已过期，请重新登录');
-                    isPaused.value = true;
-                    toast.error('自动任务', 'Session已过期，请重新登录后恢复任务');
-                    throw e;
-                }
-                log('warn', `同步 ${account.nickname} 失败: ${e.message}`);
-            }
+    // ------ 下载单个公众号的文章 ------
+    async function downloadAccountArticles(urls: string[]): Promise<void> {
+        if (urls.length === 0) {
+            log('info', '无需下载HTML');
+            return;
         }
 
-        log('success', `同步阶段完成，共处理 ${accounts.length} 个公众号`);
+        log('info', `下载 ${urls.length} 篇文章...`);
+
+        downloadProgress.total = urls.length;
+        downloadProgress.current = 0;
+
+        // 使用 Downloader 下载HTML
+        const downloader = new Downloader(urls);
+
+        downloader.on('download:progress', (url: string, success: boolean) => {
+            downloadProgress.current++;
+            downloadProgress.detail = url.slice(0, 50) + '...';
+        });
+
+        try {
+            await downloader.startDownload('html');
+            log('success', `下载完成，成功 ${downloadProgress.current}/${urls.length} 篇`);
+        } catch (e: any) {
+            log('error', `下载出错: ${e.message}`);
+        }
     }
 
-    async function syncAccountArticles(account: Info): Promise<boolean> {
+
+    async function syncAccountArticles(account: Info): Promise<string[]> {
+        const collectedUrls: string[] = [];
+
         // 对于已完成的账号，只检查是否有新文章（快速检查）
         if (account.completed) {
             // 获取第一页，检查最新文章是否已在缓存中
@@ -261,7 +407,7 @@ export function useAutoTask() {
 
             if (articles.length === 0) {
                 log('info', `${account.nickname}: 无新文章`);
-                return true; // 返回true表示调用了API
+                return collectedUrls;
             }
 
             const firstArticle = articles[0];
@@ -269,11 +415,11 @@ export function useAutoTask() {
 
             if (cached && cached.length > 0) {
                 log('info', `${account.nickname}: 无新文章（已是最新）`);
-                // 直接收集文章URL，不逐条检查HTML缓存（减少数据库请求）
+                // 收集文章URL
                 for (const article of articles) {
-                    pendingDownloads.value.push(article.link);
+                    collectedUrls.push(article.link);
                 }
-                return true;
+                return collectedUrls;
             }
 
             // 有新文章，继续增量同步
@@ -317,10 +463,9 @@ export function useAutoTask() {
 
             log('info', `${account.nickname}: 已同步 ${begin} 条消息`);
 
-            // 直接收集文章URL，不逐条检查HTML缓存（减少数据库请求）
-            // HTML缓存检查延迟到下载阶段进行
+            // 收集文章URL
             for (const article of articles) {
-                pendingDownloads.value.push(article.link);
+                collectedUrls.push(article.link);
             }
 
             // 仅在继续请求时等待（避免频率限制）
@@ -329,68 +474,7 @@ export function useAutoTask() {
             }
         }
 
-        return syncedCount > 0;
-    }
-
-
-    // ------ 阶段2：下载HTML ------
-    async function runDownloadPhase(): Promise<void> {
-        if (pendingDownloads.value.length === 0) {
-            log('info', '无需下载HTML，跳过下载阶段');
-            return;
-        }
-
-        currentPhase.value = 'download';
-        log('info', `开始下载阶段，共 ${pendingDownloads.value.length} 篇文章待下载`);
-
-        downloadProgress.total = pendingDownloads.value.length;
-        downloadProgress.current = 0;
-
-        const urls = [...pendingDownloads.value];
-        pendingDownloads.value = [];
-
-        // 使用 Downloader 下载HTML
-        const downloader = new Downloader(urls);
-
-        downloader.on('download:progress', (url: string, success: boolean) => {
-            downloadProgress.current++;
-            downloadProgress.detail = url.slice(0, 50) + '...';
-            if (success) {
-                pendingExports.value.push(url);
-            }
-        });
-
-        try {
-            await downloader.startDownload('html');
-            log('success', `下载阶段完成，成功 ${downloadProgress.current} 篇`);
-        } catch (e: any) {
-            log('error', `下载阶段出错: ${e.message}`);
-        }
-    }
-
-    // ------ 阶段3：导出Markdown ------
-    async function runExportPhase(): Promise<void> {
-        // 获取所有已下载但未导出的文章
-        const accounts = await getAllInfo();
-        let totalExported = 0;
-
-        currentPhase.value = 'export';
-        log('info', '开始导出阶段');
-
-        for (const account of accounts) {
-            if (stopRequested || isPaused.value) break;
-
-            currentAccount.value = account;
-
-            const exported = await exportAccountArticles(account);
-            totalExported += exported;
-        }
-
-        if (totalExported > 0) {
-            log('success', `导出阶段完成，共导出 ${totalExported} 篇文章`);
-        } else {
-            log('info', '没有新文章需要导出');
-        }
+        return collectedUrls;
     }
 
     async function exportAccountArticles(account: Info): Promise<number> {
@@ -398,7 +482,18 @@ export function useAutoTask() {
 
         // 获取该公众号的所有文章
         const articles = await getArticleCache(account.fakeid, 0);
-        if (!articles || articles.length === 0) return 0;
+        if (!articles || articles.length === 0) {
+            log('info', `${account.nickname}: 无文章需要导出`);
+            return 0;
+        }
+
+        log('info', `${account.nickname}: 共 ${articles.length} 篇文章`);
+
+        // 批量获取所有 HTML 内容（一次请求）
+        const articleUrls = articles.map(a => a.link);
+        log('info', `${account.nickname}: 批量获取 ${articleUrls.length} 篇文章的HTML内容...`);
+        const htmlMap = await getHtmlBatch(articleUrls);
+        log('info', `${account.nickname}: 获取到 ${htmlMap.size} 篇文章的HTML`);
 
         // 创建公众号子目录
         const accountDirName = filterInvalidFilenameChars(account.nickname || account.fakeid);
@@ -414,19 +509,22 @@ export function useAutoTask() {
         const turndownService = new TurndownService();
         const parser = new DOMParser();
         let exportedCount = 0;
+        let skippedCount = 0;
 
         exportProgress.total = articles.length;
         exportProgress.current = 0;
 
+        // 串行处理每篇文章
         for (const article of articles) {
             if (stopRequested || isPaused.value) break;
 
             exportProgress.current++;
-            exportProgress.detail = article.title;
+            exportProgress.detail = `(${exportProgress.current}/${articles.length}) ${article.title}`;
 
-            // 检查HTML是否已下载
-            const htmlCache = await getHtmlCache(article.link);
+            // 从预取的 Map 中获取 HTML
+            const htmlCache = htmlMap.get(article.link);
             if (!htmlCache) {
+                skippedCount++;
                 continue; // HTML未下载，跳过
             }
 
@@ -437,6 +535,7 @@ export function useAutoTask() {
             try {
                 await accountDir.getFileHandle(filename + '.md');
                 // 文件已存在，跳过
+                skippedCount++;
                 continue;
             } catch {
                 // 文件不存在，继续导出
@@ -449,7 +548,7 @@ export function useAutoTask() {
                 const content = doc.querySelector('#js_article');
 
                 if (!content) {
-                    log('warn', `文章 ${article.title} 内容解析失败`);
+                    log('warn', `${article.title}: 内容解析失败`);
                     continue;
                 }
 
@@ -458,10 +557,8 @@ export function useAutoTask() {
                 let imageUrlMap = new Map<string, string>();
 
                 if (imageUrls.length > 0) {
-                    log('info', `${article.title}: 上传 ${imageUrls.length} 张图片...`);
                     try {
                         imageUrlMap = await uploadImagesToHost(imageUrls);
-                        log('info', `${article.title}: 图片上传完成 ${imageUrlMap.size}/${imageUrls.length}`);
                     } catch (uploadError: any) {
                         log('warn', `${article.title}: 图片上传失败: ${uploadError.message}`);
                     }
@@ -472,19 +569,14 @@ export function useAutoTask() {
                 imgs.forEach(img => {
                     const dataSrc = img.getAttribute('data-src');
                     const src = img.getAttribute('src');
-
-                    // 优先使用 data-src
                     let originalUrl = dataSrc || src || '';
 
-                    // 检查是否有上传后的URL
                     const hostedUrl = imageUrlMap.get(originalUrl);
                     if (hostedUrl) {
                         img.setAttribute('src', hostedUrl);
                     } else if (originalUrl) {
                         img.setAttribute('src', originalUrl);
                     }
-
-                    // 移除 data-src 避免干扰
                     img.removeAttribute('data-src');
                 });
 
@@ -517,19 +609,15 @@ url: ${article.link}
 
                 exportedCount++;
 
-                await sleep(config.value.exportIntervalSeconds * 1000);
-
             } catch (e: any) {
-                log('warn', `导出 ${article.title} 失败: ${e.message}`);
+                log('warn', `${article.title}: 导出失败 - ${e.message}`);
             }
         }
 
-        if (exportedCount > 0) {
-            log('info', `${account.nickname}: 导出 ${exportedCount} 篇文章`);
-        }
-
+        log('success', `${account.nickname}: 导出 ${exportedCount} 篇，跳过 ${skippedCount} 篇`);
         return exportedCount;
     }
+
 
     function formatExportFilename(article: AppMsgEx, template: string): string {
         const updateTime = dayjs.unix(article.create_time);
@@ -556,6 +644,7 @@ url: ${article.link}
         isPaused: readonly(isPaused),
         currentPhase: readonly(currentPhase),
         currentAccount: readonly(currentAccount),
+        needsResume: readonly(needsResume),
 
         // 进度
         syncProgress: readonly(syncProgress),
@@ -576,5 +665,9 @@ url: ${article.link}
         stop,
         pause,
         resume,
+
+        // 持久化
+        hasResumableTask,
+        markAsPaused,
     };
 }

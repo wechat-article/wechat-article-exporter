@@ -78,3 +78,69 @@ export async function getHtmlCache(url: string): Promise<HtmlAsset | undefined> 
 
   return db.html.get(url);
 }
+
+/**
+ * 批量检查 URL 是否已下载 HTML
+ * 返回已存在的 URL 列表
+ */
+export async function checkHtmlExistsBatch(urls: string[]): Promise<string[]> {
+  if (!useMySQLBackend()) {
+    // IndexedDB 模式：逐个检查
+    const existingUrls: string[] = [];
+    for (const url of urls) {
+      const cached = await db.html.get(url);
+      if (cached) existingUrls.push(url);
+    }
+    return existingUrls;
+  }
+
+  // MySQL 模式：批量 API
+  try {
+    const result = await $fetch<{ code: number; data: string[] }>('/api/db/html/batch-check', {
+      method: 'POST',
+      body: { urls },
+    });
+    if (result.code !== 0) return [];
+    return result.data;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 批量获取多个 URL 的 HTML 内容
+ * 返回 URL -> HtmlAsset 的 Map
+ */
+export async function getHtmlBatch(urls: string[]): Promise<Map<string, HtmlAsset>> {
+  const result = new Map<string, HtmlAsset>();
+  if (urls.length === 0) return result;
+
+  if (!useMySQLBackend()) {
+    // IndexedDB 模式：逐个获取
+    for (const url of urls) {
+      const cached = await db.html.get(url);
+      if (cached) result.set(url, cached);
+    }
+    return result;
+  }
+
+  // MySQL 模式：批量 API
+  try {
+    const response = await $fetch<{ code: number; data: Record<string, any> }>('/api/db/html/batch-get', {
+      method: 'POST',
+      body: { urls },
+    });
+    if (response.code !== 0) return result;
+
+    for (const [url, data] of Object.entries(response.data)) {
+      result.set(url, {
+        ...data,
+        file: base64ToBlob(data.file, 'text/html'),
+      });
+    }
+    return result;
+  } catch {
+    return result;
+  }
+}
+

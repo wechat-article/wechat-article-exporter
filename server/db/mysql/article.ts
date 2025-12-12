@@ -118,10 +118,16 @@ export async function hitCache(ownerId: string, fakeid: string, createTime: numb
  * 读取缓存中的指定时间之前的历史文章
  */
 export async function getArticleCache(ownerId: string, fakeid: string, createTime: number): Promise<AppMsgExWithFakeID[]> {
-    const rows = await query<ArticleRow[]>(
-        'SELECT * FROM article WHERE owner_id = ? AND fakeid = ? AND create_time < ? ORDER BY create_time DESC',
-        [ownerId, fakeid, createTime]
-    );
+    // createTime = 0 表示获取所有文章
+    const sql = createTime === 0
+        ? 'SELECT * FROM article WHERE owner_id = ? AND fakeid = ? ORDER BY create_time DESC'
+        : 'SELECT * FROM article WHERE owner_id = ? AND fakeid = ? AND create_time < ? ORDER BY create_time DESC';
+
+    const params = createTime === 0
+        ? [ownerId, fakeid]
+        : [ownerId, fakeid, createTime];
+
+    const rows = await query<ArticleRow[]>(sql, params);
     return rows.map(rowToArticle);
 }
 
