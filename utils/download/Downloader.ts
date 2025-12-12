@@ -1,12 +1,12 @@
 import { throwException, timeout } from '#shared/utils/helpers';
 import usePreferences from '~/composables/usePreferences';
 import { getArticleByLink } from '~/store/v2/article';
-import { updateCommentCache } from '~/store/v2/comment';
+import { getCommentCache, updateCommentCache } from '~/store/v2/comment';
 import { updateCommentReplyCache } from '~/store/v2/comment_reply';
 import { updateDebugCache } from '~/store/v2/debug';
 import { getHtmlCache, updateHtmlCache } from '~/store/v2/html';
 import type { Metadata } from '~/store/v2/metadata';
-import { updateMetadataCache } from '~/store/v2/metadata';
+import { getMetadataCache, updateMetadataCache } from '~/store/v2/metadata';
 import type { CommentResponse, ReplyResponse } from '~/types/comment';
 import type { ParsedCredential } from '~/types/credential';
 import type { Preferences } from '~/types/preferences';
@@ -205,6 +205,17 @@ export class Downloader extends BaseDownload {
   private async downloadMetadataTask(url: string): Promise<void> {
     this.pending.add(url);
 
+    // 检查 metadata 缓存，已抓取则跳过代理请求
+    if (!preferences.value.downloadConfig.forceDownloadMetadata) {
+      const cached = await getMetadataCache(url);
+      if (cached) {
+        console.debug(`文章(url: ${url}) 的元数据已缓存，跳过代理抓取`);
+        this.pending.delete(url);
+        this.completed.add(url);
+        return;
+      }
+    }
+
     const article = await getArticleByLink(url);
     if (!article) {
       this.pending.delete(url);
@@ -300,6 +311,17 @@ export class Downloader extends BaseDownload {
   private async downloadCommentsTask(url: string): Promise<void> {
     this.pending.add(url);
 
+    // 检查 comment 缓存，已抓取则跳过代理请求
+    if (!preferences.value.downloadConfig.forceDownloadComment) {
+      const commentCached = await getCommentCache(url);
+      if (commentCached) {
+        console.debug(`文章(url: ${url}) 的留言已缓存，跳过代理抓取`);
+        this.pending.delete(url);
+        this.completed.add(url);
+        return;
+      }
+    }
+
     const article = await getArticleByLink(url);
     if (!article) {
       this.pending.delete(url);
@@ -316,7 +338,7 @@ export class Downloader extends BaseDownload {
       throw error;
     }
 
-    // 留言数据不进行缓存
+    // 检查 HTML 缓存（留言需要依赖 HTML 中的 commentID）
     const cached = await getHtmlCache(url);
     if (!cached) {
       // 文章还未下载，不能下载留言

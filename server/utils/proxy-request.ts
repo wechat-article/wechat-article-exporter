@@ -62,7 +62,16 @@ export async function proxyMpRequest(options: RequestOptions) {
   // 处理登录请求的 uuid cookie
   if (options.action === 'start_login') {
     // 提取出 uuid 这个 cookie，并透传给客户端
-    setCookies = mpResponse.headers.getSetCookie().filter(cookie => cookie.startsWith('uuid='));
+    // 在开发环境（HTTP）下移除 Secure 属性，否则浏览器不会存储/发送此 cookie
+    setCookies = mpResponse.headers.getSetCookie()
+      .filter(cookie => cookie.startsWith('uuid='))
+      .map(cookie => {
+        if (isDev) {
+          // 移除 Secure 属性以支持 HTTP 访问
+          return cookie.replace(/;\s*Secure/gi, '');
+        }
+        return cookie;
+      });
   }
 
   // 处理登录成功请求的 cookie
@@ -83,12 +92,20 @@ export async function proxyMpRequest(options: RequestOptions) {
         console.log('cookie 写入失败');
       }
 
-      setCookies = [
-        `auth-key=${authKey}; Path=/; Expires=${dayjs().add(4, 'days').toString()}; Secure; HttpOnly`,
-
-        // 登录成功后，删除浏览器的 uuid cookie
-        `uuid=EXPIRED; Path=/; Expires=${dayjs().subtract(1, 'days').toString()}; Secure; HttpOnly`,
-      ];
+      // 在开发环境（HTTP）下移除 Secure 属性，否则浏览器不会存储/发送此 cookie
+      if (isDev) {
+        setCookies = [
+          `auth-key=${authKey}; Path=/; Expires=${dayjs().add(4, 'days').toString()}; HttpOnly`,
+          // 登录成功后，删除浏览器的 uuid cookie
+          `uuid=EXPIRED; Path=/; Expires=${dayjs().subtract(1, 'days').toString()}; HttpOnly`,
+        ];
+      } else {
+        setCookies = [
+          `auth-key=${authKey}; Path=/; Expires=${dayjs().add(4, 'days').toString()}; Secure; HttpOnly`,
+          // 登录成功后，删除浏览器的 uuid cookie
+          `uuid=EXPIRED; Path=/; Expires=${dayjs().subtract(1, 'days').toString()}; Secure; HttpOnly`,
+        ];
+      }
     } catch (error) {
       console.error('action(login) failed:', error);
     }

@@ -110,6 +110,8 @@ export class AccountCookie {
 class CookieStore {
   // key 为 authKey, value 为 AccountCookie 实例
   store: Map<string, AccountCookie> = new Map<string, AccountCookie>();
+  // key 为 authKey, value 为 ownerId
+  ownerIdMap: Map<string, string> = new Map<string, string>();
 
   async getAccountCookie(authKey: string): Promise<AccountCookie | null> {
     // 优先从本地内存取
@@ -165,6 +167,64 @@ class CookieStore {
     }
 
     return accountCookie.token;
+  }
+
+  /**
+   * 设置用户的 ownerId
+   * @param authKey
+   * @param ownerId
+   */
+  async setOwnerId(authKey: string, ownerId: string): Promise<boolean> {
+    const kv = useStorage('kv');
+    try {
+      // 读取现有数据
+      const existing = await getMpCookie(authKey);
+      if (existing) {
+        existing.ownerId = ownerId;
+        await kv.set(`cookie:${authKey}`, existing, {
+          expirationTtl: 60 * 60 * 24 * 4, // 4 days
+        });
+      } else {
+        // 如果会话数据不存在（可能是刚创建），也尝试直接写入 ownerId
+        // 这种情况下 setCookie 可能还在处理中，我们需要确保 ownerId 被保存
+        console.warn(`setOwnerId: Session not found for authKey ${authKey.substring(0, 8)}..., saving ownerId to raw KV`);
+        // 读取原始 KV 数据（绕过过期检查）
+        const rawData = await kv.get<any>(`cookie:${authKey}`);
+        if (rawData) {
+          rawData.ownerId = ownerId;
+          await kv.set(`cookie:${authKey}`, rawData, {
+            expirationTtl: 60 * 60 * 24 * 4,
+          });
+        }
+      }
+      // 同时存储到内存中的映射
+      this.ownerIdMap.set(authKey, ownerId);
+      return true;
+    } catch (err) {
+      console.error('setOwnerId failed:', err);
+      return false;
+    }
+  }
+
+  /**
+   * 获取用户的 ownerId
+   * @param authKey
+   */
+  async getOwnerId(authKey: string): Promise<string | null> {
+    // 优先从内存读取
+    let ownerId = this.ownerIdMap.get(authKey);
+    if (ownerId) {
+      return ownerId;
+    }
+
+    // 从 KV 读取
+    const cookieValue = await getMpCookie(authKey);
+    if (cookieValue?.ownerId) {
+      this.ownerIdMap.set(authKey, cookieValue.ownerId);
+      return cookieValue.ownerId;
+    }
+
+    return null;
   }
 
   /**
@@ -270,3 +330,39 @@ export function getCookieFromResponse(name: string, response: Response): string 
   }
   return null;
 }
+
+/**
+ * 从请求中获取 ownerId
+ *
+ * @description 根据请求中的 X-Owner-Id header 或通过 auth-key 从 CookieStore 中获取
+ * @param event
+ */
+export async function getOwnerIdFromRequest(event: H3Event): Promise<string | null> {
+  // 优先从 header 读取
+  let ownerId = getRequestHeader(event, 'X-Owner-Id');
+  if (ownerId) {
+    return ownerId;
+  }
+
+  // 通过 auth-key 从 CookieStore 读取
+  let authKey = getRequestHeader(event, 'X-Auth-Key');
+  if (authKey) {
+    ownerId = await cookieStore.getOwnerId(authKey);
+    if (ownerId) {
+      return ownerId;
+    }
+  }
+
+  // 从 cookie 中的 auth-key 检索
+  const cookies = parseCookies(event);
+  authKey = cookies['auth-key'];
+  if (authKey) {
+    ownerId = await cookieStore.getOwnerId(authKey);
+    if (ownerId) {
+      return ownerId;
+    }
+  }
+
+  return null;
+}
+

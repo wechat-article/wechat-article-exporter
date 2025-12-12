@@ -15,10 +15,25 @@ const defaultOptions: Partial<Preferences> = {
   },
   downloadConfig: {
     forceDownloadContent: false,
+    forceDownloadMetadata: false,
+    forceDownloadComment: false,
   },
   accountSyncSeconds: 5,
   syncDateRange: 'all',
   syncDatePoint: MP_ORIGIN_TIMESTAMP,
+  autoTask: {
+    syncIntervalSeconds: 30,
+    downloadIntervalSeconds: 5,
+    exportIntervalSeconds: 1,
+    retryIntervalSeconds: 60,
+    maxConsecutiveErrors: 3,
+    exportFilenameTemplate: '${YYYY}-${MM}-${DD} ${title}',
+  },
+  imageHost: {
+    enabled: false,
+    apiUrl: 'http://127.0.0.1:36677/upload',
+    batchSize: 20,
+  },
 };
 
 export default () => {

@@ -20,6 +20,12 @@ export interface Preferences {
 
   syncDateRange: '1d' | '3d' | '7d' | '1m' | '3m' | '6m' | '1y' | 'all' | 'point';
   syncDatePoint: number;
+
+  // 自动任务配置
+  autoTask: AutoTaskConfig;
+
+  // 图床配置
+  imageHost: ImageHostConfig;
 }
 
 interface ExportConfig {
@@ -42,9 +48,42 @@ interface ExportConfig {
 interface DownloadConfig {
   // 抓取文章内容时，不检查缓存，强制下载最新内容
   forceDownloadContent: boolean;
+
+  // 抓取阅读量等元数据时，不检查缓存，强制重新抓取
+  forceDownloadMetadata: boolean;
+
+  // 抓取留言时，不检查缓存，强制重新抓取
+  forceDownloadComment: boolean;
 }
+
 
 interface APIAuth {
   token: string;
   nickname: string;
+}
+
+// 自动任务配置
+export interface AutoTaskConfig {
+  // 同步间隔（秒）
+  syncIntervalSeconds: number;
+  // 下载间隔（秒）
+  downloadIntervalSeconds: number;
+  // 导出间隔（秒）
+  exportIntervalSeconds: number;
+  // 错误重试间隔（秒）
+  retryIntervalSeconds: number;
+  // 最大连续错误次数
+  maxConsecutiveErrors: number;
+  // 导出文件名格式
+  exportFilenameTemplate: string;
+}
+
+// 图床配置
+export interface ImageHostConfig {
+  // 是否启用图床上传
+  enabled: boolean;
+  // 图床 API 地址
+  apiUrl: string;
+  // 每批上传图片数量
+  batchSize: number;
 }

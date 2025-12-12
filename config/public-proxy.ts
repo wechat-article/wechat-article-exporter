@@ -34,5 +34,5 @@ export const PUBLIC_PROXY_LIST: string[] = [
   'https://12.net-proxy.asia',
   'https://13.net-proxy.asia',
   'https://14.net-proxy.asia',
-  'https://15.net-proxy.asia',
+  'https://15.net-proxy.asia'
 ];

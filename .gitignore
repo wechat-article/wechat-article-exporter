@@ -19,12 +19,10 @@ logs
 .idea
 debug
 design
-docs
 
 # Local env files
-.env
-.env.*
 !.env.example
 
 # wrangler
 .wrangler
+.claude

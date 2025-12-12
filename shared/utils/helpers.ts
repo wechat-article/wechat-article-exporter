@@ -24,9 +24,27 @@ export function maxLen(text: string, max = 35): string {
 
 // 过滤文件名中的非法字符
 export function filterInvalidFilenameChars(input: string): string {
-  // 只保留中文字符、英文字符、数字
-  const regex = /[^\u4e00-\u9fa5a-zA-Z0-9()（）]/g;
-  return input.replace(regex, '_').slice(0, 100).trim();
+  // Windows/Mac/Linux 文件名非法字符: \ / : * ? " < > |
+  // 保留：中文字符、英文字符、数字、空格、括号、破折号、下划线、点
+  const regex = /[\\/:*?"<>|]/g;
+  let result = input.replace(regex, '_');
+
+  // 清理连续的下划线和空格
+  result = result.replace(/_+/g, '_');
+  result = result.replace(/\s+/g, ' ');
+
+  // 去掉首尾的下划线和空格
+  result = result.replace(/^[_\s]+|[_\s]+$/g, '');
+
+  // 限制长度（考虑文件扩展名，保守限制为200字符）
+  result = result.slice(0, 200);
+
+  // 如果结果为空，返回默认值
+  if (!result) {
+    result = 'untitled';
+  }
+
+  return result;
 }
 
 // 格式化消耗时间
@@ -63,4 +81,39 @@ export function formatTimeStamp(timestamp: number) {
 // 格式化文章显示类型
 export function formatItemShowType(type: number) {
   return ITEM_SHOW_TYPE[type] || '未识别';
+}
+
+/**
+ * 规范化微信文章 URL
+ * 微信文章 URL 包含动态追踪参数，同一篇文章不同时间访问会有不同 URL
+ * 只提取稳定参数：__biz, mid, idx, sn 来生成规范化 URL
+ * 
+ * @example
+ * // 输入: https://mp.weixin.qq.com/s?__biz=xxx&mid=123&idx=1&sn=abc&chksm=yyy&scene=21
+ * // 输出: https://mp.weixin.qq.com/s?__biz=xxx&mid=123&idx=1&sn=abc
+ */
+export function normalizeWechatUrl(url: string): string {
+  // 检查是否是微信公众号文章 URL
+  if (!url.includes('mp.weixin.qq.com')) {
+    return url; // 非微信 URL，保持原样
+  }
+
+  try {
+    const parsed = new URL(url);
+    const biz = parsed.searchParams.get('__biz') || '';
+    const mid = parsed.searchParams.get('mid') || '';
+    const idx = parsed.searchParams.get('idx') || '1';
+    const sn = parsed.searchParams.get('sn') || '';
+
+    // 如果核心参数都存在，生成规范化 URL
+    if (biz && mid && sn) {
+      return `https://mp.weixin.qq.com/s?__biz=${biz}&mid=${mid}&idx=${idx}&sn=${sn}`;
+    }
+
+    // 如果缺少核心参数，返回原 URL
+    return url;
+  } catch {
+    // URL 解析失败，返回原 URL
+    return url;
+  }
 }

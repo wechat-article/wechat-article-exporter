@@ -38,4 +38,16 @@ const sortedAccountInfos = computed(() => {
 });
 
 const selected = defineModel<Info | undefined>();
+
+// 自动选择第一个公众号 (文章数量最多的)，实现页面自动加载
+// 使用 watchEffect + nextTick 确保在异步组件中正确初始化
+watchEffect(() => {
+  if (!selected.value && sortedAccountInfos.value.length > 0) {
+    nextTick(() => {
+      if (!selected.value) {
+        selected.value = sortedAccountInfos.value[0];
+      }
+    });
+  }
+});
 </script>

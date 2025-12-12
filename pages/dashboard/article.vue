@@ -24,11 +24,12 @@ import GridStatusBar from '~/components/grid/StatusBar.vue';
 import AccountSelectorForArticle from '~/components/selector/AccountSelectorForArticle.vue';
 import { isDev, websiteName } from '~/config';
 import { sharedGridOptions } from '~/config/shared-grid-options';
-import { articleDeleted, getArticleCache } from '~/store/v2/article';
+import { articleDeleted, getArticleCache, getArticleCacheWithStatus, type ArticleWithStatus } from '~/store/v2/article';
 import { getCommentCache } from '~/store/v2/comment';
 import { getHtmlCache } from '~/store/v2/html';
 import { type Info } from '~/store/v2/info';
 import { getMetadataCache, type Metadata } from '~/store/v2/metadata';
+import { useMySQLBackend } from '~/store/v2/index';
 import type { Preferences } from '~/types/preferences';
 import type { AppMsgEx } from '~/types/types';
 import type { ArticleMetadata } from '~/utils/download/types';
@@ -339,27 +340,45 @@ watch(selectedAccount, newVal => {
 
 async function switchTableData(fakeid: string) {
   loading.value = true;
-  const articles: Article[] = [];
-  const data = await getArticleCache(fakeid, Date.now());
-  for (const article of data) {
-    const contentDownload = (await getHtmlCache(article.link)) !== undefined;
-    const commentDownload = (await getCommentCache(article.link)) !== undefined;
-    const metadata = await getMetadataCache(article.link);
-    if (metadata) {
-      articles.push({
-        ...metadata,
-        ...article,
-        contentDownload: contentDownload,
-        commentDownload: commentDownload,
-      });
-    } else {
-      articles.push({
-        ...article,
-        contentDownload: contentDownload,
-        commentDownload: commentDownload,
-      });
+  let articles: Article[] = [];
+
+  // 使用 MySQL 时，使用 JOIN 查询一次性获取所有数据（解决 N+1 问题）
+  if (useMySQLBackend()) {
+    const data = await getArticleCacheWithStatus(fakeid, Date.now());
+    articles = data.map((article: ArticleWithStatus) => ({
+      ...article,
+      contentDownload: article.contentDownload,
+      commentDownload: article.commentDownload,
+      readNum: article.readNum,
+      oldLikeNum: article.oldLikeNum,
+      shareNum: article.shareNum,
+      likeNum: article.likeNum,
+      commentNum: article.commentNum,
+    }));
+  } else {
+    // IndexedDB 回退：仍使用原有逻辑
+    const data = await getArticleCache(fakeid, Date.now());
+    for (const article of data) {
+      const contentDownload = (await getHtmlCache(article.link)) !== undefined;
+      const commentDownload = (await getCommentCache(article.link)) !== undefined;
+      const metadata = await getMetadataCache(article.link);
+      if (metadata) {
+        articles.push({
+          ...metadata,
+          ...article,
+          contentDownload: contentDownload,
+          commentDownload: commentDownload,
+        });
+      } else {
+        articles.push({
+          ...article,
+          contentDownload: contentDownload,
+          commentDownload: commentDownload,
+        });
+      }
     }
   }
+
   await sleep(200);
   globalRowData = articles.filter(article => (hideDeleted.value ? !article.is_deleted : true));
   gridApi.value?.setGridOption('rowData', globalRowData);
@@ -379,6 +398,26 @@ function onSelectionChanged(event: SelectionChangedEvent) {
 }
 const selectedArticleUrls = computed(() => {
   return selectedArticles.value.map(article => article.link);
+});
+
+// 预过滤：只返回未下载的文章 URL（消除 Downloader 中的冗余缓存查询）
+const urlsNeedingHtmlDownload = computed(() => {
+  return selectedArticles.value
+    .filter(article => !article.contentDownload)
+    .map(article => article.link);
+});
+
+const urlsNeedingMetadataDownload = computed(() => {
+  // 没有 readNum 说明元数据未下载
+  return selectedArticles.value
+    .filter(article => article.readNum === undefined)
+    .map(article => article.link);
+});
+
+const urlsNeedingCommentDownload = computed(() => {
+  return selectedArticles.value
+    .filter(article => !article.commentDownload)
+    .map(article => article.link);
 });
 
 const {
@@ -477,9 +516,9 @@ async function debug() {
               { label: '阅读量 (需要Credential)', event: 'download-article-metadata' },
               { label: '留言内容 (需要Credential)', event: 'download-article-comment' },
             ]"
-            @download-article-html="download('html', selectedArticleUrls)"
-            @download-article-metadata="download('metadata', selectedArticleUrls)"
-            @download-article-comment="download('comment', selectedArticleUrls)"
+            @download-article-html="download('html', urlsNeedingHtmlDownload)"
+            @download-article-metadata="download('metadata', urlsNeedingMetadataDownload)"
+            @download-article-comment="download('comment', urlsNeedingCommentDownload)"
           >
             <UButton
               :loading="downloadBtnLoading"
