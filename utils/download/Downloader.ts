@@ -498,46 +498,74 @@ export class Downloader extends BaseDownload {
     const parser = new DOMParser();
     const document = parser.parseFromString(html, 'text/html');
 
-    // 阅读
+    // 定位JS
+    const scripts = document.getElementsByTagName('script');
+    let targetScript = '';
+    for (const script of scripts) {
+      if (script.innerHTML.includes('appmsg_bar_data')) {
+        targetScript = script.innerHTML;
+        break;
+      }
+    }
+
+    if (!targetScript) {
+      console.error('未找到目标 script');
+      return;
+    }
+
+    // 精确提取对象字符串 (括号计数法)
+    const key = 'appmsg_bar_data:';
+    const startIdx = targetScript.indexOf(key);
+
     let readNum = 0;
-    const readNumMatchResult = html.match(/var read_num = ['"](?<read_num>\d+)['"] \* 1;/);
-    const readNumNewMatchResult = html.match(/var read_num_new = ['"](?<read_num_new>\d+)['"] \* 1;/);
-    if (readNumNewMatchResult && readNumNewMatchResult.groups && readNumNewMatchResult.groups.read_num_new) {
-      readNum = parseInt(readNumNewMatchResult.groups.read_num_new, 10);
-    } else if (readNumMatchResult && readNumMatchResult.groups && readNumMatchResult.groups.read_num) {
-      readNum = parseInt(readNumMatchResult.groups.read_num, 10);
-    }
-
-    // 点赞
     let oldLikeNum = 0;
-    const oldLinkNumEl = document.querySelector('#js_bar_oldlike_btn');
-    if (oldLinkNumEl) {
-      oldLikeNum = Number(oldLinkNumEl.textContent);
-      oldLikeNum = Number.isNaN(oldLikeNum) ? 0 : oldLikeNum;
-    }
-
-    // 分享
     let shareNum = 0;
-    const shareNumEl = document.querySelector('#js_bar_share_btn');
-    if (shareNumEl) {
-      shareNum = Number(shareNumEl.textContent);
-      shareNum = Number.isNaN(shareNum) ? 0 : shareNum;
-    }
-
-    // 喜欢
     let likeNum = 0;
-    const likeNumEl = document.querySelector('#js_bar_like_btn');
-    if (likeNumEl) {
-      likeNum = Number(likeNumEl.textContent);
-      likeNum = Number.isNaN(likeNum) ? 0 : likeNum;
-    }
-
-    // 留言
     let commentNum = 0;
-    const commentNumEl = document.querySelector('#js_bar_comment_btn');
-    if (commentNumEl) {
-      commentNum = Number(commentNumEl.textContent);
-      commentNum = Number.isNaN(commentNum) ? 0 : commentNum;
+
+    if (startIdx !== -1) {
+      let braceCount = 0;
+      let objectStr = '';
+      let foundStart = false;
+
+      for (let i = startIdx + key.length; i < targetScript.length; i++) {
+        const char = targetScript[i];
+
+        if (!foundStart) {
+          if (char === '{') {
+            foundStart = true;
+            braceCount = 1;
+            objectStr += char;
+          }
+          continue;
+        }
+
+        objectStr += char;
+        if (char === '{') braceCount++;
+        if (char === '}') braceCount--;
+
+        if (braceCount === 0) {
+          break;
+        }
+      }
+
+      // 将字符串转换为真正的 JS 对象
+      try {
+        const parseFn = new Function('return ' + objectStr);
+        const result = parseFn();
+
+        // console.log('解析成功，对象结构:', result);
+
+        readNum = result.read_num; //阅读量
+        oldLikeNum = result.old_like_count; //点赞
+        shareNum = result.share_count; //分享
+        likeNum = result.like_count; // 喜欢
+        commentNum = result.comment_count; // 留言
+
+      } catch (e) {
+        console.error('解析对象失败:', e);
+        return;
+      }
     }
 
     const article = await getArticleByLink(url);
