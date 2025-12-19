@@ -379,7 +379,16 @@ export class Exporter extends BaseDownload {
       if (!content) {
         continue;
       }
-      const markdown = turndownService.turndown(content);
+      const doc = parser.parseFromString(content, 'text/html');
+      const imgs = doc.querySelectorAll<HTMLImageElement>('img');
+      imgs.forEach(img => {
+        const src = img.getAttribute('src');
+        const dataSrc = img.getAttribute('data-src');
+        if (!src && dataSrc) {
+          img.setAttribute('src', dataSrc);
+        }
+      });
+      const markdown = turndownService.turndown(doc.body);
 
       const blob = new Blob([markdown], { type: 'text/markdown' });
       await this.writeFile(filename + '.md', blob);
