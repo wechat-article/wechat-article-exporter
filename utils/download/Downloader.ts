@@ -39,9 +39,9 @@ export class Downloader extends BaseDownloader {
     this.isRunning = true;
     const start = Date.now();
     this.emit('download:begin');
-    if (['metadata', 'comments'].includes(this.downloadType) && this.options.concurrency > 5) {
-      // 需要Credential爬取的数据，最大并发量设置为5
-      this.options.concurrency = 5;
+    if (['metadata', 'comments'].includes(this.downloadType) && this.options.concurrency > 2) {
+      // 需要Credential爬取的数据，最大并发量设置为2
+      this.options.concurrency = 2;
     }
 
     try {
