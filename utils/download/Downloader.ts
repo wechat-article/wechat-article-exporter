@@ -12,7 +12,7 @@ import type { ParsedCredential } from '~/types/credential';
 import type { Preferences } from '~/types/preferences';
 import { BaseDownloader } from '~/utils/download/BaseDownloader';
 import type { DownloadOptions } from './types';
-import { parseCgiDataNewOnClient, validateHTMLContent } from '#shared/utils/html';
+import { parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
 
 type DownloadType = 'html' | 'metadata' | 'comments';
 
@@ -496,7 +496,7 @@ export class Downloader extends BaseDownloader {
     const html = await blob.text();
 
     // 提取对象字符串
-    const cgiData = await parseCgiDataNewOnClient(html);
+    const cgiData = await parseCgiDataNew(html);
     if (!cgiData) {
       console.error('提取 window.cgiData 对象失败');
       return;

@@ -1,0 +1,626 @@
+{
+  "base_resp": {
+    "ret": 0,
+    "errmsg": "ok",
+    "wxtoken": 777,
+    "cookie_count": 0,
+    "sessionid": "svr_475a4e3baa9"
+  },
+  "user_name": "gh_bc6c492e205e",
+  "nick_name": "金榜时代官微",
+  "round_head_img": "http://mmbiz.qpic.cn/mmbiz_png/SUIPcAicB0bgpxw3AaKbWcpKdnalWGDnIfoJZb3XG6n18TkSa6txpm0Fhe2vnKPfUbmLJBZJ1ibibgrSGzugUmXgg/0?wx_fmt=png",
+  "title": "睡前数学知识点｜Day15：疯狂星期四，V你一个知识点：定积分核心公式~",
+  "desc": "",
+  "content_noencode": "<section style=\"background-color: rgb(254, 250, 237);box-sizing: border-box;font-style: normal;font-weight: 400;text-align: justify;font-size: 16px;color: rgb(62, 62, 62);\" data-pm-slice=\"0 0 []\"><section style=\"font-size: 14px;line-height: 2;letter-spacing: 1px;padding: 0px 15px;box-sizing: border-box;\"><p style=\"text-align: center;white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span style=\"color: rgb(177, 44, 22);box-sizing: border-box;\"><strong style=\"box-sizing: border-box;\"><span leaf=\"\"><br  /></span></strong></span></p><p style=\"text-align: center;white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span style=\"color: rgb(177, 44, 22);font-size: 15px;box-sizing: border-box;\"><strong style=\"box-sizing: border-box;\"><span leaf=\"\">「硕哥考前30天睡前碎碎念系列」</span></strong></span><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" lang=\"EN-US\"><o:p></o:p></span></p><p style=\"text-align: center;margin: 3pt 0pt;line-height: 2em;\" data-pm-slice=\"0 0 []\"><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\" mpa-font-style=\"mibhyss7vz7\" style=\"font-size: 14px;\" data-mpa-action-id=\"mibhyssu1om0\" data-pm-slice=\"0 0 []\"><br  /></span></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;line-height: 1.75em;\" data-mpa-action-id=\"mipsnav81z19\" data-pm-slice=\"0 0 []\"><span leaf=\"\">🤩</span><span leaf=\"\" mpa-font-style=\"mipsnaur98y\" style=\"font-size: 14px;\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">今天为你解决的是考研数学重难点之一 —</span></span><span leaf=\"\" style=\"background-color: rgb(254, 250, 237);font-style: normal;font-weight: 400;text-align: justify;color: rgb(62, 62, 62);font-size: 14px;letter-spacing: 1px;box-sizing: border-box;\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">&nbsp;</span></span><span style=\"background-color: rgb(254, 250, 237);font-style: normal;font-weight: 400;text-align: justify;color: rgb(62, 62, 62);font-size: 14px;letter-spacing: 1px;box-sizing: border-box;\" data-font-family=\"微软雅黑\"><span leaf=\"\" mpa-font-style=\"mipsnaur6c4\" style=\"font-size: 14px;\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">定积分的核心公式与解题技巧。</span></span></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;line-height: 2em;\" data-mpa-action-id=\"mipsnreppyg\" data-pm-slice=\"0 0 []\"><span leaf=\"\" style=\"background-color: rgb(254, 250, 237);font-style: normal;font-weight: 400;text-align: justify;color: rgb(62, 62, 62);font-size: 14px;line-height: 2;letter-spacing: 1px;box-sizing: border-box;\">📖</span><span mpa-font-style=\"midyiaae1lde\" style=\"font-size: 14px;\"><span leaf=\"\" style=\"background-color: rgb(254, 250, 237);font-style: normal;font-weight: 400;text-align: justify;color: rgb(62, 62, 62);letter-spacing: 1px;box-sizing: border-box;font-size: 14px;\" mpa-font-style=\"mipsnre824ly\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">今天的总结至关重要</span></span></span><span style=\"font-size: 14px;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: #333333;letter-spacing: 0pt;mso-font-width: 100%;vertical-align: baseline;\" data-font-family=\"微软雅黑\" mpa-font-style=\"mipsnre81vhb\"><span leaf=\"\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">，同学们快来查漏补缺</span></span></span><span style=\"font-size:11pt;font-family:微软雅黑;font-weight:normal;font-style:normal;color:#333333;letter-spacing:0pt;mso-font-width:100%;vertical-align:baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\" mpa-font-style=\"mipsnre818qv\" style=\"font-size: 14px;\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">看看自己是否掌握！</span></span></span><span style=\"font-size:11pt;font-family:微软雅黑;font-weight:normal;font-style:normal;color:#333333;letter-spacing:0pt;mso-font-width:100%;vertical-align:baseline;\" lang=\"EN-US\"><o:p></o:p></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;line-height: 2em;\" data-mpa-action-id=\"mio6bifo17hx\" data-pm-slice=\"0 0 []\"><span mpa-font-style=\"midyiaae1lde\" style=\"font-size: 14px;\"><span leaf=\"\" style=\"background-color: rgb(254, 250, 237);font-style: normal;font-weight: 400;text-align: justify;color: rgb(62, 62, 62);letter-spacing: 1px;box-sizing: border-box;font-size: 14px;\" mpa-font-style=\"mio6bif6u7v\"><br  /></span></span><span style=\"font-size:11pt;font-family:微软雅黑;font-weight:normal;font-style:normal;color:#333333;letter-spacing:0pt;mso-font-width:100%;vertical-align:baseline;\" lang=\"EN-US\"><o:p></o:p></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;line-height: 2em;\"><span leaf=\"\" style=\"background-color: rgb(254, 250, 237);font-style: normal;font-weight: 400;text-align: justify;color: rgb(62, 62, 62);font-size: 14px;letter-spacing: 1px;box-sizing: border-box;\"><br  /></span></p><p style=\"text-align: center;white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\">快来一起学习吧！</span></p></section><section style=\"display: flex;width: 100%;flex-flow: column;box-sizing: border-box;\"><section style=\"z-index: 1;box-sizing: border-box;\"><section style=\"text-align: center;justify-content: center;display: flex;flex-flow: row;margin: 10px 0px;box-sizing: border-box;\"><section style=\"display: inline-block;width: auto;vertical-align: top;align-self: flex-start;flex: 0 0 auto;line-height: 0;min-width: 5%;max-width: 100%;height: auto;box-sizing: border-box;\"><section style=\"display: flex;width: 100%;flex-flow: column;box-sizing: border-box;\"><section style=\"z-index: auto;box-sizing: border-box;\"><section style=\"margin: 0px;box-sizing: border-box;\"><section style=\"display: inline-block;width: 20px;height: 3px;vertical-align: top;overflow: hidden;background-color: rgb(164, 213, 96);margin: 0px 5px;box-sizing: border-box;\"><svg viewbox=\"0 0 1 1\" style=\"float:left;line-height:0;width:0;vertical-align:top;\"></svg></section></section></section></section><section style=\"display: flex;width: 100%;flex-flow: column;box-sizing: border-box;\"><section style=\"z-index: auto;box-sizing: border-box;\"><section style=\"margin: 0px;box-sizing: border-box;\"><section style=\"display: inline-block;width: 15px;height: 3px;vertical-align: top;overflow: hidden;background-color: rgb(164, 213, 96);margin: 0px 5px;box-sizing: border-box;\"><svg viewbox=\"0 0 1 1\" style=\"float:left;line-height:0;width:0;vertical-align:top;\"></svg></section></section></section></section><section style=\"display: flex;width: 100%;flex-flow: column;box-sizing: border-box;\"><section style=\"z-index: auto;box-sizing: border-box;\"><section style=\"margin: 0px;box-sizing: border-box;\"><section style=\"display: inline-block;width: 10px;height: 3px;vertical-align: top;overflow: hidden;background-color: rgb(164, 213, 96);margin: 0px 5px;box-sizing: border-box;\"><svg viewbox=\"0 0 1 1\" style=\"float:left;line-height:0;width:0;vertical-align:top;\"></svg></section></section></section></section><section style=\"display: flex;width: 100%;flex-flow: column;box-sizing: border-box;\"><section style=\"z-index: auto;box-sizing: border-box;\"><section style=\"margin: 0px;box-sizing: border-box;\"><section style=\"display: inline-block;width: 5px;height: 3px;vertical-align: top;overflow: hidden;background-color: rgb(164, 213, 96);margin: 0px 5px;box-sizing: border-box;\"><svg viewbox=\"0 0 1 1\" style=\"float:left;line-height:0;width:0;vertical-align:top;\"></svg></section></section></section></section></section></section></section></section><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: dotted;border-width: 0px;border-color: rgb(218, 203, 158);border-radius: 10px;overflow: hidden;width: 90%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-imgfileid=\"100179861\" data-ratio=\"0.40355677154582764\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0VXx72mMicicIbbibFgiaicjLLBU4GEwCdunicpJ4xbic1LAdIjLuic5OksQDfw/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"731\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\"  /></section></section><section style=\"text-align: center;justify-content: center;display: flex;flex-flow: row;margin: 10px 0px;box-sizing: border-box;\"><section style=\"display: inline-block;width: 95%;vertical-align: bottom;align-self: flex-end;flex: 0 0 auto;border-style: solid;border-width: 1px;border-color: rgb(218, 203, 158);border-radius: 12px;overflow: hidden;padding: 12px 0px;height: auto;margin: 0px;box-sizing: border-box;\"><section style=\"text-align: left;justify-content: flex-start;display: flex;flex-flow: row;box-sizing: border-box;\"><section style=\"display: inline-block;vertical-align: middle;width: auto;flex: 0 0 0%;height: auto;align-self: center;box-sizing: border-box;\"><section style=\"text-align: center;box-sizing: border-box;\"><section style=\"display: inline-block;width: 6px;height: 75px;vertical-align: top;overflow: hidden;border-style: solid;border-width: 0px;background-color: rgb(218, 203, 158);box-sizing: border-box;\"><section style=\"text-align: justify;box-sizing: border-box;\"><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p></section></section></section></section><section style=\"display: inline-block;vertical-align: middle;width: auto;align-self: center;flex: 100 100 0%;height: auto;padding: 0px 13px;box-sizing: border-box;\"><section style=\"text-align: justify;font-size: 14px;line-height: 2;letter-spacing: 1px;box-sizing: border-box;\"><section nodeleaf=\"\"><mp-common-mpaudio class=\"js_editor_audio res_iframe js_uneditable custom_select_card\" data-pluginname=\"insertaudio\" name=\"【Day&amp;nbsp;15】大题给分点在过程与步骤！保证步骤清晰\" author=\"金榜时代官微\" src=\"/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;name=%E3%80%90Day%26nbsp%3B15%E3%80%91%E5%A4%A7%E9%A2%98%E7%BB%99%E5%88%86%E7%82%B9%E5%9C%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E6%AD%A5%E9%AA%A4%EF%BC%81%E4%BF%9D%E8%AF%81%E6%AD%A5%E9%AA%A4%E6%B8%85%E6%99%B0&amp;play_length=1%E5%88%86%E9%92%9F\" isaac2=\"1\" low_size=\"134.25\" source_size=\"134.3\" high_size=\"516.98\" play_length=\"66000\" data-trans_state=\"1\" data-verify_state=\"3\" data-topic_id=\"4262215789681311745\" data-topic_name=\"26考研数学硕哥睡前碎碎念\" voice_encode_fileid=\"MzIzNDcyMTI5MV8yMjQ3NjY0NTQ1\" cover=\"http://mmbiz.qpic.cn/sz_mmbiz_jpg/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0YywTSErczVwZYT2FbkB7qxdzRgfsmhV0MqZGoHt5FjyhWdoxmLnLsA/0?wx_fmt=jpeg\"></mp-common-mpaudio></section><p style=\"text-align: center;\"><span leaf=\"\" mpa-font-style=\"mi7cv4s499i\" style=\"font-size: 12px;\" data-mpa-action-id=\"mi7cv4sjinf\" data-pm-slice=\"0 0 []\"><span textstyle=\"\" style=\"color: rgb(136, 136, 136);\">🎵26考研数学硕哥睡前碎碎念</span></span></p></section></section><section style=\"display: inline-block;vertical-align: middle;width: auto;flex: 0 0 0%;height: auto;align-self: center;box-sizing: border-box;\"><section style=\"text-align: center;box-sizing: border-box;\"><section style=\"display: inline-block;width: 6px;height: 75px;vertical-align: top;overflow: hidden;border-style: solid;border-width: 0px;background-color: rgb(218, 203, 158);box-sizing: border-box;\"><section style=\"text-align: justify;box-sizing: border-box;\"><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p></section></section></section></section></section></section></section><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><span leaf=\"\" style=\"text-align: center;display: block;\" data-mpa-action-id=\"mi7d8xipxv0\" data-pm-slice=\"0 0 []\"><img alt=\"图片\" class=\"rich_pages wxw-img __bg_gif\" data-ratio=\"0.45689655172413796\" data-src=\"https://mmbiz.qpic.cn/mmbiz_gif/7QRTvkK2qC4ia5UrsIrkGrdzLz4x5Nbv7F8m1CQmrcTyM2C93TQoITGibV8TL7dJYbPS0I7SWC4mjCXAzUTJegqQ/640?tp=webp&amp;wxfrom=5&amp;wx_lazy=1#imgIndex=2\" data-w=\"232\" data-width=\"100%\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;vertical-align: baseline;color: rgba(0, 0, 0, 0.9);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 17px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-align: center;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: transparent;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;display: inline-block;overflow-wrap: break-word !important;height: auto !important;width: 102px !important;visibility: visible !important;\"  /></span><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: dotted;border-width: 0px;border-color: rgb(218, 203, 158);border-radius: 10px;overflow: hidden;width: 90%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-imgfileid=\"100179860\" data-ratio=\"0.41201117318435754\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0lYZqlxj7ZSR1qVWEDDYs4vo7PrvyFibqfkficYjowYcwNGIqQLw6uMpQ/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"716\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\"  /></section></section><section style=\"text-align: center;justify-content: center;display: flex;flex-flow: row;margin: 10px 0px 0px;box-sizing: border-box;\"><section style=\"display: inline-block;vertical-align: bottom;width: auto;align-self: flex-end;min-width: 5%;max-width: 100%;flex: 0 0 auto;height: auto;box-sizing: border-box;\"><section style=\"transform: perspective(0px);-webkit-transform: perspective(0px);-moz-transform: perspective(0px);-o-transform: perspective(0px);transform-style: flat;box-sizing: border-box;\"><section style=\"margin: 0px;line-height: 0;transform: rotateY(180deg);-webkit-transform: rotateY(180deg);-moz-transform: rotateY(180deg);-o-transform: rotateY(180deg);box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;width: 18px;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_gif/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0FUaosI3VRia3BHibqm1UHujOAvJZ43kB5sLiaL4Xib4mR9bvic66lH1Id8A/640?wx_fmt=gif&amp;from=appmsg\" class=\"rich_pages wxw-img\" data-ratio=\"1.366\" data-s=\"300,640\" data-type=\"gif\" data-w=\"1500\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\" data-imgfileid=\"100179862\"  /></section></section></section></section><section style=\"display: inline-block;vertical-align: bottom;width: auto;align-self: flex-end;flex: 0 0 auto;min-width: 5%;max-width: 100%;height: auto;padding: 0px 15px;border-bottom-style: solid;border-bottom-width: 0px;box-sizing: border-box;\"><section style=\"margin: 8px 0px 0px;box-sizing: border-box;\"><section style=\"color: rgb(133, 79, 48);letter-spacing: 2px;padding: 0px;font-size: 18px;box-sizing: border-box;\"><p style=\"margin: 0px;padding: 0px;box-sizing: border-box;\"><strong style=\"box-sizing: border-box;\"><span leaf=\"\">定积分的核心公式</span></strong></p></section></section></section><section style=\"display: inline-block;vertical-align: bottom;width: auto;align-self: flex-end;min-width: 5%;max-width: 100%;flex: 0 0 auto;height: auto;box-sizing: border-box;\"><section style=\"margin: 0px;line-height: 0;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;width: 18px;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_gif/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0FUaosI3VRia3BHibqm1UHujOAvJZ43kB5sLiaL4Xib4mR9bvic66lH1Id8A/640?wx_fmt=gif&amp;from=appmsg\" class=\"rich_pages wxw-img\" data-ratio=\"1.366\" data-s=\"300,640\" data-type=\"gif\" data-w=\"1500\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\" data-imgfileid=\"100179863\"  /></section></section></section></section><section style=\"margin: 10px 0% 5px;text-align: center;justify-content: center;display: flex;flex-flow: row;box-sizing: border-box;\"><section style=\"display: inline-block;width: 95%;vertical-align: top;border-width: 4px 1px 1px;border-style: solid;border-color: rgb(196, 174, 118) rgb(218, 203, 158) rgb(218, 203, 158);background-color: rgb(255, 254, 251);padding: 10px;align-self: flex-start;flex: 0 0 auto;height: auto;box-sizing: border-box;\"><section style=\"margin: 0px 0%;line-height: 0;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-croporisrc=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGm1ODcmch3XyTNt5NtiaCOrywnc6xGO1OgFAgy8Ps0E4eOt3RP0L3Pxtg/0?wx_fmt=png&amp;from=appmsg\" data-cropselx2=\"519\" data-cropsely2=\"772\" data-imgfileid=\"100180864\" data-ratio=\"1.5087040618955512\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGm1ODcmch3XyTNt5NtiaCOrywnc6xGO1OgFAgy8Ps0E4eOt3RP0L3Pxtg/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"517\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;pointer-events: initial;height: auto !important;\"  /></section><section><span leaf=\"\"><br  /></span></section></section></section></section><section style=\"text-align: center;opacity: 0.35;box-sizing: border-box;\"><section data-cacheurl=\"\" data-remoteid=\"\" style=\"display: inline-block;width: 100%;height: 20px;vertical-align: top;overflow: hidden;background-repeat: no-repeat;background-attachment: scroll;background-position: 50% 50% !important;background-size: 100% 100% !important;box-sizing: border-box;background-image: url(&quot;https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF02EIB4parW5tBD7jfaKNHviaqmev46EiaO5yNB0vJGn7ibVQyyuMZGjfsQ/640?wx_fmt=png&amp;from=appmsg&quot;);\"><svg viewbox=\"0 0 1 1\" style=\"float:left;line-height:0;width:0;vertical-align:top;\"></svg></section></section><section style=\"font-size: 14px;line-height: 2;letter-spacing: 1px;padding: 0px 15px;box-sizing: border-box;\"><section style=\"background-color: rgb(254, 250, 237);box-sizing: border-box;font-style: normal;font-weight: 400;text-align: justify;font-size: 16px;color: rgb(62, 62, 62);\" data-pm-slice=\"5 5 []\"><section style=\"text-align: center;justify-content: center;display: flex;flex-flow: row;margin: 10px 0px 0px;box-sizing: border-box;\"><section style=\"display: inline-block;vertical-align: bottom;width: auto;align-self: flex-end;min-width: 5%;max-width: 100%;flex: 0 0 auto;height: auto;box-sizing: border-box;\"><section style=\"margin: 0px;line-height: 0;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></section></section></section></section><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p></section><span leaf=\"\" style=\"text-align: center;display: block;\" data-mpa-action-id=\"mi7d95ca1ks2\" data-pm-slice=\"0 0 []\"><img data-src=\"https://mmbiz.qpic.cn/mmbiz_gif/7QRTvkK2qC4ia5UrsIrkGrdzLz4x5Nbv7F8m1CQmrcTyM2C93TQoITGibV8TL7dJYbPS0I7SWC4mjCXAzUTJegqQ/640?tp=webp&amp;wxfrom=5&amp;wx_lazy=1#imgIndex=2\" alt=\"图片\" class=\"rich_pages wxw-img __bg_gif\" data-ratio=\"0.45689655172413796\" data-w=\"232\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;vertical-align: baseline;color: rgba(0, 0, 0, 0.9);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 17px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-align: center;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: transparent;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;display: inline-block;overflow-wrap: break-word !important;height: auto !important;width: 102px !important;visibility: visible !important;\" data-width=\"100%\"  /></span><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: dotted;border-width: 0px;border-color: rgb(218, 203, 158);border-radius: 10px;overflow: hidden;width: 90%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-imgfileid=\"100179868\" data-ratio=\"0.44022503516174405\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0yIicic8jWaucKSSWJ2dwPUxshicY9zdMos7YnzknuaV2b5Eon4feALcMA/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"711\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\"  /></section></section><section style=\"font-size: 14px;line-height: 2;letter-spacing: 1px;padding: 0px 15px;box-sizing: border-box;\"><p style=\"white-space: normal;margin: 0px 16px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p></section><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: solid;border-width: 1px;border-color: rgb(196, 174, 118);width: 95%;height: auto;box-sizing: border-box;margin-left: 16px;margin-right: 16px;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-croporisrc=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmz6Py9H6UHvCzV8sr4PCuVOr5Z4ricCxKhNNBIJVRdj0c9MHsczWwAGQ/0?wx_fmt=png&amp;from=appmsg\" data-cropselx2=\"547\" data-cropsely2=\"270\" data-imgfileid=\"100180865\" data-ratio=\"0.4386792452830189\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmz6Py9H6UHvCzV8sr4PCuVOr5Z4ricCxKhNNBIJVRdj0c9MHsczWwAGQ/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"636\" style=\"vertical-align: middle;max-width: 100%;width: 547px;box-sizing: border-box;height: 73px;\"  /></section><section style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 16px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;line-height: 0;text-align: center;\" data-pm-slice=\"0 0 []\"><span leaf=\"\"><br  /></span></section></section><section style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 16px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;line-height: 0;text-align: center;\" data-pm-slice=\"0 0 []\"><span leaf=\"\"><br  /></span><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 16px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;line-height: 0;text-align: center;\" data-pm-slice=\"0 0 []\"><span leaf=\"\"><br  /></span></section></section><section style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 16px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;line-height: 0;text-align: center;\" data-pm-slice=\"0 0 []\"><span leaf=\"\"><br  /></span></section></section><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><span leaf=\"\" style=\"text-align: center;display: block;\" data-mpa-action-id=\"mi7d9m3g1v32\" data-pm-slice=\"0 0 []\"><img alt=\"图片\" class=\"rich_pages wxw-img __bg_gif\" data-ratio=\"0.45689655172413796\" data-src=\"https://mmbiz.qpic.cn/mmbiz_gif/7QRTvkK2qC4ia5UrsIrkGrdzLz4x5Nbv7F8m1CQmrcTyM2C93TQoITGibV8TL7dJYbPS0I7SWC4mjCXAzUTJegqQ/640?tp=webp&amp;wxfrom=5&amp;wx_lazy=1#imgIndex=2\" data-w=\"232\" data-width=\"100%\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;vertical-align: baseline;color: rgba(0, 0, 0, 0.9);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 17px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 0.544px;orphans: 2;text-align: center;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: transparent;text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;display: inline-block;overflow-wrap: break-word !important;height: auto !important;width: 102px !important;visibility: visible !important;\"  /></span><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: dotted;border-width: 0px;border-color: rgb(218, 203, 158);border-radius: 10px;overflow: hidden;width: 90%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-imgfileid=\"100179871\" data-ratio=\"0.40629095674967236\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0xLBJO1NQkZYibLmX1vz37Tn7HkDUU9ynyFSAaqdgJyKsyicia06qkW4mA/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"763\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\"  /></section></section><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: solid;border-width: 1px;border-color: rgb(218, 203, 158);width: 95%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-croporisrc=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmxJvlwIJr91q7xZWBvINZFQJXTr2gcrWLtXMHohcesmuHmmDJ6VWHiaA/0?wx_fmt=png&amp;from=appmsg\" data-cropselx2=\"547\" data-cropsely2=\"452\" data-imgfileid=\"100180866\" data-ratio=\"0.5530451866404715\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmxJvlwIJr91q7xZWBvINZFQJXTr2gcrWLtXMHohcesmuHmmDJ6VWHiaA/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"1018\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;pointer-events: initial;height: auto !important;\"  /></section><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><section style=\"background-color: rgb(254, 250, 237);box-sizing: border-box;font-style: normal;font-weight: 400;text-align: justify;font-size: 16px;color: rgb(62, 62, 62);\" data-pm-slice=\"3 3 []\"><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;border-style: solid;border-width: 1px;border-color: rgb(218, 203, 158);width: 95%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img class=\"rich_pages wxw-img\" data-croporisrc=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmOzvAXfd9BAjHv47DhbrQdNcsRHetxribL6xRUQp4bHpvgeId4VoCrQQ/0?wx_fmt=png&amp;from=appmsg\" data-cropselx2=\"547\" data-cropsely2=\"292\" data-imgfileid=\"100180867\" data-ratio=\"0.645320197044335\" data-s=\"300,640\" data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmOzvAXfd9BAjHv47DhbrQdNcsRHetxribL6xRUQp4bHpvgeId4VoCrQQ/640?wx_fmt=png&amp;from=appmsg\" data-type=\"png\" data-w=\"1015\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;pointer-events: initial;height: auto !important;\"  /></section></section></section><p style=\"white-space: normal;margin: 0px 16px;padding: 0px;box-sizing: border-box;line-height: 2em;\"><span leaf=\"\"><br  /></span></p><p style=\"text-align: justify;margin: 3pt 16px;line-height: 2em;\" data-pm-slice=\"0 0 []\" data-mpa-action-id=\"mipt3vz01vmo\"><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\">今天也是干货满满的一天，临近考试同学们也别太紧张，每天跟着我们梳理知识点查漏补</span><span leaf=\"\" mpa-font-style=\"mipt3vyi1ivc\" style=\"font-size: 14px;\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">缺。</span></span></span><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\" mpa-font-style=\"mipt3vyicj\" style=\"font-size: 14px;\">深耕方得收获，久熬终见曙光</span></span><span data-font-family=\"微软雅黑\"><span leaf=\"\" style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\">。</span></span><span data-font-family=\"微软雅黑\"><span leaf=\"\" style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\">错题本上的印记，都是照亮</span></span><span data-font-family=\"微软雅黑\"><span leaf=\"\" style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\">考研路</span></span><span data-font-family=\"微软雅黑\"><span leaf=\"\" style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\">的光</span></span><span data-font-family=\"微软雅黑\"><span leaf=\"\" style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\">！<span textstyle=\"\" style=\"letter-spacing: 1px;\">今天也完成了学习</span></span><span leaf=\"\">打卡！</span></span><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\">点赞！晚安，让我们一研为定！</span></span><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" lang=\"EN-US\"><o:p></o:p></span></p><p style=\"text-align: justify;margin: 3pt 16px;line-height: 2em;\" data-pm-slice=\"0 0 []\"><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\"><br  /></span></span><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" lang=\"EN-US\"><o:p></o:p></span></p><p style=\"text-align: justify;margin: 3pt 16px;line-height: 2em;\"><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" data-font-family=\"微软雅黑\"><span leaf=\"\" mpa-font-style=\"mih6ta9ey8o\" style=\"font-size: 14px;\"><span textstyle=\"\" style=\"letter-spacing: 1px;\">PS.同学们有什么想问硕哥的可以评论区留言哦~老师会亲自为你解答滴！<img data-src=\"https://res.wx.qq.com/t/wx_fed/we-emoji/res/assets/Expression/Expression_5@2x.png\" class=\"rich_pages wxw-img\" data-ratio=\"1\" data-w=\"20\" style=\"display: inline-block;width: 20px;vertical-align: middle;background-size: cover;\"  /></span></span></span><span style=\"font-size: 11pt;font-family: 微软雅黑;font-weight: normal;font-style: normal;color: rgb(51, 51, 51);letter-spacing: 0pt;vertical-align: baseline;\" lang=\"EN-US\"><o:p></o:p></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\" data-pm-slice=\"0 0 []\"><span style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;color: rgb(177, 44, 22);font-size: 15px;overflow-wrap: break-word !important;\"><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><img data-src=\"https://res.wx.qq.com/t/wx_fed/we-emoji/res/assets/newemoji/Party.png?tp=webp&amp;wxfrom=5&amp;wx_lazy=1#imgIndex=12\" alt=\"图片\" class=\"rich_pages wxw-img\" data-ratio=\"1\" data-w=\"128\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;vertical-align: middle;display: inline-block;background-size: cover;background-color: transparent;box-sizing: border-box !important;overflow-wrap: break-word !important;height: auto !important;width: 20px !important;visibility: visible !important;\"  />还有一个好消息！</span></strong></span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">如果你想</span></strong></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span mpa-font-style=\"mi9vebyms5y\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;font-weight: normal;font-size: 13px;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">考前临时抱佛脚，抓住最后时间逆袭过线？</span></span></strong></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><span leaf=\"\" mpa-font-style=\"mi9vebym1v5m\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;font-size: 13px;box-sizing: border-box !important;overflow-wrap: break-word !important;\">抓不住重点、越学越焦虑，想提升不知道如何下手？</span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><span leaf=\"\" mpa-font-style=\"mi9vebymwkd\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;font-size: 13px;box-sizing: border-box !important;overflow-wrap: break-word !important;\">对解题套路、技巧不熟练，不知道如何吃透真题？</span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-align: justify;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;overflow-wrap: break-word !important;line-height: 2em;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><br  /></span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><span style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;font-size: 15px;overflow-wrap: break-word !important;\"><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><span textstyle=\"\" style=\"background-color: rgb(217, 33, 66);color: rgb(255, 255, 255);\">&nbsp;硕哥数学过线急救班&nbsp;</span></span></strong></span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><span style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;font-size: 16px;overflow-wrap: break-word !important;\"><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span leaf=\"\" mpa-font-style=\"mi7dgiq91tjd\" data-mpa-action-id=\"mi7dgirf1v5o\" data-pm-slice=\"0 0 []\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;font-size: 18px;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><span textstyle=\"\" style=\"color: rgb(217, 33, 66);\">21号&nbsp;</span></span></strong></span><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">正式上线啦！！！</span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">每天</span><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><span textstyle=\"\" style=\"color: rgb(255, 76, 0);\">4小时</span></span></strong><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">，只学必考点+</span><strong style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;overflow-wrap: break-word !important;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\"><span textstyle=\"\" style=\"color: rgb(255, 76, 0);\">5年真题</span></span></strong><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">强刷</span></p><p style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box;clear: both;min-height: 1em;color: rgb(62, 62, 62);font-family: &quot;PingFang SC&quot;, system-ui, -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, Arial, sans-serif;font-size: 14px;font-style: normal;font-variant-ligatures: normal;font-variant-caps: normal;font-weight: 400;letter-spacing: 1px;orphans: 2;text-indent: 0px;text-transform: none;widows: 2;word-spacing: 0px;-webkit-text-stroke-width: 0px;white-space: normal;background-color: rgb(254, 250, 237);text-decoration-thickness: initial;text-decoration-style: initial;text-decoration-color: initial;text-align: center;overflow-wrap: break-word !important;line-height: 2em;\"><span leaf=\"\" style=\"-webkit-tap-highlight-color: transparent;margin: 0px;padding: 0px;outline: 0px;max-width: 100%;box-sizing: border-box !important;overflow-wrap: break-word !important;\">抓大放小，考前逆袭急救过线！</span></p></section><section style=\"text-align: center;margin-top: 0.5em;margin-bottom: 0.5em;padding-left: 0.5em;padding-right: 0.5em;box-sizing: border-box;\"><section style=\"box-sizing: border-box;width: 100%;border: 0.3em solid white;box-shadow: rgb(102, 102, 102) 0.2em 0.2em 0.5em;height: auto !important;display: inline-block;line-height: 0;\" nodeleaf=\"\"><img data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF01GfsiawC2qBqAj5zTCRvusXOJgNEXicjz7icxicvB6BNj5tVV9yMuUUOicQ/640?wx_fmt=png&amp;from=appmsg\" class=\"rich_pages wxw-img\" data-ratio=\"0.244152\" data-s=\"300,640\" data-type=\"png\" data-w=\"684\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\" data-imgfileid=\"100179870\"  /></section></section><p style=\"white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\"><br  /></span></p><section style=\"font-size: 15px;line-height: 2;letter-spacing: 1px;color: rgb(249, 110, 87);box-sizing: border-box;\"><p style=\"text-align: center;white-space: normal;margin: 0px;padding: 0px;box-sizing: border-box;\"><span leaf=\"\" mpa-font-style=\"mi9vghnb4me\" style=\"font-size: 13px;\" data-mpa-action-id=\"mi9vghqphzk\" data-pm-slice=\"0 0 []\"><span textstyle=\"\" style=\"font-weight: bold;\">（已报名【数学保命班】的同学无需购买此课程）</span></span></p></section><section style=\"line-height: 0;text-align: center;box-sizing: border-box;\"><section style=\"max-width: 100%;vertical-align: middle;display: inline-block;line-height: 0;width: 95%;height: auto;box-sizing: border-box;\" nodeleaf=\"\"><img data-src=\"https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0biayc0j1RVxWsXc62PrXicjomHHGmxvRFenrPicxMXiay1MGUyrSQxEw7icD8q2tQjtL4cfVdVnDXGGG5g/640?wx_fmt=png&amp;from=appmsg\" class=\"rich_pages wxw-img\" data-ratio=\"0.4513888888888889\" data-s=\"300,640\" data-w=\"864\" style=\"vertical-align: middle;max-width: 100%;width: 100%;box-sizing: border-box;\" data-croporisrc=\"http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0biayc0j1RVxWsXc62PrXicjomHHGmxvRFenrPicxMXiay1MGUyrSQxEw7icD8q2tQjtL4cfVdVnDXGGG5g/0?wx_fmt=png&amp;from=appmsg\" data-cropselx2=\"549\" data-cropsely2=\"797\" data-imgfileid=\"100179961\"  /></section></section></section><p style=\"display: none;\"><mp-style-type data-value=\"3\"></mp-style-type></p>",
+  "create_time": "2025-12-04 18:00",
+  "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF02fKUwOszueyBzSiajI9OuciaxrCkNib8m2XwodicySKIocOMdAZxO1fNvg/0?wx_fmt=jpeg",
+  "link": "https://mp.weixin.qq.com/s?__biz=MzIzNDcyMTI5MQ==&amp;mid=2247664546&amp;idx=2&amp;sn=cf3b894cff1fe9892fb0598a40c465fb&amp;chksm=e91364ef142eca992924da1e7efc132a7fe301ebfdf403668e506be0bfada295cee7b112fd20#rd",
+  "source_url": "",
+  "can_share": 1,
+  "alias": "juliubook",
+  "type": 9,
+  "author": "小榜",
+  "is_limit_user": 0,
+  "show_cover_pic": 0,
+  "advertisement_info": [],
+  "ori_create_time": 1764842451,
+  "user_uin": 238499879,
+  "total_item_num": 2,
+  "is_async": 1,
+  "comment_id": "4282366089721282576",
+  "img_format": "jpeg",
+  "svr_time": 1765936349,
+  "copyright_info": {
+    "copyright_stat": 0,
+    "is_cartoon_copyright": 0
+  },
+  "can_reward": 0,
+  "signature": "要考研，找金榜！考数学，更要找金榜！",
+  "in_mm": 0,
+  "app_id": "wxeb4c2a46a6226601",
+  "show_comment": 0,
+  "can_use_page": 0,
+  "hd_head_img": "http://wx.qlogo.cn/mmhead/Q3auHgzwzM71noIWGMsHHrNC1c7cFVpk3Qh06UTRSOCrV3x8ejMxPA/0",
+  "del_reason_id": 0,
+  "srcid": "121716jGweIJBJxksdlUOxFv",
+  "is_wxg_stuff_uin": 0,
+  "need_report_cost": 0,
+  "bizuin": "MzIzNDcyMTI5MQ==",
+  "mid": 2247664546,
+  "idx": 2,
+  "sn": "cf3b894cff1fe9892fb0598a40c465fb",
+  "use_tx_video_player": 0,
+  "is_only_read": 1,
+  "req_id": "1709bJTwgpI09Emirl6uPnCN",
+  "use_outer_link": 0,
+  "ban_scene": 0,
+  "csp_nonce_str": 1296008185,
+  "msg_daily_idx": 1,
+  "ori_head_img_url": "http://wx.qlogo.cn/mmhead/Q3auHgzwzM71noIWGMsHHrNC1c7cFVpk3Qh06UTRSOCrV3x8ejMxPA/132",
+  "filter_time": 1764841177,
+  "appmsg_fe_filter": "contenteditable",
+  "is_login": 1,
+  "item_show_type": 0,
+  "voice_in_appmsg": [
+    {
+      "voice_id": "MzIzNDcyMTI5MV8yMjQ3NjY0NTQ1",
+      "sn": "4816d55115a4fb4e60c74fd024fe6cce",
+      "voice_md5": "",
+      "listen_id": "222483580371378689"
+    }
+  ],
+  "video_page_info": {
+    "mp_video_trans_info": [],
+    "drama_video_info": {},
+    "drama_info": {}
+  },
+  "malicious_title_reason_id": 0,
+  "picture_page_info_list": [
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0VXx72mMicicIbbibFgiaicjLLBU4GEwCdunicpJ4xbic1LAdIjLuic5OksQDfw/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 731,
+      "height": 295,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.86437887,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGm1IFRHmnQUmyf3QIoAicQCJSInmr2w3NsOn4CiaHnWmNiadhV7KNrPdiaIg/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/mmbiz_gif/7QRTvkK2qC4ia5UrsIrkGrdzLz4x5Nbv7F8m1CQmrcTyM2C93TQoITGibV8TL7dJYbPS0I7SWC4mjCXAzUTJegqQ/640?tp=webp&amp;amp;wxfrom=5&amp;amp;wx_lazy=1#imgIndex=2",
+      "width": 232,
+      "height": 106,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0lYZqlxj7ZSR1qVWEDDYs4vo7PrvyFibqfkficYjowYcwNGIqQLw6uMpQ/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 716,
+      "height": 295,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.85729873,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmeFv3oIK3fP3E3xAsL9LUJWdfGalFZCYUth5nmRz5zgxUfle1rgHOFQ/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_gif/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0FUaosI3VRia3BHibqm1UHujOAvJZ43kB5sLiaL4Xib4mR9bvic66lH1Id8A/640?wx_fmt=gif&amp;amp;from=appmsg",
+      "width": 1080,
+      "height": 1475,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_gif/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0FUaosI3VRia3BHibqm1UHujOAvJZ43kB5sLiaL4Xib4mR9bvic66lH1Id8A/640?wx_fmt=gif&amp;amp;from=appmsg",
+      "width": 1080,
+      "height": 1475,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGm1ODcmch3XyTNt5NtiaCOrywnc6xGO1OgFAgy8Ps0E4eOt3RP0L3Pxtg/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 517,
+      "height": 780,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.96413791,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmptaWnpFDuovR657mibjcKXlqVo8Iz0FhHmgcIAian3q73xASerdTiarIA/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF02EIB4parW5tBD7jfaKNHviaqmev46EiaO5yNB0vJGn7ibVQyyuMZGjfsQ/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 641,
+      "height": 67,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/mmbiz_gif/7QRTvkK2qC4ia5UrsIrkGrdzLz4x5Nbv7F8m1CQmrcTyM2C93TQoITGibV8TL7dJYbPS0I7SWC4mjCXAzUTJegqQ/640?tp=webp&amp;amp;wxfrom=5&amp;amp;wx_lazy=1#imgIndex=2",
+      "width": 232,
+      "height": 106,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0yIicic8jWaucKSSWJ2dwPUxshicY9zdMos7YnzknuaV2b5Eon4feALcMA/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 711,
+      "height": 313,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.87060481,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmJxF9LdpN879ZW5910PBPJiczeGbLwPX1U98nyFjXZ1j8mguachjZgNA/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmz6Py9H6UHvCzV8sr4PCuVOr5Z4ricCxKhNNBIJVRdj0c9MHsczWwAGQ/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 636,
+      "height": 279,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.91344094,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmA8VW20mZOibkGssIKt3ibRNd81QbCOnLibLZVgibMMmcsfnjsljPV6VXZg/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/mmbiz_gif/7QRTvkK2qC4ia5UrsIrkGrdzLz4x5Nbv7F8m1CQmrcTyM2C93TQoITGibV8TL7dJYbPS0I7SWC4mjCXAzUTJegqQ/640?tp=webp&amp;amp;wxfrom=5&amp;amp;wx_lazy=1#imgIndex=2",
+      "width": 232,
+      "height": 106,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0xLBJO1NQkZYibLmX1vz37Tn7HkDUU9ynyFSAaqdgJyKsyicia06qkW4mA/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 763,
+      "height": 310,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.84753686,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmykjGcDmVaD19L1lpaRg7krFf16NHKATULFSIfInQ93qEsmIETV7qJw/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmxJvlwIJr91q7xZWBvINZFQJXTr2gcrWLtXMHohcesmuHmmDJ6VWHiaA/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 1018,
+      "height": 563,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 1,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmQxgpgibZkaOic9micV3UXGEl2tnb8QHWrOrmMeaLibDWP6BLf0OwnIZiaOA/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmOzvAXfd9BAjHv47DhbrQdNcsRHetxribL6xRUQp4bHpvgeId4VoCrQQ/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 1015,
+      "height": 655,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.96980476,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmJvVT5bpGqVAYyFm9Teb9eSRz9FEKohEmmZtbxbQDlBWYAgiaVj7oHxQ/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://res.wx.qq.com/t/wx_fed/we-emoji/res/assets/Expression/Expression_5@2x.png",
+      "width": 128,
+      "height": 128,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://res.wx.qq.com/t/wx_fed/we-emoji/res/assets/newemoji/Party.png?tp=webp&amp;amp;wxfrom=5&amp;amp;wx_lazy=1#imgIndex=12",
+      "width": 128,
+      "height": 128,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF01GfsiawC2qBqAj5zTCRvusXOJgNEXicjz7icxicvB6BNj5tVV9yMuUUOicQ/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 684,
+      "height": 167,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.83474118,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmkkITldJUMdUhmVs8pnice1pXSjWZO6icKgqov73BofRLsMicXcNxxV3kQ/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0biayc0j1RVxWsXc62PrXicjomHHGmxvRFenrPicxMXiay1MGUyrSQxEw7icD8q2tQjtL4cfVdVnDXGGG5g/640?wx_fmt=png&amp;amp;from=appmsg",
+      "width": 864,
+      "height": 390,
+      "poi_info": [],
+      "wxa_info": [],
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "show_watermark": true,
+      "bottom_right_brightness": 0.30470783,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_png/SUIPcAicB0bgNVY8Qiatu4YcPOdv29CDGmlohHNhPXVMVDibtGhVLuB4xEbqkwkDEWtGdibXkYnibV2OLEeyRlKpKjQ/0?wx_fmt=png",
+        "is_uploader": true
+      },
+      "spot_product_info": []
+    }
+  ],
+  "show_msg_voice": 0,
+  "locationlist": [],
+  "hotspotinfolist": [],
+  "isnew": 0,
+  "malicious_content_type": 0,
+  "fasttmpl_version": 8043084,
+  "is_top_stories": 0,
+  "video_ids": [],
+  "isprofileblock": 0,
+  "cdn_url_235_1": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF0H0KfaoYWsykGO8r99A9huO3WsbxFicpBDQXHpiaiajzTW1Xz4O70Zg76g/0?wx_fmt=jpeg",
+  "cdn_url_1_1": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/SUIPcAicB0bhnNKkh1YNsK0NF8o1fOAF02fKUwOszueyBzSiajI9OuciaxrCkNib8m2XwodicySKIocOMdAZxO1fNvg/0?wx_fmt=jpeg",
+  "more_read_type": 0,
+  "appmsg_like_type": 2,
+  "ori_send_time": 1764842451,
+  "show_top_bar": 0,
+  "related_tag": [],
+  "user_info": {
+    "show_top_bar": 0,
+    "enter_id": 262382059,
+    "user_uin": 238499879,
+    "is_login": 1,
+    "is_wxg_stuff_uin": 0,
+    "show_comment": 0,
+    "can_share": 1,
+    "can_use_page": 0,
+    "is_paid": 0,
+    "clientversion": "",
+    "ckeys": [],
+    "show_msg_voice": 0,
+    "fasttmpl_infos": [
+      {
+        "type": 0,
+        "version": 8043084,
+        "lang": "zh_CN",
+        "fullversion": "8043084-zh_CN-html",
+        "versiongroup": "zh_CN-html"
+      }
+    ],
+    "isoversea": 2,
+    "search_keyword": {
+      "item_list": [
+        {
+          "keyword": "数学保命班",
+          "idx_range_list": [
+            {
+              "begin_idx": 5,
+              "end_idx": 9,
+              "section_idx": 65
+            }
+          ],
+          "s1s_stat_info": "%7B%22bizuin%22%3A3234721291%2C%22msgid%22%3A2247664546%2C%22msgidx%22%3A2%2C%22docid%22%3A%226517057640424860329%22%2C%22keywordItem%22%3A%7B%22keyword%22%3A%22%E6%95%B0%E5%AD%A6%E4%BF%9D%E5%91%BD%E7%8F%AD%22%2C%22section_idx%22%3A65%2C%22begin_idx%22%3A5%2C%22end_idx%22%3A9%2C%22type%22%3A1024%2C%22lemma_id%22%3A%22%22%7D%2C%22category%22%3A%22%E6%95%99%E8%82%B2_%E7%A1%95%E5%8D%9A%E6%95%99%E8%82%B2%3A0.994715%22%2C%22reqId%22%3A9238453272616171352%2C%22S1SPageType%22%3A1%2C%22strReqId%22%3A%229238453272616171352%22%2C%22orgReqId%22%3A%229238453272616171352%22%2C%22item_show_type%22%3A0%2C%22common_value_expt%22%3A91%2C%22highlight_preload%22%3A0%7D",
+          "s1s_context_info": "%7B%22keyword%22%3A%22%E6%95%B0%E5%AD%A6%E4%BF%9D%E5%91%BD%E7%8F%AD%22%2C%22isNeedUpdateGPTInfo%22%3Afalse%2C%22S1SPageType%22%3A1%2C%22search_id%22%3A%229238453272616171352%22%2C%22doc_info%22%3A%7B%22triple%22%3A%7B%22bizuin%22%3A3234721291%2C%22msgid%22%3A2247664546%2C%22msgidx%22%3A2%7D%2C%22docid%22%3A6517057640424859648%2C%22publish_time%22%3A1764842400%7D%2C%22idx_range%22%3A%7B%22section_idx%22%3A65%2C%22begin_idx%22%3A5%2C%22end_idx%22%3A9%7D%2C%22expt_value%22%3A91%2C%22source%22%3A1024%2C%22needPreRender%22%3Afalse%7D",
+          "s1s_jsapi_name": "openWXSearchHalfPage",
+          "s1s_jsapi_paras": "{\"query\":\"数学保命班\",\"scene\":139,\"hiddenSearchHeader\":0,\"webviewHeightRatio\":0.699999988,\"kvItems\":[{\"key\":\"mpEndHalfPageResultTab\",\"textValue\":\"0\"},{\"key\":\"firstSearchRequest\",\"uintValue\":1},{\"key\":\"MPHalfSearchAIBox\",\"uintValue\":3}],\"sessionKvItems\":[{\"key\":\"mpEndHalfPageResultTab\",\"textValue\":\"0\"},{\"key\":\"MPHalfSearchAIBox\",\"uintValue\":3}],\"parentType\":135}",
+          "tags": []
+        }
+      ],
+      "exp_info": "CIvct4YMEKLH4q8IGAIiEzY1MTcwNTc2NDA0MjQ4NjAzMjko2O7Tot2J5ZqAAQ==",
+      "need_baike_preload": true,
+      "show_ad_keyword": false,
+      "ad_item_list": []
+    },
+    "tts_heard_person_cnt": 24,
+    "tts_is_show": 1,
+    "frontend_exp": {
+      "list": [
+        {
+          "key": "appmsg_loveline",
+          "value": "1"
+        },
+        {
+          "key": "appmsg_underline_translate",
+          "value": "1"
+        },
+        {
+          "key": "audio_page_clike_to_seek",
+          "value": "1"
+        },
+        {
+          "key": "audio_page_style",
+          "value": "1"
+        },
+        {
+          "key": "listenplayer_audio_lyrics",
+          "value": "1"
+        },
+        {
+          "key": "listenplayer_star",
+          "value": "1"
+        },
+        {
+          "key": "listenplayer_tmp",
+          "value": "1"
+        },
+        {
+          "key": "shareh5info",
+          "value": "1"
+        },
+        {
+          "key": "tts_floating",
+          "value": "1"
+        }
+      ],
+      "succ": true
+    },
+    "show_version": 2,
+    "bar_version": 5,
+    "transfer_config": [
+      {
+        "scope": "mmbizwap_cgi_appmsgad",
+        "cgis": [
+          "mp/advertisement_report",
+          "mp/getappmsgad",
+          "mp/ad_video_report",
+          "mp/ad_monitor",
+          "mp/ad_report",
+          "mp/ad_biz_info",
+          "mp/ad_complaint",
+          "mp/ad",
+          "mp/ad_app_info"
+        ]
+      },
+      {
+        "scope": "mmbizwap_cgi_appmsgext",
+        "cgis": [
+          "mp/appmsg_comment",
+          "mp/getappmsgext",
+          "mp/videoplayer",
+          "mp/appmsg_video_snap",
+          "mp/immersive_player",
+          "mp/appmsg_weapp",
+          "mp/appmsg_like",
+          "mp/newappmsgvote",
+          "mp/reward",
+          "mp/authorreward",
+          "mp/qqmusic",
+          "mp/video",
+          "mp/qna",
+          "mp/searchwordbaike",
+          "mp/appmsgthank"
+        ]
+      },
+      {
+        "scope": "mmbizwap_cgi_misc",
+        "cgis": [
+          "mp/wapcommreport",
+          "mp/underline",
+          "mp/relatedarticle",
+          "mp/homepage",
+          "mp/waerrpage",
+          "mp/getverifyinfo",
+          "mp/getprofilebizrecommend",
+          "mp/infringement",
+          "mp/getprofiletransferpage",
+          "mp/wacomplain",
+          "mp/appmsgreport",
+          "mp/getbizbanner"
+        ]
+      }
+    ],
+    "bar_data": 1,
+    "appmsg_bar_data": {
+      "show_like": 1,
+      "show_old_like": 1,
+      "show_share": 1,
+      "show_like_gray": 0,
+      "show_old_like_gray": 0,
+      "show_share_gray": 0,
+      "comment_enabled": 1,
+      "like_count": 1,
+      "old_like_count": 9,
+      "share_count": 28,
+      "comment_count": 0,
+      "get_data_succ": 1,
+      "collect_count": 2,
+      "show_collect": 1,
+      "show_collect_gray": 0,
+      "read_num": 687,
+      "show_read": 1,
+      "show_friend_seen": 2,
+      "friend_subscribe_count": 0,
+      "is_subscribed": 0,
+      "star_num": 1,
+      "show_star": 1,
+      "can_use_star": 0,
+      "original_content_num": 84,
+      "verify_status": 2
+    },
+    "pic_related_rec_info": {},
+    "line_info": {
+      "use_line": 1,
+      "ui_version": 1
+    },
+    "show_comment_bar": 0,
+    "subcount_version": 3,
+    "reward_half_panel": 1,
+    "show_comment_entrance": 2,
+    "share_h5info": {
+      "underline_url": "https://mp.weixin.qq.com/mp/underline?action=get_appmsg_segment&clicktype=2#wechat_redirect",
+      "interaction_url": "https://mp.weixin.qq.com/mp/getinteraction?action=get_usertypelist&type=0&get_save=1&get_lastread=1&clicktype=2#wechat_redirect"
+    },
+    "short_link": "https://mp.weixin.qq.com/s/10C4BZQJwSW03kauuUmQ-g",
+    "quote_list": [],
+    "red_flower_like_info": {
+      "is_red_flower_like": 0
+    },
+    "audio_page_style": 1,
+    "audio_page_enable_clike_to_seek": 1,
+    "indentity_id": "gTbkiD2QmitOuP8-VadJQw",
+    "get_search_keyword_realtime": 0
+  },
+  "ainfos": [],
+  "related_article_info": {
+    "has_related_article_info": 0
+  },
+  "has_red_packet_cover": 0,
+  "is_pay_subscribe": 0,
+  "pay_subscribe_info": {
+    "preview_percent": 0,
+    "desc": "",
+    "fee": 0,
+    "gifts_count": 0,
+    "wecoin_amount": 0
+  },
+  "video_in_article": [],
+  "is_area_shield": 0,
+  "shield_areaids": [],
+  "appmsg_ext_get": {
+    "func_flag": 0
+  },
+  "anchor_tree": [],
+  "voice_in_appmsg_list_json": "{\"voice_in_appmsg\":[{\"voice_id\":\"MzIzNDcyMTI5MV8yMjQ3NjY0NTQ1\",\"sn\":\"4816d55115a4fb4e60c74fd024fe6cce\",\"voice_md5\":\"\",\"listen_id\":\"222483580371378689\"}]}",
+  "live_info": [],
+  "lang": "zh_CN",
+  "cdn_url_16_9": "",
+  "real_item_show_type": 0,
+  "url_item_show_type": 0,
+  "video_page_infos": [],
+  "can_use_wecoin": 1,
+  "wecoin_tips": 0,
+  "front_end_additional_fields": {
+    "is_auto_type_setting": 3,
+    "save_type": 0,
+    "template_version": ""
+  },
+  "open_fansmsg": 0,
+  "is_cooling_appmsg": 0,
+  "ip_wording": {
+    "country_name": "中国",
+    "country_id": "156",
+    "province_name": "北京"
+  },
+  "show_ip_wording": 1,
+  "is_acct_area_shield": 0,
+  "shield_acct_areaids": [],
+  "style_type": 3,
+  "shield_areas_info": [],
+  "create_timestamp": 1764842451,
+  "picture_list_in_pictext": [],
+  "servicetype": 0,
+  "segment_comment_id": "4282366113310048279",
+  "ad_mark_status": 0,
+  "hide_ad_mark_on_cps": 0,
+  "finder_audio_card": "{\"list\":[]}",
+  "claim_source": {
+    "is_user_no_claim_source": 1
+  },
+  "extra_comment_id": "4282366112840286218",
+  "last_text": [],
+  "wash_status": 0,
+  "enterid": 1765936348,
+  "zhuge_qa_id_list": [],
+  "sec_control_info": {
+    "list": []
+  },
+  "cdn_url_3_4": "",
+  "window_product_list": [],
+  "finder_music_card": "{\"list\":[]}",
+  "finder_audio_card_list": {
+    "list": []
+  },
+  "finder_music_card_list": {
+    "list": []
+  },
+  "new_service_type": 1,
+  "product_activity": {},
+  "rt_biz_info": {
+    "elected_comment_total_cnt": 0
+  },
+  "redpacket_cover_list": [],
+  "footer_gift_activity": {},
+  "verify_status": 2,
+  "watermark_setting": 3,
+  "title_gen_type": 0,
+  "appmsg_listen_id": "150425985084851305",
+  "trans_appmsg_info": {},
+  "location": {},
+  "topic_infos": [],
+  "footer_common_shops": [],
+  "footer_product_card": {},
+  "desc_empty": true,
+  "hashtags": {
+    "hashtag": []
+  },
+  "aigc_pictures": [],
+  "private_info": {}
+}

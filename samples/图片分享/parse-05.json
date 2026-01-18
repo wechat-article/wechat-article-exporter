@@ -1,0 +1,486 @@
+{
+  "base_resp": {
+    "ret": 0,
+    "errmsg": "ok",
+    "wxtoken": 777,
+    "cookie_count": 0,
+    "sessionid": "svr_b8673e78637"
+  },
+  "user_name": "gh_03ba256a8f7e",
+  "nick_name": "趋势动物小程序说明书",
+  "round_head_img": "http://mmbiz.qpic.cn/mmbiz_png/OibVWv6Vp3rvrlhGzP45OVXXjJRla2Ok2dO8bUaCs3TvSFmverbd5w6BstGkI11aMfe5iaibKTflvYReDQEmpaNDA/0?wx_fmt=png",
+  "title": "20251218 警惕技术泡沫",
+  "desc": "分享三个观察：\n\n1、美国科技股和加密币相关性非常高。\n\n2、美国科技股刚刚开始下行趋势。\n\n观察样本代表：\n🔹美股，温转平，右侧戛然而止\n🔹谷歌，温转平 &lt;a class=&quot;wx_img_refer_link&quot; data-seq=&quot;2&quot; data-refer=&quot;图2&quot; style=&quot;&quot;&gt;图2&lt;/a&gt;\n🔹英伟达破位，凉转寒，下行趋势开始 &lt;a class=&quot;wx_img_refer_link&quot; data-seq=&quot;1&quot; data-refer=&quot;图1&quot; style=&quot;&quot;&gt;图1&lt;/a&gt;\n🔹美国科技(信息技术)行业，趋势相对强度垫底\n\n3、加密币再次确认凉转寒，下行风险打开。&lt;a class=&quot;wx_img_refer_link&quot; data-seq=&quot;4&quot; data-refer=&quot;图4&quot; style=&quot;&quot;&gt;图4&lt;/a&gt;\n\n警惕由科技股调整带来的市场风险。\n&lt;a data-unique-id=&quot;mjb7rp9c-smomcu&quot; href=&quot;https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;amp;mid=2247490207&amp;amp;idx=1&amp;amp;sn=f792d8d3085327cf7b5216d378c0e7e0&amp;amp;scene=142#wechat_redirect&quot; class=&quot;normal_text_link mp_article_text_link&quot; target=&quot;_blank&quot; data-itemshowtype=&quot;8&quot;&gt;20251202 加密科技趋势退潮&lt;/a&gt;\n\n无论中资还是美股，目前资金避险或偏好的方向，依然是大金融。\n&lt;a data-unique-id=&quot;mjb7xnyd-7jzotk&quot; href=&quot;https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;amp;mid=2247490381&amp;amp;idx=1&amp;amp;sn=88aea6e261812f6dd5666bcd5775107b&amp;amp;scene=142#wechat_redirect&quot; class=&quot;normal_text_link mp_article_text_link&quot; target=&quot;_blank&quot; data-itemshowtype=&quot;8&quot;&gt;20251217 大象起舞&lt;/a&gt;\n\n详见&lt;a data-unique-id=&quot;mb4pwcb5-mg4f2x&quot; target=&quot;_blank&quot; class=&quot;weapp_text_link&quot; data-miniprogram-type=&quot;text&quot; data-miniprogram-appid=&quot;wx64e4edbab5e14356&quot; data-miniprogram-path=&quot;pages/tendency/tendency?shareId=261164&quot; data-miniprogram-nickname=&quot;趋势动物Pro&quot; data-miniprogram-servicetype=&quot;0&quot; data-miniprogram-applink=&quot;&quot;&gt;趋势动物pro&lt;/a&gt;\n\n声明：&lt;a data-unique-id=&quot;mefncqxh-e19sej&quot; href=&quot;https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;amp;mid=2247486838&amp;amp;idx=1&amp;amp;sn=2e294d9ed4823863ac07bcd445edece4&amp;amp;scene=142#wechat_redirect&quot; class=&quot;normal_text_link mp_article_text_link&quot; target=&quot;_blank&quot; data-itemshowtype=&quot;8&quot;&gt;内容包含观点&lt;/a&gt;，请独立决策。  \nNick，2025/12/18",
+  "content_noencode": "分享三个观察：\n\n1、美国科技股和加密币相关性非常高。\n\n2、美国科技股刚刚开始下行趋势。\n\n观察样本代表：\n🔹美股，温转平，右侧戛然而止\n🔹谷歌，温转平 <a class=\"wx_img_refer_link\" data-seq=\"2\" data-refer=\"图2\" style=\"\">图2</a>\n🔹英伟达破位，凉转寒，下行趋势开始 <a class=\"wx_img_refer_link\" data-seq=\"1\" data-refer=\"图1\" style=\"\">图1</a>\n🔹美国科技(信息技术)行业，趋势相对强度垫底\n\n3、加密币再次确认凉转寒，下行风险打开。<a class=\"wx_img_refer_link\" data-seq=\"4\" data-refer=\"图4\" style=\"\">图4</a>\n\n警惕由科技股调整带来的市场风险。\n<a data-unique-id=\"mjb7rp9c-smomcu\" href=\"https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;mid=2247490207&amp;idx=1&amp;sn=f792d8d3085327cf7b5216d378c0e7e0&amp;scene=142#wechat_redirect\" class=\"normal_text_link mp_article_text_link\" target=\"_blank\" data-itemshowtype=\"8\">20251202 加密科技趋势退潮</a>\n\n无论中资还是美股，目前资金避险或偏好的方向，依然是大金融。\n<a data-unique-id=\"mjb7xnyd-7jzotk\" href=\"https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;mid=2247490381&amp;idx=1&amp;sn=88aea6e261812f6dd5666bcd5775107b&amp;scene=142#wechat_redirect\" class=\"normal_text_link mp_article_text_link\" target=\"_blank\" data-itemshowtype=\"8\">20251217 大象起舞</a>\n\n详见<a data-unique-id=\"mb4pwcb5-mg4f2x\" target=\"_blank\" class=\"weapp_text_link\" data-miniprogram-type=\"text\" data-miniprogram-appid=\"wx64e4edbab5e14356\" data-miniprogram-path=\"pages/tendency/tendency?shareId=261164\" data-miniprogram-nickname=\"趋势动物Pro\" data-miniprogram-servicetype=\"0\" data-miniprogram-applink=\"\">趋势动物pro</a>\n\n声明：<a data-unique-id=\"mefncqxh-e19sej\" href=\"https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;mid=2247486838&amp;idx=1&amp;sn=2e294d9ed4823863ac07bcd445edece4&amp;scene=142#wechat_redirect\" class=\"normal_text_link mp_article_text_link\" target=\"_blank\" data-itemshowtype=\"8\">内容包含观点</a>，请独立决策。  \nNick，2025/12/18",
+  "create_time": "2025-12-18 17:13",
+  "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2ArKpLoclDTCck6uwoYNSEvNgiamOr2I705oaTD0tx9CRMVqtt09F0yBw/0?wx_fmt=jpeg",
+  "link": "https://mp.weixin.qq.com/s/IeR0bKDttmpFLlXj3-lKiw",
+  "source_url": "",
+  "can_share": 0,
+  "alias": "",
+  "type": 9,
+  "author": "",
+  "is_limit_user": 0,
+  "show_cover_pic": 0,
+  "advertisement_info": [],
+  "ori_create_time": 1766049188,
+  "user_uin": 0,
+  "total_item_num": 1,
+  "is_async": 1,
+  "comment_id": "4302632633084674052",
+  "img_format": "jpeg",
+  "svr_time": 1766121137,
+  "copyright_info": {
+    "copyright_stat": 0,
+    "is_cartoon_copyright": 0
+  },
+  "can_reward": 0,
+  "signature": "趋势决定持仓",
+  "in_mm": 0,
+  "app_id": "wxbd4f1d4a8d4d7eae",
+  "show_comment": 0,
+  "can_use_page": 0,
+  "hd_head_img": "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4zDVVlhliadhOSiaHiaJZWjzsG9jMJyFmXSgBHAoc8WBqIg/0",
+  "del_reason_id": 0,
+  "srcid": "",
+  "is_wxg_stuff_uin": 0,
+  "need_report_cost": 0,
+  "bizuin": "MzkyODQ5MTIzNw==",
+  "mid": 2247490415,
+  "idx": 1,
+  "sn": "755a3aa8e8f49a807cae1028d22c976a",
+  "use_tx_video_player": 0,
+  "is_only_read": 1,
+  "req_id": "1913DAiPMwu2drsed3uo0bKE",
+  "use_outer_link": 0,
+  "ban_scene": 0,
+  "csp_nonce_str": 737072722,
+  "msg_daily_idx": 1,
+  "ori_head_img_url": "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4zDVVlhliadhOSiaHiaJZWjzsG9jMJyFmXSgBHAoc8WBqIg/132",
+  "filter_time": 1766049142,
+  "appmsg_fe_filter": "contenteditable",
+  "is_login": 0,
+  "weapp_card": "{\"weapp_card_list\":[{\"appid\":\"wx64e4edbab5e14356\",\"sn\":\"ffb29c176cc7e6984ba4919a7193b908\"},{\"appid\":\"wx64e4edbab5e14356\",\"sn\":\"ffb29c176cc7e6984ba4919a7193b908\"}]}",
+  "page_type": 2,
+  "item_show_type": 8,
+  "voice_in_appmsg": [],
+  "video_page_info": {
+    "mp_video_trans_info": [],
+    "drama_video_info": {},
+    "drama_info": {}
+  },
+  "malicious_title_reason_id": 0,
+  "picture_page_info_list": [
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2ALunLtZlkMW1dyK3p0Ck2gIGeAYvWQdJXDxjNns9LibqDAMsR1JSqNFw/0?wx_fmt=jpeg&amp;from=appmsg",
+      "width": 1206,
+      "height": 2622,
+      "theme_color": "rgb(7,7,7)",
+      "is_qr_code": 0,
+      "poi_info": [],
+      "wxa_info": [],
+      "live_photo": {
+        "format_info": []
+      },
+      "disable_theme_color": true,
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "pic_window_product": {
+        "product_encrypt_key": "",
+        "product_type": 0,
+        "title": "",
+        "data_type": 0,
+        "product_id": ""
+      },
+      "show_watermark": true,
+      "bottom_right_brightness": 0.019607844,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2A1ncbJXR1zlpNP7KRS4WYvDNlG40H7QJYJ1lTFUTKzVjunz1uI3dFJA/0?wx_fmt=jpeg",
+        "is_uploader": true
+      },
+      "spot_product_info": [],
+      "share_cover": {
+        "file_id": 100006764,
+        "width": 1206,
+        "height": 1608,
+        "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2AzX6hnXiaXmE7AOJtiaicNQRV0BOnscqE7Rk3pkwQAvFSmPDR6JMPMbz1g/0?wx_fmt=jpeg",
+        "crop_info": "{\"ori_url\":\"https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2ALunLtZlkMW1dyK3p0Ck2gIGeAYvWQdJXDxjNns9LibqDAMsR1JSqNFw/0?wx_fmt=jpeg&amp;from=appmsg\",\"x1\":0.0,\"y1\":0.156494528,\"x2\":1.0,\"y2\":0.769953072}"
+      }
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2ANvEOrQqyWVSM1am14WGV8meWCDmZkEOxYwFGUbZrFywh6sTxRuKI3w/0?wx_fmt=jpeg&amp;from=appmsg",
+      "width": 1206,
+      "height": 2622,
+      "theme_color": "rgb(7,7,7)",
+      "is_qr_code": 0,
+      "poi_info": [],
+      "wxa_info": [],
+      "live_photo": {
+        "format_info": []
+      },
+      "disable_theme_color": true,
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "pic_window_product": {
+        "product_encrypt_key": "",
+        "product_type": 0,
+        "title": "",
+        "data_type": 0,
+        "product_id": ""
+      },
+      "show_watermark": true,
+      "bottom_right_brightness": 0.019607844,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2AiaO0ficic2m8vO8BvTmMme7NiclDBia0R8oaL1rjPjqFufuC4BqWxmwsx9A/0?wx_fmt=jpeg",
+        "is_uploader": true
+      },
+      "spot_product_info": [],
+      "share_cover": {
+        "file_id": 0,
+        "width": 0,
+        "height": 0,
+        "cdn_url": "",
+        "crop_info": ""
+      }
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2AnjPzrjhxFQFsZbIXuD758I3jvyE81Pnicq9uv8cibjBicprNoewlDfMBQ/0?wx_fmt=jpeg&amp;from=appmsg",
+      "width": 1206,
+      "height": 2622,
+      "theme_color": "rgb(7,7,7)",
+      "is_qr_code": 0,
+      "poi_info": [],
+      "wxa_info": [],
+      "live_photo": {
+        "format_info": []
+      },
+      "disable_theme_color": true,
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "pic_window_product": {
+        "product_encrypt_key": "",
+        "product_type": 0,
+        "title": "",
+        "data_type": 0,
+        "product_id": ""
+      },
+      "show_watermark": true,
+      "bottom_right_brightness": 0.019607844,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2A0pdbP8eB8uXonyKUxClt9v83lQDmQwY2u37mUKrOnOFFX5Of43DMmg/0?wx_fmt=jpeg",
+        "is_uploader": true
+      },
+      "spot_product_info": [],
+      "share_cover": {
+        "file_id": 0,
+        "width": 0,
+        "height": 0,
+        "cdn_url": "",
+        "crop_info": ""
+      }
+    },
+    {
+      "cdn_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2AjLgHMVTicNgcePmDvoaWOJDUXEE6DxKwQLz3GN6INvDuzU8oSia9RcoQ/0?wx_fmt=jpeg&amp;from=appmsg",
+      "width": 1206,
+      "height": 2020,
+      "theme_color": "rgb(8,8,8)",
+      "is_qr_code": 0,
+      "poi_info": [],
+      "wxa_info": [],
+      "live_photo": {
+        "format_info": []
+      },
+      "disable_theme_color": true,
+      "bind_ad_info": [],
+      "cps_ad_info": [],
+      "pic_window_product": {
+        "product_encrypt_key": "",
+        "product_type": 0,
+        "title": "",
+        "data_type": 0,
+        "product_id": ""
+      },
+      "show_watermark": true,
+      "bottom_right_brightness": 0.057063613,
+      "watermark_info": {
+        "cdn_url": "http://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2AuaWB8FwLDmUjIfw6Qf9ibTQI3lfouv7YTyQQiauqxrhVMTgqdD87FRsA/0?wx_fmt=jpeg",
+        "is_uploader": true
+      },
+      "spot_product_info": [],
+      "share_cover": {
+        "file_id": 0,
+        "width": 0,
+        "height": 0,
+        "cdn_url": "",
+        "crop_info": ""
+      }
+    }
+  ],
+  "locationlist": [],
+  "hotspotinfolist": [],
+  "isnew": 0,
+  "malicious_content_type": 0,
+  "is_top_stories": 0,
+  "video_ids": [],
+  "isprofileblock": 0,
+  "cdn_url_235_1": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2ArKpLoclDTCck6uwoYNSEvNgiamOr2I705oaTD0tx9CRMVqtt09F0yBw/0?wx_fmt=jpeg",
+  "cdn_url_1_1": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2A0XVibibWpxU4rzvAHNAAibibK0wX4oEEB1Sle3U46sPTGicJk1YAgTXF8Mg/0?wx_fmt=jpeg",
+  "more_read_type": 0,
+  "appmsg_like_type": 2,
+  "ori_send_time": 1766049188,
+  "show_top_bar": 0,
+  "related_tag": [],
+  "user_info": {
+    "is_paid": 0,
+    "clientversion": "",
+    "ckeys": [],
+    "fasttmpl_infos": [
+      {
+        "type": 4,
+        "version": 8046144,
+        "lang": "zh_CN",
+        "fullversion": "8046144-zh_CN-html",
+        "versiongroup": "zh_CN-html"
+      }
+    ],
+    "isoversea": 1,
+    "search_keyword": {
+      "item_list": [],
+      "exp_info": "",
+      "need_baike_preload": true,
+      "show_ad_keyword": false,
+      "ad_item_list": []
+    },
+    "transfer_config": [
+      {
+        "scope": "mmbizwap_cgi_appmsgad",
+        "cgis": [
+          "mp/advertisement_report",
+          "mp/getappmsgad",
+          "mp/ad_video_report",
+          "mp/ad_monitor",
+          "mp/ad_report",
+          "mp/ad_biz_info",
+          "mp/ad_complaint",
+          "mp/ad",
+          "mp/ad_app_info"
+        ]
+      },
+      {
+        "scope": "mmbizwap_cgi_appmsgext",
+        "cgis": [
+          "mp/appmsg_comment",
+          "mp/getappmsgext",
+          "mp/videoplayer",
+          "mp/appmsg_video_snap",
+          "mp/immersive_player",
+          "mp/appmsg_weapp",
+          "mp/appmsg_like",
+          "mp/newappmsgvote",
+          "mp/reward",
+          "mp/authorreward",
+          "mp/qqmusic",
+          "mp/video",
+          "mp/qna",
+          "mp/searchwordbaike",
+          "mp/appmsgthank"
+        ]
+      },
+      {
+        "scope": "mmbizwap_cgi_misc",
+        "cgis": [
+          "mp/wapcommreport",
+          "mp/underline",
+          "mp/relatedarticle",
+          "mp/homepage",
+          "mp/waerrpage",
+          "mp/getverifyinfo",
+          "mp/getprofilebizrecommend",
+          "mp/infringement",
+          "mp/getprofiletransferpage",
+          "mp/wacomplain",
+          "mp/appmsgreport",
+          "mp/getbizbanner"
+        ]
+      }
+    ],
+    "appmsg_bar_data": {},
+    "pic_related_rec_info": {},
+    "quote_list": [],
+    "red_flower_like_info": {
+      "is_red_flower_like": 0
+    },
+    "get_search_keyword_realtime": 0
+  },
+  "ainfos": [
+    {
+      "link_type": null,
+      "title": "20251202 加密科技趋势退潮",
+      "subject_name": "趋势动物小程序说明书",
+      "item_show_type": 8,
+      "url": "https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;amp;mid=2247490207&amp;amp;idx=1&amp;amp;sn=f792d8d3085327cf7b5216d378c0e7e0&amp;amp;scene=142#wechat_redirect"
+    },
+    {
+      "link_type": null,
+      "title": "20251217 大象起舞",
+      "subject_name": "趋势动物小程序说明书",
+      "item_show_type": 8,
+      "url": "https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;amp;mid=2247490381&amp;amp;idx=1&amp;amp;sn=88aea6e261812f6dd5666bcd5775107b&amp;amp;scene=142#wechat_redirect"
+    },
+    {
+      "link_type": null,
+      "title": "请各位读者自行区分「观点」和「趋势」",
+      "subject_name": "趋势动物小程序说明书",
+      "item_show_type": 8,
+      "url": "https://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;amp;mid=2247486838&amp;amp;idx=1&amp;amp;sn=2e294d9ed4823863ac07bcd445edece4&amp;amp;scene=142#wechat_redirect"
+    }
+  ],
+  "related_article_info": {
+    "has_related_article_info": 0
+  },
+  "has_red_packet_cover": 0,
+  "is_pay_subscribe": 0,
+  "pay_subscribe_info": {
+    "preview_percent": 0,
+    "desc": "",
+    "fee": 0,
+    "gifts_count": 0,
+    "wecoin_amount": 0
+  },
+  "video_in_article": [],
+  "appmsgalbuminfo": {
+    "album_id": "4278391120221962241",
+    "title": "Crypto",
+    "link": "https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyODQ5MTIzNw==&amp;action=getalbum&amp;album_id=4278391120221962241#wechat_redirect",
+    "isupdating": 1,
+    "content_size": 2,
+    "fee": 0,
+    "album_needpay": 0,
+    "appmsg_needpay": 0,
+    "type": 8,
+    "continous_read_on": 1,
+    "article_titles": [],
+    "pre_article_link": "http://mp.weixin.qq.com/s?__biz=MzkyODQ5MTIzNw==&amp;mid=2247490207&amp;idx=1&amp;sn=f792d8d3085327cf7b5216d378c0e7e0&amp;chksm=c216a915f5612003d22ad6c3620dbc683161971669b017b8a3938b6f4f168c79ad5a315a601a#wechat_redirect",
+    "next_article_link": "",
+    "pre_article_title": "20251202 加密科技趋势退潮",
+    "next_article_title": "",
+    "album_id_str": "4278391120221962241"
+  },
+  "is_area_shield": 0,
+  "shield_areaids": [],
+  "appmsg_ext_get": {
+    "func_flag": 0
+  },
+  "anchor_tree": [],
+  "voice_in_appmsg_list_json": "{\"voice_in_appmsg\":[]}",
+  "public_tag_info": {
+    "tags": [
+      {
+        "tag_name": "Crypto",
+        "tag_link": "https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyODQ5MTIzNw==&amp;action=getalbum&amp;album_id=4278391120221962241#wechat_redirect",
+        "tag_content_num": 2,
+        "album_id": "4278391120221962241",
+        "album_info": {
+          "album_id": "4278391120221962241",
+          "title": "Crypto",
+          "link": "https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyODQ5MTIzNw==&amp;action=getalbum&amp;album_id=4278391120221962241#wechat_redirect",
+          "isupdating": 1,
+          "content_size": 2,
+          "fee": 0,
+          "album_needpay": 0,
+          "appmsg_needpay": 0,
+          "type": 8,
+          "continous_read_on": 1,
+          "article_titles": [],
+          "album_id_str": "4278391120221962241"
+        }
+      }
+    ]
+  },
+  "live_info": [],
+  "lang": "zh_CN",
+  "cdn_url_16_9": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2ArKpLoclDTCck6uwoYNSEvNgiamOr2I705oaTD0tx9CRMVqtt09F0yBw/0?wx_fmt=jpeg",
+  "real_item_show_type": 8,
+  "url_item_show_type": 0,
+  "video_page_infos": [],
+  "can_use_wecoin": 1,
+  "wecoin_tips": 0,
+  "front_end_additional_fields": {
+    "is_auto_type_setting": 3,
+    "save_type": 0,
+    "template_version": "38006916"
+  },
+  "open_fansmsg": 0,
+  "is_cooling_appmsg": 0,
+  "ip_wording": {
+    "country_name": "中国",
+    "country_id": "156",
+    "province_name": "上海"
+  },
+  "show_ip_wording": 1,
+  "is_acct_area_shield": 0,
+  "shield_acct_areaids": [],
+  "style_type": 3,
+  "shield_areas_info": [],
+  "create_timestamp": 1766049188,
+  "masonry_feed_info": {
+    "version": 1,
+    "from_old_app": 0
+  },
+  "picture_list_in_pictext": [],
+  "servicetype": 0,
+  "segment_comment_id": "4302632644325408769",
+  "ad_mark_status": 0,
+  "hide_ad_mark_on_cps": 0,
+  "finder_audio_card": "{\"list\":[]}",
+  "claim_source": {
+    "is_user_no_claim_source": 1
+  },
+  "extra_comment_id": "4302632643771760641",
+  "last_text": [],
+  "wash_status": 0,
+  "enterid": 1766121137,
+  "zhuge_qa_id_list": [],
+  "sec_control_info": {
+    "list": []
+  },
+  "cdn_url_3_4": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/OibVWv6Vp3rvJdOERDKtcAvnSQfGVkb2AYBXHhaiaEU77V264eiaZbicx5B5aUJgCNUicCLDZ5H23cOZYYA8H2eppzA/0?wx_fmt=jpeg",
+  "window_product_list": [],
+  "finder_music_card": "{\"list\":[]}",
+  "finder_audio_card_list": {
+    "list": []
+  },
+  "finder_music_card_list": {
+    "list": []
+  },
+  "new_service_type": 1,
+  "product_activity": {},
+  "rt_biz_info": {
+    "elected_comment_total_cnt": 15
+  },
+  "redpacket_cover_list": [],
+  "footer_gift_activity": {},
+  "verify_status": 0,
+  "watermark_setting": 3,
+  "title_gen_type": 0,
+  "appmsg_listen_id": "150427222072210092",
+  "trans_appmsg_info": {},
+  "location": {},
+  "topic_infos": [],
+  "weapp_link": {
+    "appid": "wx64e4edbab5e14356",
+    "path": "pages/tendency/tendency?shareId=261164",
+    "nickname": "趋势动物Pro",
+    "headimgurl": "http://mmbiz.qpic.cn/sz_mmbiz_png/wYLxugMYAia6eFibzcJiclmVsmkVf9E226wHbhqKr3GEhpMc34nDUTC6LiaZF6oEmH9bHZVW0cKRbibK6jpus6nKveA/640?wx_fmt=png&amp;wxfrom=200",
+    "username": "gh_6e5f60228611@app",
+    "topic": ""
+  },
+  "footer_common_shops": [],
+  "footer_product_card": {},
+  "desc_empty": false,
+  "hashtags": {
+    "hashtag": []
+  },
+  "aigc_pictures": [],
+  "private_info": {}
+}

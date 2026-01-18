@@ -1,6 +1,6 @@
 import TurndownService from 'turndown';
 import { urlIsValidMpArticle } from '#shared/utils';
-import { normalizeHtml } from '#shared/utils/html';
+import { normalizeHtml, parseCgiDataNew } from '#shared/utils/html';
 import { USER_AGENT } from '~/config';
 
 interface SearchBizQuery {
@@ -30,7 +30,7 @@ export default defineEventHandler(async event => {
   }
 
   const format: string = (query.format || 'html').toLowerCase();
-  if (!['html', 'markdown', 'text'].includes(format)) {
+  if (!['html', 'markdown', 'text', 'json'].includes(format)) {
     return {
       base_resp: {
         ret: -1,
@@ -69,6 +69,8 @@ export default defineEventHandler(async event => {
           'Content-Type': 'text/markdown; charset=UTF-8',
         },
       });
+    case 'json':
+      return await parseCgiDataNew(rawHtml);
     default:
       throw new Error(`Unknown format ${format}`);
   }

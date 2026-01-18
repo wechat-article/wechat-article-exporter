@@ -154,7 +154,7 @@ function extractCgiScript(html: string) {
  * @param html 文章的完整 html 内容
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-export function parseCgiDataNewOnClient(html: string): Promise<any> {
+function parseCgiDataNewOnClient(html: string): Promise<any> {
   const code = extractCgiScript(html);
   if (!code) {
     return Promise.resolve(null);
@@ -186,7 +186,7 @@ export function parseCgiDataNewOnClient(html: string): Promise<any> {
  * @param html 文章的完整 html 内容
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-export function parseCgiDataNewOnServerDeprecated(html: string): Promise<any> {
+function parseCgiDataNewOnServerDeprecated(html: string): Promise<any> {
   const code = extractCgiScript(html);
   if (!code) {
     return Promise.resolve(null);
@@ -212,7 +212,7 @@ export function parseCgiDataNewOnServerDeprecated(html: string): Promise<any> {
  * @param html 文章的完整 html 内容
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-export async function parseCgiDataNewOnServer(html: string): Promise<any> {
+async function parseCgiDataNewOnServer(html: string): Promise<any> {
   const code = extractCgiScript(html);
   if (!code) {
     return Promise.resolve(null);
@@ -231,4 +231,17 @@ export async function parseCgiDataNewOnServer(html: string): Promise<any> {
     console.error(error);
   }
   return null;
+}
+
+/**
+ * 从 html 中提取 cgiDataNew 对象
+ * @param html 文章的完整 html 内容
+ * @return window.cgiDataNew 对象，解析失败时返回 null
+ */
+export async function parseCgiDataNew(html: string): Promise<any> {
+  if (process.client && document) {
+    return parseCgiDataNewOnClient(html);
+  } else {
+    return parseCgiDataNewOnServer(html);
+  }
 }

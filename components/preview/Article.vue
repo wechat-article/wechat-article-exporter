@@ -30,7 +30,7 @@ async function open(article: AppMsgEx) {
     const rawHtml = await htmlAsset.file.text();
     articleHtml.value = await normalizeHtmlForPreview(htmlAsset, rawHtml);
   } else {
-    toast.warning('文章预览失败', `文章【${article.title}】未缓存`);
+    toast.warning('文章预览失败', `文章【${article.title}】未拉取文章内容`);
   }
 }
 

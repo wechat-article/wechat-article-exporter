@@ -257,7 +257,7 @@ export const apis = [
   },
   {
     name: '获取文章内容',
-    description: '获取文章内容，支持 html / markdown / text 格式',
+    description: '获取文章内容，支持 html / markdown / text / json 格式',
     url: '/api/public/v1/download',
     method: 'GET',
     params: [
@@ -277,7 +277,7 @@ export const apis = [
         required: false,
         default: 'html',
         type: 'String',
-        remark: '支持 html / markdown / text 格式',
+        remark: '支持 html / markdown / text / json 格式',
       },
     ],
     responseSample: {},
