@@ -8,6 +8,14 @@
     .deleted-row {
         background-color: #fef9c3;
     }
+
+    /* 侧边栏工具面板标签 */
+    .ag-side-bar .ag-side-button-label {
+        letter-spacing: 0.2em;
+        font-size: 15px;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif;
+        /*font-weight: bold;*/
+    }
 }
 
 body {

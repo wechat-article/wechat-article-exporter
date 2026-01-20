@@ -17,7 +17,7 @@ async function run() {
         console.warn('提取 window.cgiDataNew 对象失败');
         continue;
       }
-      console.log(cgiData.item_show_type);
+      console.log('item_show_type:', cgiData.item_show_type);
       write(normalizeOutPath(samplePath), JSON.stringify(cgiData, null, 2));
     }
     console.groupEnd();
