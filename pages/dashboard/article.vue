@@ -473,6 +473,17 @@ async function debug() {
     console.log(result);
   }
 }
+
+const copied = ref(false);
+function copyWechatLink() {
+  const link = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${selectedAccount.value?.fakeid}&scene=124#wechat_redirect`;
+  navigator.clipboard.writeText(link);
+
+  copied.value = true;
+  setTimeout(() => {
+    copied.value = false;
+  }, 1000);
+}
 </script>
 
 <template>
@@ -483,7 +494,7 @@ async function debug() {
 
     <div class="flex flex-col h-full divide-y divide-gray-200">
       <!-- 顶部筛选与操作区 -->
-      <header class="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:justify-between px-3 py-2">
+      <header class="flex flex-col items-start lg:flex-row lg:items-center lg:justify-between gap-2 px-3 py-2">
         <div class="flex flex-col xl:flex-row gap-2">
           <div class="flex space-x-3">
             <AccountSelectorForArticle v-model="selectedAccount" class="w-80" />
@@ -537,6 +548,14 @@ async function debug() {
               trailing-icon="i-heroicons-chevron-down-20-solid"
             />
           </ButtonGroup>
+
+          <UButton
+            :disabled="!selectedAccount"
+            :icon="copied ? 'i-lucide:check' : 'i-heroicons-link-16-solid'"
+            label="复制公众号链接"
+            :color="copied ? 'green' : 'blue'"
+            @click="copyWechatLink"
+          />
           <UButton v-if="isDev" @click="debug">调试</UButton>
         </div>
       </header>
