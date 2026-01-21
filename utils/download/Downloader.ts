@@ -231,14 +231,17 @@ export class Downloader extends BaseDownloader {
         if (status === 'Success') {
           // 下载成功
           await this.processHtmlMetadata(blob, url);
+
           // 抓取阅读量时，将带有阅读量的html更新到缓存
-          await updateHtmlCache({
-            fakeid: article.fakeid,
-            url: url,
-            title: article.title,
-            file: blob,
-            commentID,
-          });
+          if (preferences.value.downloadConfig.metadataOverrideContent) {
+            await updateHtmlCache({
+              fakeid: article.fakeid,
+              url: url,
+              title: article.title,
+              file: blob,
+              commentID,
+            });
+          }
           this.pending.delete(url);
           this.completed.add(url);
           this.proxyManager.recordSuccess(proxy);
@@ -254,7 +257,7 @@ export class Downloader extends BaseDownloader {
           this.proxyManager.recordSuccess(proxy);
           return;
         } else if (status === 'Exception' && commentID) {
-          // 文章状态异常
+          // 文章状态异常，此时 commentID 表示的异常原因
           console.warn(`获取阅读量时发现文章(url: ${url} )状态异常: ${commentID}`);
 
           // 通知外边更新文章状态

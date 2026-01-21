@@ -439,6 +439,18 @@ const {
       article.shareNum = metadata.shareNum;
       article.likeNum = metadata.likeNum;
       article.commentNum = metadata.commentNum;
+
+      if ((preferences.value as unknown as Preferences).downloadConfig.metadataOverrideContent) {
+        // 如果同步下载文章内容，则更新相关字段
+        article.contentDownload = true;
+        article._status = '正常';
+        updateArticleStatus(url, '正常');
+
+        // 修复之前代码逻辑错误导致的数据库状态被误设置为【已删除】
+        article.is_deleted = false;
+        articleDeleted(url, false);
+      }
+
       updateRow(article);
     } else {
       console.warn(`${url} not found in table data when update metadata`);

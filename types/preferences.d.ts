@@ -45,9 +45,7 @@ interface ExportConfig {
 interface DownloadConfig {
   // 抓取文章内容时，不检查缓存，强制下载最新内容
   forceDownloadContent: boolean;
-}
 
-interface APIAuth {
-  token: string;
-  nickname: string;
+  // 抓取阅读量时是否覆盖文章内容
+  metadataOverrideContent: boolean;
 }
