@@ -20,6 +20,7 @@ logs
 debug
 design
 docs
+samples/**/output
 
 # Local env files
 .env
