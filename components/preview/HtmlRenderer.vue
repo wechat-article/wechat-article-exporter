@@ -18,13 +18,14 @@ interface Props {
 const props = defineProps<Props>();
 
 // 传入的完整HTML代码
-const htmlContent = ref(DOMPurify.sanitize(props.html, { WHOLE_DOCUMENT: true }));
+const htmlContent = ref('');
 
 watch(
   () => props.html,
   (newHtml: string) => {
     // 使用DOMPurify来清理HTML内容，防止XSS攻击
     htmlContent.value = DOMPurify.sanitize(newHtml, { WHOLE_DOCUMENT: true });
-  }
+  },
+  { immediate: true }
 );
 </script>

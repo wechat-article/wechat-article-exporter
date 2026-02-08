@@ -3,7 +3,7 @@ import { samples, read, write } from './common';
 
 function normalizeOutPath(input: string): string {
   const segments = input.split('/');
-  segments[segments.length - 1] = 'normalize-' + segments[segments.length - 1];
+  segments[segments.length - 1] = 'output/normalize-' + segments[segments.length - 1];
   return segments.join('/');
 }
 

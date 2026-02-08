@@ -83,7 +83,10 @@
     </div>
     <div class="border border-slate-200 p-3 rounded-md mt-5">
       <p class="flex justify-between items-center mb-3">
-        <span class="text-xl font-medium">同步时间范围: </span>
+        <span class="text-xl font-medium">
+          同步时间范围:
+          <span class="text-xs text-slate-500">(说明: 只能从当前时间开始往前同步)</span>
+        </span>
         <span class="text-sm text-blue-500 font-medium">实际同步范围: {{ getActualDateRange() }}</span>
       </p>
 

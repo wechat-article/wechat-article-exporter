@@ -239,7 +239,7 @@ async function parseCgiDataNewOnServer(html: string): Promise<any> {
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
 export async function parseCgiDataNew(html: string): Promise<any> {
-  if (process.client && document) {
+  if (process.client && typeof document === 'object') {
     return parseCgiDataNewOnClient(html);
   } else {
     return parseCgiDataNewOnServer(html);

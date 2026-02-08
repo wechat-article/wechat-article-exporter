@@ -86,5 +86,8 @@ export function read(filepath: string) {
 }
 
 export function write(filepath: string, data: any) {
+  const dir = path.dirname(filepath);
+  fs.mkdirSync(dir, { recursive: true });
+
   fs.writeFileSync(filepath, data, 'utf8');
 }

@@ -26,7 +26,7 @@ function preview() {
       <UButton
         :disabled="!params.data.contentDownload || params.data.downloading"
         icon="i-heroicons:fire-16-solid"
-        color="blue"
+        :color="params.data.contentDownload ? 'blue' : 'rose'"
         square
         variant="ghost"
         @click="preview"
