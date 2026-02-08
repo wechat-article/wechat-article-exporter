@@ -1,6 +1,7 @@
 import { throwException, timeout } from '#shared/utils/helpers';
+import { parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
 import usePreferences from '~/composables/usePreferences';
-import { getArticleByLink } from '~/store/v2/article';
+import { getArticleByLink, getSingleArticleByLink } from '~/store/v2/article';
 import { updateCommentCache } from '~/store/v2/comment';
 import { updateCommentReplyCache } from '~/store/v2/comment_reply';
 import { updateDebugCache } from '~/store/v2/debug';
@@ -12,9 +13,8 @@ import type { ParsedCredential } from '~/types/credential';
 import type { Preferences } from '~/types/preferences';
 import { BaseDownloader } from '~/utils/download/BaseDownloader';
 import type { DownloadOptions } from './types';
-import { parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
 
-type DownloadType = 'html' | 'metadata' | 'comments';
+type DownloadType = 'html' | 'metadata' | 'comments' | 'fakeid';
 
 const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials:credentials', []);
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
@@ -105,7 +105,44 @@ export class Downloader extends BaseDownloader {
       return this.downloadMetadataTask(url);
     } else if (this.downloadType === 'comments') {
       return this.downloadCommentsTask(url);
+    } else if (this.downloadType === 'fakeid') {
+      return this.fixSingleFakeidTask(url);
     }
+  }
+
+  // 修复单篇文章下载时的虚假fakeid
+  private async fixSingleFakeidTask(url: string) {
+    this.pending.add(url);
+
+    const article = await getSingleArticleByLink(url);
+    if (!article) {
+      this.pending.delete(url);
+      this.failed.add(url);
+      return;
+    }
+
+    for (let attempt = 0; attempt < this.options.maxRetries; attempt++) {
+      const proxy = this.proxyManager.getBestProxy();
+
+      try {
+        const blob = await this.download(article.fakeid, url, proxy, false);
+        const html = await blob.text();
+        const cgiData = await parseCgiDataNew(html);
+        if (cgiData && cgiData.bizuin) {
+          this.emit('fix:fakeid', url, cgiData.bizuin);
+
+          this.pending.delete(url);
+          this.completed.add(url);
+          this.proxyManager.recordSuccess(proxy);
+          return;
+        }
+      } catch (error) {
+        await this.handleDownloadFailure(proxy, url, attempt, error);
+      }
+    }
+
+    this.pending.delete(url);
+    this.failed.add(url);
   }
 
   // 下载 HTML 任务

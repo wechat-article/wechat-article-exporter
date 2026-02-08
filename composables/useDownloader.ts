@@ -19,6 +19,9 @@ export interface DownloadArticleOptions {
 
   // 文章留言抓取成功回调
   onComment: (url: string) => void;
+
+  // 修复单篇文章下载的 fakeid 专用
+  onFakeID: (url: string, fakeid: string) => void;
 }
 
 export default (options: Partial<DownloadArticleOptions> = {}) => {
@@ -181,13 +184,60 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
     }
   }
 
-  async function download(type: 'html' | 'metadata' | 'comment', urls: string[]) {
+  // 修复单篇文章fakeid
+  async function fixSingleFakeidTask(urls: string[]) {
+    if (urls.length === 0) {
+      toast.warning('提示', '请先选择文章');
+      return;
+    }
+
+    try {
+      loading.value = true;
+
+      downloader = new Downloader(urls);
+      downloader.on('download:progress', (url: string, success: boolean, status: DownloaderStatus) => {
+        console.debug(
+          `进度: (进行中:${status.pending.length} / 已完成:${status.completed.length} / 已失败:${status.failed.length})`
+        );
+        completed_count.value = status.completed.length;
+      });
+      downloader.on('download:begin', () => {
+        console.debug('开始修复 fakeid ...');
+        completed_count.value = 0;
+        total_count.value = urls.length;
+      });
+      downloader.on('fix:fakeid', (url: string, fakeid: string) => {
+        console.debug(`${url} 修复成功 fakeid: ${fakeid}`);
+        if (typeof options.onFakeID === 'function') {
+          options.onFakeID(url, fakeid);
+        }
+      });
+      downloader.on('download:finish', (seconds: number, status: DownloaderStatus) => {
+        console.debug('耗时:', formatElapsedTime(seconds));
+        toast.success(
+          '【fakeid】修复完成',
+          `本次耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}`
+        );
+      });
+
+      await downloader.startDownload('fakeid');
+    } catch (error) {
+      console.error('【fakeid】修复失败:', error);
+      alert((error as Error).message);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function download(type: 'html' | 'metadata' | 'comment' | 'fakeid', urls: string[]) {
     if (type === 'html') {
       await downloadArticleHTML(urls);
     } else if (type === 'metadata') {
       await downloadArticleMetadata(urls);
     } else if (type === 'comment') {
       await downloadArticleComment(urls);
+    } else if (type === 'fakeid') {
+      await fixSingleFakeidTask(urls);
     }
   }
 

@@ -1,5 +1,5 @@
 import { validateHTMLContent } from '#shared/utils/html';
-import { samples, read } from './common';
+import { read, samples } from './common';
 
 function run() {
   for (const group of samples) {

@@ -169,6 +169,9 @@ export type AppMsgExWithFakeID = AppMsgEx & {
 
   // 文章状态
   _status: string;
+
+  // 是否是单文章下载添加的数据
+  _single?: boolean;
 };
 
 export interface DownloadableArticle {

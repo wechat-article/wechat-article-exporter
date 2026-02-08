@@ -1,6 +1,6 @@
-import { renderHTMLFromCgiDataNew } from '#shared/utils/renderer';
 import { parseCgiDataNew } from '#shared/utils/html';
-import { samples, read, write } from './common';
+import { renderHTMLFromCgiDataNew } from '#shared/utils/renderer';
+import { read, samples, write } from './common';
 
 function normalizeOutPath(input: string): string {
   const segments = input.split('/');

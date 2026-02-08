@@ -85,8 +85,8 @@
 </template>
 
 <script setup lang="ts">
-import type { AccountMetric } from '~/types/proxy';
 import { request } from '#shared/utils/request';
+import type { AccountMetric } from '~/types/proxy';
 
 interface Props {
   data: AccountMetric[];

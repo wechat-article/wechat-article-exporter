@@ -91,6 +91,20 @@ export async function getArticleByLink(url: string): Promise<AppMsgExWithFakeID>
   return article;
 }
 
+// 根据 url 获取 SINGLE_ARTICLE_FAKEID 文章对象
+export async function getSingleArticleByLink(url: string): Promise<AppMsgExWithFakeID> {
+  const article = await db.article
+    .where('link')
+    .equals(url)
+    .and(article => article.fakeid === 'SINGLE_ARTICLE_FAKEID')
+    .first();
+  if (!article) {
+    throw new Error(`Article(${url}) does not exist`);
+  }
+
+  return article;
+}
+
 /**
  * 文章被删除
  * @param url
@@ -119,6 +133,26 @@ export async function updateArticleStatus(url: string, status: string): Promise<
       .equals(url)
       .modify(article => {
         article._status = status;
+      });
+  });
+}
+
+/**
+ * 更新文章的fakeid
+ * @param url
+ * @param fakeid
+ */
+export async function updateArticleFakeid(url: string, fakeid: string): Promise<void> {
+  db.transaction('rw', 'article', async () => {
+    db.article
+      .where('link')
+      .equals(url)
+      .and(article => article.fakeid === 'SINGLE_ARTICLE_FAKEID')
+      .modify(article => {
+        article.fakeid = fakeid;
+
+        // 标记改数据是【单篇文章下载】添加的
+        article._single = true;
       });
   });
 }

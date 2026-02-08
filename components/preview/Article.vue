@@ -10,13 +10,13 @@
 
 <script setup lang="ts">
 import HtmlRenderer from '~/components/preview/HtmlRenderer.vue';
+import toastFactory from '~/composables/toast';
 import usePreferences from '~/composables/usePreferences';
 import { getHtmlCache, type HtmlAsset } from '~/store/v2/html';
 import { getMetadataCache } from '~/store/v2/metadata';
 import type { Preferences } from '~/types/preferences';
 import type { AppMsgEx } from '~/types/types';
 import { renderComments } from '~/utils/comment';
-import toastFactory from '~/composables/toast';
 
 const toast = toastFactory();
 

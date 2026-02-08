@@ -6,7 +6,7 @@ import type { Preferences } from '~/types/preferences';
 import { bestConcurrencyCount } from '~/utils';
 import { DEFAULT_OPTIONS } from './constants';
 import { ProxyManager } from './ProxyManager';
-import type { DownloaderStatus, DownloadOptions, Callback } from './types';
+import type { Callback, DownloaderStatus, DownloadOptions } from './types';
 
 const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials:credentials', []);
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;

@@ -62,10 +62,10 @@
 
 <script setup lang="ts">
 import { Loader } from 'lucide-vue-next';
+import { request } from '#shared/utils/request';
+import ProxyMetrics from '~/components/ProxyMetrics.vue';
 import { websiteName } from '~/config';
 import type { AccountMetric } from '~/types/proxy';
-import ProxyMetrics from '~/components/ProxyMetrics.vue';
-import { request } from '#shared/utils/request';
 
 useHead({
   title: `公共代理 | ${websiteName}`,
