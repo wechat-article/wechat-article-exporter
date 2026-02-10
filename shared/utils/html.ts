@@ -124,9 +124,6 @@ export function validateHTMLContent(html: string): ['Success' | 'Deleted' | 'Exc
   }
 }
 
-// 识别文章的类型
-function detectArticleType(html: string) {}
-
 /**
  * 提取 window.cgiDataNew 所在脚本的代码
  * @param html 文章的完整 html 内容

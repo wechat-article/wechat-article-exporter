@@ -1,9 +1,15 @@
 <template>
-  <div>
+  <div class="h-screen">
+    <UButton
+      icon="i-lucide:x"
+      square
+      variant="link"
+      color="gray"
+      class="absolute right-3 top-3"
+      @click="show = false"
+    ></UButton>
     <client-only>
-      <ShadowRoot>
-        <div v-html="htmlContent"></div>
-      </ShadowRoot>
+      <iframe class="border-none w-full h-screen" :srcdoc="htmlContent"></iframe>
     </client-only>
   </div>
 </template>
@@ -16,6 +22,7 @@ interface Props {
   html: string;
 }
 const props = defineProps<Props>();
+const show = defineModel<boolean>('show', { default: false });
 
 // 传入的完整HTML代码
 const htmlContent = ref('');

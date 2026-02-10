@@ -1,14 +1,14 @@
 <template>
   <div>
     <USlideover v-model="isOpen" :ui="{ width: 'max-w-[720px]' }">
-      <div class="article-preview h-screen overflow-y-scroll">
-        <HtmlRenderer :html="articleHtml" />
-      </div>
+      <HtmlRenderer :html="articleHtml" v-model:show="isOpen" />
     </USlideover>
   </div>
 </template>
 
 <script setup lang="ts">
+import { parseCgiDataNew } from '#shared/utils/html';
+import { renderHTMLFromCgiDataNew } from '#shared/utils/renderer';
 import HtmlRenderer from '~/components/preview/HtmlRenderer.vue';
 import toastFactory from '~/composables/toast';
 import usePreferences from '~/composables/usePreferences';
@@ -17,6 +17,10 @@ import { getMetadataCache } from '~/store/v2/metadata';
 import type { Preferences } from '~/types/preferences';
 import type { AppMsgEx } from '~/types/types';
 import { renderComments } from '~/utils/comment';
+
+defineExpose({
+  open: open,
+});
 
 const toast = toastFactory();
 
@@ -28,15 +32,15 @@ async function open(article: AppMsgEx) {
   if (htmlAsset) {
     isOpen.value = true;
     const rawHtml = await htmlAsset.file.text();
-    articleHtml.value = await normalizeHtmlForPreview(htmlAsset, rawHtml);
+    const cgiData = await parseCgiDataNew(rawHtml);
+    console.log(cgiData);
+    const html = await renderHTMLFromCgiDataNew(cgiData);
+    // articleHtml.value = await normalizeHtmlForPreview(htmlAsset, rawHtml);
+    articleHtml.value = html;
   } else {
-    toast.warning('文章预览失败', `文章【${article.title}】未拉取文章内容`);
+    toast.warning('文章预览失败', `文章【${article.title}】还未拉取文章内容`);
   }
 }
-
-defineExpose({
-  open: open,
-});
 
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
 

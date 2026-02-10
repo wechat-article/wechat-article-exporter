@@ -12,21 +12,8 @@ const ITEM_SHOW_TYPE = {
  */
 export async function renderHTMLFromCgiDataNew(cgiData: any) {
   const title = extractTitle(cgiData);
-
   const meta = renderMetaInfo(cgiData);
-
-  let contentHTML = '';
-  switch (cgiData.item_show_type) {
-    case ITEM_SHOW_TYPE.图片分享:
-      contentHTML = renderContent_8(cgiData);
-      break;
-    case ITEM_SHOW_TYPE.文本分享:
-      contentHTML = renderContent_10(cgiData);
-      break;
-    case ITEM_SHOW_TYPE.普通图文:
-      contentHTML = renderContent_0(cgiData);
-      break;
-  }
+  const contentHTML = extractContentHTML(cgiData);
 
   return `<!DOCTYPE html>
 <html lang="zh_CN">
@@ -43,8 +30,9 @@ export async function renderHTMLFromCgiDataNew(cgiData: any) {
             padding: 0;
             outline: 0;
         }
-        body, .__body__ {
+        body {
             font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif;
+            line-height: 1.6;
         }
         .__page_content__ {
             max-width: 667px;
@@ -71,6 +59,12 @@ export async function renderHTMLFromCgiDataNew(cgiData: any) {
         .__meta__ .nick_name {
             color: #576B95;
         }
+        .__meta__ .copyright {
+            color: rgba(0, 0, 0, 0.3);
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 0 4px;
+            margin: 0 10px 10px 0;
+        }
         blockquote.source {
             padding: 10px;
             margin: 30px 0;
@@ -82,6 +76,10 @@ export async function renderHTMLFromCgiDataNew(cgiData: any) {
         blockquote.source a {
             cursor: pointer;
             text-decoration: underline;
+        }
+        .item_show_type_0 > section {
+            margin-top: 0;
+            margin-bottom: 24px;
         }
         a {
             color: #576B95;
@@ -114,10 +112,9 @@ export async function renderHTMLFromCgiDataNew(cgiData: any) {
     </style>
 </head>
 <body>
-<div class="body __page_content__">
+<div class="__page_content__">
 <h1 class="title">${title}</h1>
 ${meta}
-
 <blockquote class="source">原文地址: <a href="${cgiData.link}">${cgiData.link}</a></blockquote>
 ${contentHTML}
 </div>
@@ -148,6 +145,29 @@ function extractTitle(cgiData: any): string {
       break;
   }
   return title;
+}
+
+/**
+ * 提取内容html
+ * @param cgiData
+ */
+function extractContentHTML(cgiData: any): string {
+  let contentHTML = '';
+  switch (cgiData.item_show_type) {
+    case ITEM_SHOW_TYPE.图片分享:
+      contentHTML = renderContent_8(cgiData);
+      break;
+    case ITEM_SHOW_TYPE.文本分享:
+      contentHTML = renderContent_10(cgiData);
+      break;
+    case ITEM_SHOW_TYPE.普通图文:
+      contentHTML = renderContent_0(cgiData);
+      break;
+    default:
+      contentHTML = '(unknown)';
+      break;
+  }
+  return contentHTML;
 }
 
 /**
@@ -203,7 +223,7 @@ function renderContent_0(cgiData: any): string {
   let contentHTML = cgiData.content_noencode || '';
 
   // 使用 cheerio 处理 HTML 片段
-  const $ = cheerio.load(contentHTML, { xml: true });
+  const $ = cheerio.load(contentHTML, null, false);
 
   // 1. 处理懒加载图片：data-src → src
   $('img[data-src]').each((i, elem) => {
@@ -217,74 +237,16 @@ function renderContent_0(cgiData: any): string {
     }
   });
 
-  // 2. 移除 <strong>（内容提升）
-  // $('strong').each((i, elem) => {
-  //   const $strong = $(elem);
-  //   // 使用 .contents() 获取所有子节点（包括文本节点和元素节点），然后替换 strong 本身
-  //   $strong.replaceWith($strong.contents());
-  // });
-
-  // 4. 移除 mdnice / 微信编辑器常见的冗余属性（mpa-*、leaf 等）
-  $('*').each((i, elem) => {
-    const $elem = $(elem);
-    Object.keys($elem.attr() || {}).forEach(attr => {
-      if (attr.startsWith('mpa-') || attr === 'leaf') {
-        $elem.removeAttr(attr);
-      }
-    });
+  // 2. 修复图片的宽高比例 (删除`height`属性即可)
+  $('img[height]').each((i, elem) => {
+    const $img = $(elem);
+    $img.removeAttr('height');
   });
 
-  // 5. 移除完全无属性的 <span>（或只有空 style 的 <span>），内容提升
-  //    这能清理大量 mdnice 产生的嵌套空 span
-  // $('span').each((i, elem) => {
-  //   const $span = $(elem);
-  //   const attrs = Object.keys($span.attr() || {});
-  //   const hasStyle = $span.attr('style') && $span.attr('style')!.trim().length > 0;
-  //   const hasOtherAttr = attrs.some(a => a !== 'style');
-  //
-  //   if (!hasStyle && !hasOtherAttr) {
-  //     $span.replaceWith($span.contents());
-  //   }
-  // });
-
-  // 6. 可选：递归清理多次（因为 unwrap 后可能产生新的空 span）
-  //    重复 3 次通常足够清理多层嵌套
-  // for (let i = 0; i < 3; i++) {
-  //   $('span').each((i, elem) => {
-  //     const $span = $(elem);
-  //     const attrs = Object.keys($span.attr() || {});
-  //     const hasStyle = $span.attr('style') && $span.attr('style')!.trim().length > 0;
-  //     const hasOtherAttr = attrs.some(a => a !== 'style');
-  //
-  //     if (!hasStyle && !hasOtherAttr) {
-  //       $span.replaceWith($span.contents());
-  //     }
-  //   });
-  // }
-
-  // 7. 移除空元素（排除 br、img、hr 等有意义的空标签）
-  // $(':empty').not('br,img,hr,meta,link').remove();
-
-  // 8. 处理部分无效嵌套（Cheerio load 时已自动修复大部分块级被内联包裹的情况，
-  //    如 <span><p>...</p></span> → <p>...</p><span></span>）
-  //    如果仍有残留块级元素被内联包裹，可额外提升常见块级标签
-  const blockTags = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'section'];
-  blockTags.forEach(tag => {
-    $(tag).each((i, blockElem) => {
-      const $block = $(blockElem);
-      // 如果父元素是内联标签（如 span、strong、em），提升内容
-      $block.parents('span,strong,em,b,i,u').each((j, parent) => {
-        $(parent).replaceWith($(parent).contents());
-      });
-    });
-  });
+  // 3. 处理内嵌视频
 
   // 获取处理后的 HTML 片段（cheerio 会正确序列化多顶级元素和自闭合标签）
   let modifiedContent = $.html();
-
-  modifiedContent = modifiedContent.replace(/&amp;/g, '&');
-
-  // 去除图片的懒加载
   return `<section class="item_show_type_0">${modifiedContent}</section>`;
 }
 
@@ -294,6 +256,7 @@ function renderContent_0(cgiData: any): string {
  */
 function renderMetaInfo(cgiData: any): string {
   return `<div class="__meta__">
+    <span class="copyright">原创</span>
     <span class="author">${cgiData.author}</span>
     <span class="nick_name">${cgiData.nick_name}</span>
     <span class="create_time">${cgiData.create_time}</span>
