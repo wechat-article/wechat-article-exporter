@@ -34,9 +34,12 @@ async function open(article: AppMsgEx) {
     const rawHtml = await htmlAsset.file.text();
     const cgiData = await parseCgiDataNew(rawHtml);
     console.log(cgiData);
-    const html = await renderHTMLFromCgiDataNew(cgiData);
+
     // articleHtml.value = await normalizeHtmlForPreview(htmlAsset, rawHtml);
-    articleHtml.value = html;
+    articleHtml.value = await renderHTMLFromCgiDataNew(
+      cgiData,
+      (preferences.value as Preferences).exportConfig.exportHtmlIncludeComments
+    );
   } else {
     toast.warning('文章预览失败', `文章【${article.title}】还未拉取文章内容`);
   }
