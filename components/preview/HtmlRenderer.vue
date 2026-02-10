@@ -16,7 +16,6 @@
 
 <script lang="ts" setup>
 import DOMPurify from 'dompurify';
-import { ShadowRoot } from 'vue-shadow-dom';
 
 interface Props {
   html: string;
