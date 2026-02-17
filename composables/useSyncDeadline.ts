@@ -17,6 +17,8 @@ export default () => {
         return start.subtract(3, 'days');
       case '7d':
         return start.subtract(7, 'days');
+      case '15d':
+        return start.subtract(15, 'days');
       case '1m':
         return start.subtract(1, 'months');
       case '3m':
@@ -52,7 +54,7 @@ export default () => {
     const now = dayjs().format('YYYY-MM-DD');
     const deadline = getDeadline();
 
-    return now + ' ~ ' + deadline.format('YYYY-MM-DD');
+    return deadline.format('YYYY-MM-DD') + ' ~ ' + now;
   }
 
   /**
@@ -71,6 +73,10 @@ export default () => {
       {
         value: '7d',
         label: '最近七天',
+      },
+      {
+        value: '15d',
+        label: '最近半个月',
       },
       {
         value: '1m',
