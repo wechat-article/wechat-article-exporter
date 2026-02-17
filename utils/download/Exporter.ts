@@ -369,23 +369,122 @@ export class Exporter extends BaseDownloader {
     const parser = new DOMParser();
     const turndownService = new TurndownService();
 
+    const localImageMode = preferences.value.exportConfig.exportMarkdownLocalImage;
+
     for (let i = 0; i < total; i++) {
       const url = this.urls[i];
 
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
+      const article = await getArticleByLink(url);
+      if (!article) {
+        continue;
+      }
+
       const content = await this.getPureContent(url, 'html', parser);
       if (!content) {
         continue;
       }
-      const markdown = turndownService.turndown(content);
+
+      let markdown = turndownService.turndown(content);
+
+      // 如果需要本地化图片，下载图片并替换路径
+      if (localImageMode) {
+        markdown = await this.processMarkdownImages(markdown, filename, article.fakeid);
+      }
 
       const blob = new Blob([markdown], { type: 'text/markdown' });
       await this.writeFile(filename + '.md', blob);
       this.emit('export:progress', i + 1);
     }
     await sleep(100);
+  }
+
+  // 处理 Markdown 中的图片：下载并替换路径
+  private async processMarkdownImages(markdown: string, dirname: string, fakeid: string): Promise<string> {
+    // 匹配 Markdown 图片语法: ![alt](url) 或 ![alt](url "title")
+    const imageRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s\)]+)(?:\s+"([^"]*)")?\)/g;
+
+    // 收集所有图片 URL
+    const imageUrls: { url: string; alt: string; title: string }[] = [];
+    let match;
+    while ((match = imageRegex.exec(markdown)) !== null) {
+      imageUrls.push({
+        url: match[2],
+        alt: match[1],
+        title: match[3] || '',
+      });
+    }
+
+    if (imageUrls.length === 0) {
+      return markdown;
+    }
+
+    // 下载图片
+    const downloadedImages = new Map<string, { blob: Blob; uuid: string }>();
+    for (const { url } of imageUrls) {
+      try {
+        const blob = await this.downloadImage(url, fakeid);
+        if (blob) {
+          const uuid = new Date().getTime().toString(36) + Math.random().toString(36).substr(2, 9);
+          downloadedImages.set(url, { blob, uuid });
+        }
+      } catch (error) {
+        console.warn(`下载图片失败: ${url}`, error);
+      }
+    }
+
+    // 替换 Markdown 中的图片路径
+    markdown = markdown.replace(imageRegex, (match, alt, imageUrl, title) => {
+      const downloaded = downloadedImages.get(imageUrl);
+      if (downloaded) {
+        const ext = mime.getExtension(downloaded.blob.type) || 'png';
+        const localPath = `./assets/${downloaded.uuid}.${ext}`;
+        const titlePart = title ? ` "${title}"` : '';
+        return `![${alt}](${localPath}${titlePart})`;
+      }
+      return match;
+    });
+
+    // 写入图片文件到本地
+    for (const [imageUrl, { blob, uuid }] of downloadedImages.entries()) {
+      const ext = mime.getExtension(blob.type) || 'png';
+      const localPath = `assets/${uuid}.${ext}`;
+      await this.writeFile(dirname + '/' + localPath, blob);
+    }
+
+    return markdown;
+  }
+
+  // 下载单张图片
+  private async downloadImage(url: string, fakeid: string): Promise<Blob | null> {
+    // 检查缓存
+    const cached = await getResourceCache(url);
+    if (cached) {
+      return cached.file;
+    }
+
+    // 尝试下载
+    for (let attempt = 0; attempt < this.options.maxRetries; attempt++) {
+      const proxy = this.proxyManager.getBestProxy();
+      try {
+        const blob = await this.download(fakeid, url, proxy);
+        await updateResourceCache({
+          fakeid: fakeid,
+          url: url,
+          file: blob,
+        });
+        this.proxyManager.recordSuccess(proxy);
+        return blob;
+      } catch (error) {
+        console.warn(`下载图片失败 (尝试 ${attempt + 1}/${this.options.maxRetries}): ${url}`, error);
+        if (attempt === this.options.maxRetries - 1) {
+          return null;
+        }
+      }
+    }
+    return null;
   }
 
   // 导出 word 文件
