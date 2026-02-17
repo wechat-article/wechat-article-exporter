@@ -389,13 +389,16 @@ export class Exporter extends BaseDownloader {
 
       let markdown = turndownService.turndown(content);
 
-      // 如果需要本地化图片，下载图片并替换路径
+      // 如果需要本地化图片，下载图片并替换路径，文件放在文件夹下
       if (localImageMode) {
         markdown = await this.processMarkdownImages(markdown, filename, article.fakeid);
+        const blob = new Blob([markdown], { type: 'text/markdown' });
+        await this.writeFile(filename + '/index.md', blob);
+      } else {
+        // 不下载图片，直接保存为单个文件
+        const blob = new Blob([markdown], { type: 'text/markdown' });
+        await this.writeFile(filename + '.md', blob);
       }
-
-      const blob = new Blob([markdown], { type: 'text/markdown' });
-      await this.writeFile(filename + '.md', blob);
       this.emit('export:progress', i + 1);
     }
     await sleep(100);
