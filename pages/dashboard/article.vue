@@ -337,36 +337,45 @@ function preview(article: Article) {
 
 const loading = ref(false);
 
-// 只能选择单个账号
-const selectedAccount = ref<MpAccount | undefined>();
+// 支持选择多个账号
+const selectedAccounts = ref<MpAccount[]>([]);
 
-watch(selectedAccount, newVal => {
-  switchTableData(newVal!.fakeid).catch(() => {});
+watch(selectedAccounts, newVal => {
+  if (newVal.length > 0) {
+    switchTableData(newVal.map(acc => acc.fakeid)).catch(() => {});
+  } else {
+    globalRowData = [];
+    gridApi.value?.setGridOption('rowData', globalRowData);
+  }
 });
 
-async function switchTableData(fakeid: string) {
+async function switchTableData(fakeids: string[]) {
   loading.value = true;
   const articles: Article[] = [];
-  const data = await getArticleCache(fakeid, Date.now());
-  for (const article of data) {
-    const contentDownload = (await getHtmlCache(article.link)) !== undefined;
-    const commentDownload = (await getCommentCache(article.link)) !== undefined;
-    const metadata = await getMetadataCache(article.link);
-    if (metadata) {
-      articles.push({
-        ...metadata,
-        ...article,
-        contentDownload: contentDownload,
-        commentDownload: commentDownload,
-      });
-    } else {
-      articles.push({
-        ...article,
-        contentDownload: contentDownload,
-        commentDownload: commentDownload,
-      });
+
+  for (const fakeid of fakeids) {
+    const data = await getArticleCache(fakeid, Date.now());
+    for (const article of data) {
+      const contentDownload = (await getHtmlCache(article.link)) !== undefined;
+      const commentDownload = (await getCommentCache(article.link)) !== undefined;
+      const metadata = await getMetadataCache(article.link);
+      if (metadata) {
+        articles.push({
+          ...metadata,
+          ...article,
+          contentDownload: contentDownload,
+          commentDownload: commentDownload,
+        });
+      } else {
+        articles.push({
+          ...article,
+          contentDownload: contentDownload,
+          commentDownload: commentDownload,
+        });
+      }
     }
   }
+
   await sleep(200);
   globalRowData = articles.filter(article => (hideDeleted.value ? !article.is_deleted : true));
   gridApi.value?.setGridOption('rowData', globalRowData);
@@ -488,8 +497,12 @@ async function debug() {
 
 const copied = ref(false);
 function copyWechatLink() {
-  const link = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${selectedAccount.value?.fakeid}&scene=124#wechat_redirect`;
-  navigator.clipboard.writeText(link);
+  if (selectedAccounts.value.length === 0) return;
+
+  const links = selectedAccounts.value.map(
+    account => `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${account.fakeid}&scene=124#wechat_redirect`
+  );
+  navigator.clipboard.writeText(links.join('\n'));
 
   copied.value = true;
   setTimeout(() => {
@@ -509,7 +522,7 @@ function copyWechatLink() {
       <header class="flex flex-col items-start lg:flex-row lg:items-center lg:justify-between gap-2 px-3 py-2">
         <div class="flex flex-col xl:flex-row gap-2">
           <div class="flex space-x-3">
-            <AccountSelectorForArticle v-model="selectedAccount" class="w-80" />
+            <AccountSelectorForArticle v-model="selectedAccounts" class="w-80" />
           </div>
         </div>
         <div class="flex items-center space-x-2">
@@ -526,7 +539,7 @@ function copyWechatLink() {
           >
             <UButton
               :loading="downloadBtnLoading"
-              :disabled="!selectedAccount"
+              :disabled="selectedAccounts.length === 0"
               color="white"
               class="font-mono"
               :label="downloadBtnLoading ? `抓取中 ${downloadCompletedCount}/${downloadTotalCount}` : '抓取'"
@@ -553,7 +566,7 @@ function copyWechatLink() {
           >
             <UButton
               :loading="exportBtnLoading"
-              :disabled="!selectedAccount"
+              :disabled="selectedAccounts.length === 0"
               color="white"
               class="font-mono"
               :label="exportBtnLoading ? `${exportPhase} ${exportCompletedCount}/${exportTotalCount}` : '导出'"
@@ -562,7 +575,7 @@ function copyWechatLink() {
           </ButtonGroup>
 
           <UButton
-            :disabled="!selectedAccount"
+            :disabled="selectedAccounts.length === 0"
             :icon="copied ? 'i-lucide:check' : 'i-heroicons-link-16-solid'"
             label="复制公众号链接"
             :color="copied ? 'green' : 'blue'"
