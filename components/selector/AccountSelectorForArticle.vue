@@ -9,11 +9,13 @@
     :options="sortedAccountInfos"
     option-attribute="nickname"
     placeholder="请选择公众号"
+    multiple
   >
     <template #label>
-      <UAvatar v-if="selected" :src="selected.round_head_img" size="2xs" />
-      <span v-if="selected" class="max-w-30 line-clamp-1">{{ selected.nickname }}</span>
-      <span v-if="selected" class="shrink-0">({{ selected.articles }}篇)</span>
+      <span v-if="selected && selected.length > 0" class="line-clamp-1">
+        已选择 {{ selected.length }} 个公众号
+      </span>
+      <span v-else>请选择公众号</span>
     </template>
     <template #option="{ option: account }">
       <UAvatar :src="account.round_head_img" size="sm" />
@@ -37,5 +39,7 @@ const sortedAccountInfos = computed(() => {
   return cachedAccountInfos;
 });
 
-const selected = defineModel<MpAccount | undefined>();
+const selected = defineModel<MpAccount[]>({
+  default: [],
+});
 </script>

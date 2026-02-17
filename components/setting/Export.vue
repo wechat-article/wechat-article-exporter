@@ -84,6 +84,14 @@
           label="导出 HTML 中包含留言数据"
         />
       </div>
+      <div>
+        <UCheckbox
+          v-model="preferences.exportConfig.exportMarkdownLocalImage"
+          name="exportMarkdownLocalImage"
+          label="导出 Markdown 时将图片保存为本地文件"
+        />
+        <p class="text-xs text-gray-500 mt-1 ml-6">开启后，Markdown 中的图片将下载到本地 assets 文件夹</p>
+      </div>
     </div>
   </UCard>
 </template>
