@@ -179,6 +179,48 @@ export class Exporter extends BaseDownloader {
     }
   }
 
+  /**
+   * 并发处理文件导出队列
+   * 复用 processExportQueue 的 Promise.race() 并发模型
+   * @param urls 待处理的文章 URL 列表
+   * @param task 每篇文章的处理函数
+   * @param options 可选配置
+   */
+  private async processFileExportQueue(
+    urls: string[],
+    task: (url: string) => Promise<void>,
+    options: { concurrency?: number; progressEvent?: string } = {}
+  ): Promise<void> {
+    const { concurrency = 5, progressEvent = 'export:progress' } = options;
+    const activePromises: Set<Promise<void>> = new Set();
+    const queue = [...urls];
+    let completedCount = 0;
+
+    while (queue.length > 0 || activePromises.size > 0) {
+      while (activePromises.size < concurrency && queue.length > 0) {
+        const url = queue.pop()!;
+        const promise = task(url)
+          .then(() => {
+            completedCount++;
+            this.emit(progressEvent, completedCount);
+          })
+          .catch(e => {
+            console.error(`导出文件失败(url: ${url}):`, e);
+            completedCount++;
+            this.emit(progressEvent, completedCount);
+          });
+        activePromises.add(promise);
+        promise.finally(() => {
+          activePromises.delete(promise);
+        });
+      }
+
+      if (activePromises.size > 0) {
+        await Promise.race(activePromises);
+      }
+    }
+  }
+
   // 下载资源任务
   private async downloadResourceTask(url: string, fakeid: string): Promise<void> {
     this.pending.add(url);
@@ -285,123 +327,110 @@ export class Exporter extends BaseDownloader {
     await export2JsonFile(data, '微信公众号文章');
   }
 
-  // 导出 html 文件
+  // 导出 html 文件（并发处理）
   private async exportHtmlFiles() {
     const total = this.urls.length;
     console.log(`总共${total}篇文章`);
     this.emit('export:write', total);
 
-    for (let i = 0; i < total; i++) {
-      const url = this.urls[i];
-      const cached = await getHtmlCache(url);
-      if (!cached) {
-        console.warn(`文章(url: ${url} )的 html 还未下载，不能导出`);
-        continue;
-      }
-
-      const dirname = await this.exportDirName(cached.url);
-
-      console.log(`(${i + 1}/${total})开始导出: ${cached.title}，目录名: ${dirname}`);
-      const html = await cached.file.text();
-      const resourceMap = await getResourceMapCache(url);
-      if (!resourceMap) {
-        console.warn(`文章(url: ${url} )的 resource-map 缺失，无法导出`);
-        continue;
-      }
-
-      const urlmap = new Map<string, string>();
-      for (const resourceUrl of resourceMap.resources) {
-        const resource = await getResourceCache(resourceUrl);
-        if (!resource) {
-          continue;
+    await this.processFileExportQueue(
+      this.urls,
+      async url => {
+        const cached = await getHtmlCache(url);
+        if (!cached) {
+          console.warn(`文章(url: ${url} )的 html 还未下载，不能导出`);
+          return;
         }
 
-        const uuid = new Date().getTime() + Math.random().toString();
-        const ext = mime.getExtension(resource.file.type);
-        if (ext) {
-          await this.writeFile(dirname + `/assets/${uuid}.${ext}`, resource.file);
-          urlmap.set(resourceUrl, `./assets/${uuid}.${ext}`);
+        const dirname = await this.exportDirName(cached.url);
+
+        console.log(`开始导出: ${cached.title}，目录名: ${dirname}`);
+        const html = await cached.file.text();
+        const resourceMap = await getResourceMapCache(url);
+        if (!resourceMap) {
+          console.warn(`文章(url: ${url} )的 resource-map 缺失，无法导出`);
+          return;
         }
-      }
 
-      const finalHtml = await this.normalizeHtml(cached, html, urlmap);
-      const blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+        const urlmap = new Map<string, string>();
+        for (const resourceUrl of resourceMap.resources) {
+          const resource = await getResourceCache(resourceUrl);
+          if (!resource) {
+            continue;
+          }
 
-      await this.writeFile(dirname + '/index.html', blob);
-      this.emit('export:write:progress', i + 1);
-    }
+          const uuid = new Date().getTime() + Math.random().toString();
+          const ext = mime.getExtension(resource.file.type);
+          if (ext) {
+            await this.writeFile(dirname + `/assets/${uuid}.${ext}`, resource.file);
+            urlmap.set(resourceUrl, `./assets/${uuid}.${ext}`);
+          }
+        }
+
+        const finalHtml = await this.normalizeHtml(cached, html, urlmap);
+        const blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+
+        await this.writeFile(dirname + '/index.html', blob);
+      },
+      { progressEvent: 'export:write:progress' }
+    );
     await sleep(100);
   }
 
-  // 导出 txt 文件
+  // 导出 txt 文件（并发处理）
   private async exportTxtFiles() {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    for (let i = 0; i < total; i++) {
-      const url = this.urls[i];
-
+    await this.processFileExportQueue(this.urls, async url => {
       const filename = await this.exportDirName(url);
-      console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
+      console.log(`开始导出: ${filename}(${url})`);
 
       const content = await this.getRenderedText(url);
-      if (!content) {
-        continue;
-      }
+      if (!content) return;
 
       const blob = new Blob([content], { type: 'text/plain' });
       await this.writeFile(filename + '.txt', blob);
-      this.emit('export:progress', i + 1);
-    }
+    });
     await sleep(100);
   }
 
-  // 导出 markdown 文件
+  // 导出 markdown 文件（并发处理）
   private async exportMarkdownFiles() {
     const total = this.urls.length;
     this.emit('export:total', total);
 
     const turndownService = new TurndownService();
 
-    for (let i = 0; i < total; i++) {
-      const url = this.urls[i];
-
+    await this.processFileExportQueue(this.urls, async url => {
       const filename = await this.exportDirName(url);
-      console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
+      console.log(`开始导出: ${filename}(${url})`);
 
       const content = await this.getRenderedHTML(url);
-      if (!content) {
-        continue;
-      }
+      if (!content) return;
       const markdown = turndownService.turndown(content);
 
       const blob = new Blob([markdown], { type: 'text/markdown' });
       await this.writeFile(filename + '.md', blob);
-      this.emit('export:progress', i + 1);
-    }
+    });
     await sleep(100);
   }
 
-  // 导出 word 文件
+  // 导出 word 文件（并发处理）
   private async exportWordFiles() {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    for (let i = 0; i < total; i++) {
-      const url = this.urls[i];
-
+    await this.processFileExportQueue(this.urls, async url => {
       const filename = await this.exportDirName(url);
-      console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
+      console.log(`开始导出: ${filename}(${url})`);
 
       const content = await this.getRenderedHTML(url);
-      if (!content) {
-        continue;
-      }
+      if (!content) return;
       const blob = window.htmlDocx.asBlob(content) as Blob;
 
       await this.writeFile(filename + '.docx', blob);
-      this.emit('export:progress', i + 1);
-    }
+    });
     await sleep(100);
   }
 
