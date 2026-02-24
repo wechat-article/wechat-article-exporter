@@ -2,6 +2,8 @@ import dayjs from 'dayjs';
 import mime from 'mime';
 import TurndownService from 'turndown';
 import { filterInvalidFilenameChars, sleep } from '#shared/utils/helpers';
+import { parseCgiDataNew } from '#shared/utils/html';
+import { renderHTMLFromCgiDataNew, renderTextFromCgiDataNew } from '#shared/utils/renderer';
 import usePreferences from '~/composables/usePreferences';
 import { getArticleByLink } from '~/store/v2/article';
 import { getHtmlCache, type HtmlAsset } from '~/store/v2/html';
@@ -150,23 +152,20 @@ export class Exporter extends BaseDownloader {
 
   // 处理导出任务队列
   private async processExportQueue() {
-    const activePromises: Promise<any>[] = [];
+    const activePromises: Set<Promise<any>> = new Set();
     const resources = [...this.resources];
 
-    while (resources.length > 0 || activePromises.length > 0) {
+    while (resources.length > 0 || activePromises.size > 0) {
       // 检查是否需要启动新的下载任务，需同时满足以下两点:
       // - 没有达到并发量限制
       // - 还有更多 URL 需要下载
-      while (activePromises.length < this.options.concurrency && resources.length > 0) {
+      while (activePromises.size < this.options.concurrency && resources.length > 0) {
         // 启动新的下载任务
         const resource: { url: string; fakeid: string } = resources.pop()!;
         const promise = this.downloadResourceTask(resource.url, resource.fakeid);
-        activePromises.push(promise);
+        activePromises.add(promise);
         promise.finally(() => {
-          const index = activePromises.indexOf(promise);
-          if (index > -1) {
-            activePromises.splice(index, 1);
-          }
+          activePromises.delete(promise);
 
           // 下载任务结束，触发通知
           this.emit('export:download:progress', resource.url, this.completed.has(resource.url), this.getStatus());
@@ -174,7 +173,7 @@ export class Exporter extends BaseDownloader {
       }
 
       // 等待任何活动任务完成
-      if (activePromises.length > 0) {
+      if (activePromises.size > 0) {
         await Promise.race(activePromises);
       }
     }
@@ -220,7 +219,6 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const parser = new DOMParser();
     const data: ExcelExportEntity[] = [];
 
     for (let i = 0; i < total; i++) {
@@ -231,7 +229,7 @@ export class Exporter extends BaseDownloader {
       const accountName = await getAccountNameByFakeid(article.fakeid);
       const exportedArticle: ExcelExportEntity = { ...article, _accountName: accountName };
       if (preferences.value.exportConfig.exportExcelIncludeContent) {
-        exportedArticle.content = await this.getPureContent(url, 'text', parser);
+        exportedArticle.content = await this.getRenderedText(url);
       }
       const metadata = await getMetadataCache(url);
       if (metadata) {
@@ -254,7 +252,6 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const parser = new DOMParser();
     const data: ExcelExportEntity[] = [];
 
     for (let i = 0; i < total; i++) {
@@ -266,7 +263,7 @@ export class Exporter extends BaseDownloader {
       const exportedArticle: ExcelExportEntity = { ...article, _accountName: accountName };
 
       if (preferences.value.exportConfig.exportJsonIncludeContent) {
-        exportedArticle.content = await this.getPureContent(url, 'text', parser);
+        exportedArticle.content = await this.getRenderedText(url);
       }
       const metadata = await getMetadataCache(url);
       if (metadata) {
@@ -341,15 +338,13 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const parser = new DOMParser();
-
     for (let i = 0; i < total; i++) {
       const url = this.urls[i];
 
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
-      const content = await this.getPureContent(url, 'text', parser);
+      const content = await this.getRenderedText(url);
       if (!content) {
         continue;
       }
@@ -366,7 +361,6 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const parser = new DOMParser();
     const turndownService = new TurndownService();
 
     for (let i = 0; i < total; i++) {
@@ -375,7 +369,7 @@ export class Exporter extends BaseDownloader {
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
-      const content = await this.getPureContent(url, 'html', parser);
+      const content = await this.getRenderedHTML(url);
       if (!content) {
         continue;
       }
@@ -393,15 +387,13 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const parser = new DOMParser();
-
     for (let i = 0; i < total; i++) {
       const url = this.urls[i];
 
       const filename = await this.exportDirName(url);
       console.log(`(${i + 1}/${total})开始导出: ${filename}(${url})`);
 
-      const content = await this.getPureContent(url, 'html', parser);
+      const content = await this.getRenderedHTML(url);
       if (!content) {
         continue;
       }
@@ -416,82 +408,47 @@ export class Exporter extends BaseDownloader {
   // 导出 pdf 文件
   private async exportPdfFiles() {}
 
-  private async getPureContent(url: string, format: 'html' | 'text', parser: DOMParser): Promise<string> {
+  /**
+   * 获取渲染后的完整 HTML 文档
+   * 使用 parseCgiDataNew + renderHTMLFromCgiDataNew 管线
+   */
+  private async getRenderedHTML(url: string, comments = false): Promise<string> {
     const cached = await getHtmlCache(url);
     if (!cached) {
-      console.warn(`文章(url: ${url} )的 html 还未下载，不能导出其内容`);
+      console.warn(`文章(url: ${url})的 html 还未下载，不能导出其内容`);
       return '';
     }
-
     const html = await cached.file.text();
-    const document = parser.parseFromString(html, 'text/html');
-    const $jsArticleContent = document.querySelector('#js_article')!;
-    // 删除无用dom元素
-    $jsArticleContent.querySelector('#js_top_ad_area')?.remove();
-    $jsArticleContent.querySelector('#js_tags_preview_toast')?.remove();
-    $jsArticleContent.querySelector('#content_bottom_area')?.remove();
-    $jsArticleContent.querySelectorAll('script').forEach(el => {
-      el.remove();
-    });
-    $jsArticleContent.querySelector('#js_pc_qr_code')?.remove();
-    $jsArticleContent.querySelector('#wx_stream_article_slide_tip')?.remove();
-
-    // 图片懒加载：将 data-src 回填到 src，便于导出
-    const imgs = $jsArticleContent.querySelectorAll<HTMLImageElement>('img');
-    imgs.forEach(img => {
-      const src = img.getAttribute('src');
-      const dataSrc = img.getAttribute('data-src');
-      if (!src && dataSrc) {
-        img.setAttribute('src', dataSrc);
-      }
-    });
-
-    // 文本分享消息补充
-    const $js_text_desc = $jsArticleContent.querySelector('#js_text_desc') as HTMLElement | null;
-    if ($js_text_desc && !$js_text_desc.innerHTML.trim()) {
-      const textContentMatch = html.match(
-        /var\s+TextContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']*')/s
-      );
-      const contentMatch = html.match(
-        /var\s+ContentNoEncode\s*=\s*window\.a_value_which_never_exists\s*\|\|\s*(?<value>'[^']*')/s
-      );
-
-      let desc: string | null = null;
-      const assignFromMatch = (match: RegExpMatchArray | null, key: string) => {
-        if (match && match.groups && match.groups.value) {
-          const code = `window.${key} = ${match.groups.value}`;
-          // eslint-disable-next-line no-eval
-          eval(code);
-          // @ts-ignore
-          return (window as any)[key] as string;
-        }
-        return null;
-      };
-
-      desc = assignFromMatch(textContentMatch, '__WX_TEXT_NO_ENCODE__');
-      if (!desc) {
-        desc = assignFromMatch(contentMatch, '__WX_CONTENT_NO_ENCODE__');
-      }
-
-      if (desc) {
-        desc = desc.replace(/\r/g, '').replace(/\n/g, '<br>');
-        $js_text_desc.innerHTML = desc;
-      }
-    }
-
-    if (format === 'html') {
-      return $jsArticleContent.outerHTML;
-    } else if (format === 'text') {
-      return ($jsArticleContent as HTMLElement).innerText!.replace(/\s+/g, ' ').trim();
-    } else {
+    const cgiData = await parseCgiDataNew(html);
+    if (!cgiData) {
+      console.warn(`文章(url: ${url})无法解析 cgiDataNew，跳过导出`);
       return '';
     }
+    return await renderHTMLFromCgiDataNew(cgiData, comments);
+  }
+
+  /**
+   * 获取渲染后的纯文本内容
+   * 使用 parseCgiDataNew + renderTextFromCgiDataNew 管线
+   */
+  private async getRenderedText(url: string): Promise<string> {
+    const cached = await getHtmlCache(url);
+    if (!cached) {
+      console.warn(`文章(url: ${url})的 html 还未下载，不能导出其内容`);
+      return '';
+    }
+    const html = await cached.file.text();
+    const cgiData = await parseCgiDataNew(html);
+    if (!cgiData) {
+      console.warn(`文章(url: ${url})无法解析 cgiDataNew，跳过导出`);
+      return '';
+    }
+    return renderTextFromCgiDataNew(cgiData);
   }
 
   static async getHtmlContent(url: string) {
-    const parser = new DOMParser();
     const exporter = new Exporter([]);
-    return exporter.getPureContent(url, 'html', parser);
+    return exporter.getRenderedHTML(url);
   }
 
   // 调整最终的 html

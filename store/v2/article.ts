@@ -10,7 +10,7 @@ export type ArticleAsset = AppMsgExWithFakeID;
  * @param publish_page
  */
 export async function updateArticleCache(account: MpAccount, publish_page: PublishPage) {
-  db.transaction('rw', ['article', 'info'], async () => {
+  await db.transaction('rw', ['article', 'info'], async () => {
     const keys = await db.article.toCollection().keys();
 
     const fakeid = account.fakeid;
@@ -111,8 +111,8 @@ export async function getSingleArticleByLink(url: string): Promise<AppMsgExWithF
  * @param is_deleted
  */
 export async function articleDeleted(url: string, is_deleted = true): Promise<void> {
-  db.transaction('rw', 'article', async () => {
-    db.article
+  await db.transaction('rw', 'article', async () => {
+    await db.article
       .where('link')
       .equals(url)
       .modify(article => {
@@ -127,8 +127,8 @@ export async function articleDeleted(url: string, is_deleted = true): Promise<vo
  * @param status
  */
 export async function updateArticleStatus(url: string, status: string): Promise<void> {
-  db.transaction('rw', 'article', async () => {
-    db.article
+  await db.transaction('rw', 'article', async () => {
+    await db.article
       .where('link')
       .equals(url)
       .modify(article => {
@@ -143,8 +143,8 @@ export async function updateArticleStatus(url: string, status: string): Promise<
  * @param fakeid
  */
 export async function updateArticleFakeid(url: string, fakeid: string): Promise<void> {
-  db.transaction('rw', 'article', async () => {
-    db.article
+  await db.transaction('rw', 'article', async () => {
+    await db.article
       .where('link')
       .equals(url)
       .and(article => article.fakeid === 'SINGLE_ARTICLE_FAKEID')

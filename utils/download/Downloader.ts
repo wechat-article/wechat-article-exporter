@@ -61,13 +61,13 @@ export class Downloader extends BaseDownloader {
 
   // 处理下载任务队列
   private async processDownloadQueue() {
-    const activePromises: Promise<any>[] = [];
+    const activePromises: Set<Promise<any>> = new Set();
 
-    begin: while (this.urls.length > 0 || activePromises.length > 0) {
+    begin: while (this.urls.length > 0 || activePromises.size > 0) {
       // 检查是否需要启动新的下载任务，需同时满足以下两点:
       // - 没有达到并发量限制
       // - 还有更多 URL 需要下载
-      while (activePromises.length < this.options.concurrency && this.urls.length > 0) {
+      while (activePromises.size < this.options.concurrency && this.urls.length > 0) {
         if (this.isStopping) {
           break begin;
         }
@@ -75,12 +75,9 @@ export class Downloader extends BaseDownloader {
         // 启动新的下载任务
         const url: string = this.urls.pop()!;
         const promise = this.processTask(url);
-        activePromises.push(promise);
+        activePromises.add(promise);
         promise.finally(() => {
-          const index = activePromises.indexOf(promise);
-          if (index > -1) {
-            activePromises.splice(index, 1);
-          }
+          activePromises.delete(promise);
 
           // 下载任务结束，触发通知
           this.emit('download:progress', url, this.completed.has(url), this.getStatus());
@@ -88,7 +85,7 @@ export class Downloader extends BaseDownloader {
       }
 
       // 等待任何活动任务完成
-      if (activePromises.length > 0) {
+      if (activePromises.size > 0) {
         await Promise.race(activePromises);
       }
     }

@@ -11,8 +11,8 @@ export interface ResourceAsset {
  * @param resource 缓存
  */
 export async function updateResourceCache(resource: ResourceAsset): Promise<boolean> {
-  return db.transaction('rw', 'resource', () => {
-    db.resource.put(resource);
+  return db.transaction('rw', 'resource', async () => {
+    await db.resource.put(resource);
     return true;
   });
 }

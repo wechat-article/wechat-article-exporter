@@ -13,8 +13,8 @@ export interface CommentReplyAsset {
  * @param reply 缓存
  */
 export async function updateCommentReplyCache(reply: CommentReplyAsset): Promise<boolean> {
-  return db.transaction('rw', 'comment_reply', () => {
-    db.comment_reply.put(reply, `${reply.url}:${reply.contentID}`);
+  return db.transaction('rw', 'comment_reply', async () => {
+    await db.comment_reply.put(reply, `${reply.url}:${reply.contentID}`);
     return true;
   });
 }

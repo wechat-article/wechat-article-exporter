@@ -42,6 +42,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
 
     try {
       loading.value = true;
+      cleanupDownloader();
 
       downloader = new Downloader(urls);
       downloader.on('download:progress', (url: string, success: boolean, status: DownloaderStatus) => {
@@ -85,6 +86,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       alert((error as Error).message);
     } finally {
       loading.value = false;
+      cleanupDownloader();
     }
   }
 
@@ -97,6 +99,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
 
     try {
       loading.value = true;
+      cleanupDownloader();
 
       downloader = new Downloader(urls);
       downloader.on('download:progress', (url: string, success: boolean, status: DownloaderStatus) => {
@@ -139,6 +142,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       alert((error as Error).message);
     } finally {
       loading.value = false;
+      cleanupDownloader();
     }
   }
 
@@ -151,6 +155,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
 
     try {
       loading.value = true;
+      cleanupDownloader();
 
       downloader = new Downloader(urls);
       downloader.on('download:progress', (url: string, success: boolean, status: DownloaderStatus) => {
@@ -181,6 +186,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       alert((error as Error).message);
     } finally {
       loading.value = false;
+      cleanupDownloader();
     }
   }
 
@@ -193,6 +199,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
 
     try {
       loading.value = true;
+      cleanupDownloader();
 
       downloader = new Downloader(urls);
       downloader.on('download:progress', (url: string, success: boolean, status: DownloaderStatus) => {
@@ -226,6 +233,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       alert((error as Error).message);
     } finally {
       loading.value = false;
+      cleanupDownloader();
     }
   }
 
@@ -241,10 +249,17 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
     }
   }
 
+  function cleanupDownloader() {
+    if (downloader) {
+      downloader.removeAllListeners();
+      downloader = null;
+    }
+  }
+
   function stop() {
     if (downloader) {
       downloader.stop();
-      downloader = null;
+      // 注意：不在此处清理监听器，等 download:stop 事件触发后由 finally 块清理
     }
   }
 

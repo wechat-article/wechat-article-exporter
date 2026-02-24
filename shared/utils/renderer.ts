@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import { getMetadataCache } from '~/store/v2/metadata';
-import type { ArticleMetadata } from '~/utils/download/types';
 import { renderComments } from '~/utils/comment';
+import type { ArticleMetadata } from '~/utils/download/types';
 
 const ITEM_SHOW_TYPE = {
   图片分享: 8,
@@ -296,6 +296,33 @@ function renderContent_0(cgiData: any): string {
   // 获取处理后的 HTML 片段（cheerio 会正确序列化多顶级元素和自闭合标签）
   let modifiedContent = $.html();
   return `<section class="item_show_type_0">${modifiedContent}</section>`;
+}
+
+/**
+ * 根据解析的 cgiDataNew 对象提取纯文本内容
+ * 用于 TXT/Excel/JSON 等纯文本导出场景
+ * @param cgiData
+ */
+export function renderTextFromCgiDataNew(cgiData: any): string {
+  const title = extractTitle(cgiData);
+  let text = '';
+  switch (cgiData.item_show_type) {
+    case ITEM_SHOW_TYPE.普通图文: {
+      // 普通图文 & 文章分享（都是 item_show_type=0）
+      const $ = cheerio.load(cgiData.content_noencode || '', null, false);
+      text = $.text();
+      break;
+    }
+    case ITEM_SHOW_TYPE.图片分享:
+      text = cgiData.content_noencode || '';
+      break;
+    case ITEM_SHOW_TYPE.文本分享:
+      text = cgiData.text_page_info?.content_noencode || '';
+      break;
+    default:
+      break;
+  }
+  return `${title}\n\n${text.trim()}`;
 }
 
 /**

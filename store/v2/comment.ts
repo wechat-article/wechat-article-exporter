@@ -12,8 +12,8 @@ export interface CommentAsset {
  * @param comment 缓存
  */
 export async function updateCommentCache(comment: CommentAsset): Promise<boolean> {
-  return db.transaction('rw', 'comment', () => {
-    db.comment.put(comment);
+  return db.transaction('rw', 'comment', async () => {
+    await db.comment.put(comment);
     return true;
   });
 }

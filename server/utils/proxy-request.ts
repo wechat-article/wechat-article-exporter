@@ -74,15 +74,23 @@ export async function proxyMpRequest(options: RequestOptions) {
     try {
       const authKey = crypto.randomUUID().replace(/-/g, '');
 
-      const { redirect_url } = await mpResponse.clone().json();
-      const token = new URL(`http://localhost${redirect_url}`).searchParams.get('token')!;
+      const body = await mpResponse.clone().json();
+      const redirectUrl = body?.redirect_url;
+      if (!redirectUrl || typeof redirectUrl !== 'string') {
+        throw new Error(`登录响应中未找到 redirect_url，响应内容: ${JSON.stringify(body)}`);
+      }
+
+      const token = new URL(`http://localhost${redirectUrl}`).searchParams.get('token');
+      if (!token) {
+        throw new Error(`redirect_url 中未找到 token 参数: ${redirectUrl}`);
+      }
+
       console.log('token', token);
       const success = await cookieStore.setCookie(authKey, token, mpResponse.headers.getSetCookie());
-      if (success) {
-        console.log('cookie 写入成功');
-      } else {
-        console.log('cookie 写入失败');
+      if (!success) {
+        throw new Error('cookie 写入 KV 存储失败');
       }
+      console.log('cookie 写入成功');
 
       setCookies = [
         `auth-key=${authKey}; Path=/; Expires=${dayjs().add(4, 'days').toString()}; Secure; HttpOnly`,
@@ -92,6 +100,12 @@ export async function proxyMpRequest(options: RequestOptions) {
       ];
     } catch (error) {
       console.error('action(login) failed:', error);
+
+      // 登录失败时返回错误响应，而不是静默继续
+      return new Response(JSON.stringify({ base_resp: { ret: -1, err_msg: `登录处理失败: ${error}` } }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
   }
 

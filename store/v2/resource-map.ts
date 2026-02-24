@@ -11,8 +11,8 @@ export interface ResourceMapAsset {
  * @param resourceMap 缓存
  */
 export async function updateResourceMapCache(resourceMap: ResourceMapAsset): Promise<boolean> {
-  return db.transaction('rw', 'resource-map', () => {
-    db['resource-map'].put(resourceMap);
+  return db.transaction('rw', 'resource-map', async () => {
+    await db['resource-map'].put(resourceMap);
     return true;
   });
 }

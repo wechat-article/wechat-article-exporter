@@ -13,8 +13,8 @@ export interface DebugAsset {
  * @param html 缓存
  */
 export async function updateDebugCache(html: DebugAsset): Promise<boolean> {
-  return db.transaction('rw', 'debug', () => {
-    db.debug.put(html);
+  return db.transaction('rw', 'debug', async () => {
+    await db.debug.put(html);
     return true;
   });
 }

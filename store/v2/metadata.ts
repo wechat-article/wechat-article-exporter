@@ -12,8 +12,8 @@ export type Metadata = ArticleMetadata & {
  * @param metadata
  */
 export async function updateMetadataCache(metadata: Metadata): Promise<boolean> {
-  return db.transaction('rw', 'metadata', () => {
-    db.metadata.put(metadata);
+  return db.transaction('rw', 'metadata', async () => {
+    await db.metadata.put(metadata);
     return true;
   });
 }

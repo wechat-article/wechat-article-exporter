@@ -13,8 +13,8 @@ export interface HtmlAsset {
  * @param html 缓存
  */
 export async function updateHtmlCache(html: HtmlAsset): Promise<boolean> {
-  return db.transaction('rw', 'html', () => {
-    db.html.put(html);
+  return db.transaction('rw', 'html', async () => {
+    await db.html.put(html);
     return true;
   });
 }

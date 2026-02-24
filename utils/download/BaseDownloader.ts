@@ -91,6 +91,13 @@ export class BaseDownloader {
   }
 
   /**
+   * 移除所有事件监听器
+   */
+  public removeAllListeners() {
+    this.events.clear();
+  }
+
+  /**
    * 取消所有正在下载的请求
    */
   public cancelAllPending(): void {
