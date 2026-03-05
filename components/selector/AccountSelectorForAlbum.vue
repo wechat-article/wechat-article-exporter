@@ -53,7 +53,7 @@ const sortedAccountInfos = computed(() => {
 
 // 获取公众号下所有的合集数据（根据已缓存的文章数据）
 async function getAllAlbums(fakeid: string) {
-  const articles = await getArticleCache(fakeid, Date.now());
+  const articles = await getArticleCache(fakeid, Math.floor(Date.now() / 1000));
   const albums: AppMsgAlbumInfo[] = [];
   articles
     .flatMap(article => article.appmsg_album_infos)

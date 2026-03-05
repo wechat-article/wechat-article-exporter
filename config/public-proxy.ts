@@ -4,7 +4,6 @@
 export const PUBLIC_PROXY_LIST: string[] = [
   ...getDomainProxyList('worker-proxy.asia'),
   ...getDomainProxyList('net-proxy.asia'),
-  ...getDomainProxyList('workers-proxy.top'),
   ...getDomainProxyList('workers-proxy.shop'),
   ...getDomainProxyList('workers-proxy-1.shop'),
   ...getDomainProxyList('workers-proxy-2.shop'),
