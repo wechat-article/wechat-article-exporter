@@ -1,6 +1,6 @@
 {
   "name": "wechat-article-exporter",
-  "version": "2.3.11",
+  "version": "2.3.12",
   "type": "module",
   "scripts": {
     "debug": "nuxt dev --inspect",
