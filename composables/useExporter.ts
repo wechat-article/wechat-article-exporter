@@ -240,7 +240,18 @@ export default () => {
   // 导出 pdf
   async function export2pdf(urls: string[]) {}
 
-  function exportFile(type: 'excel' | 'json' | 'html' | 'text' | 'markdown' | 'word' | 'pdf', urls: string[]) {
+  const needsContentFormats = new Set(['html', 'text', 'markdown', 'word']);
+
+  function exportFile(
+    type: 'excel' | 'json' | 'html' | 'text' | 'markdown' | 'word' | 'pdf',
+    urls: string[],
+    contentNotDownloadedCount?: number,
+  ) {
+    if (needsContentFormats.has(type) && contentNotDownloadedCount) {
+      toast.warning('提示', `有 ${contentNotDownloadedCount} 篇文章尚未抓取内容，请先抓取内容后再导出`);
+      return;
+    }
+
     switch (type) {
       case 'excel':
         return export2excel(urls);

@@ -387,6 +387,9 @@ function onSelectionChanged(event: SelectionChangedEvent) {
 const selectedArticleUrls = computed(() => {
   return selectedArticles.value.map(article => article.link);
 });
+const contentNotDownloadedCount = computed(() => {
+  return selectedArticles.value.filter(article => !article.contentDownload).length;
+});
 
 const {
   loading: downloadBtnLoading,
@@ -546,10 +549,10 @@ function copyWechatLink() {
             ]"
             @export-article-excel="exportFile('excel', selectedArticleUrls)"
             @export-article-json="exportFile('json', selectedArticleUrls)"
-            @export-article-html="exportFile('html', selectedArticleUrls)"
-            @export-article-text="exportFile('text', selectedArticleUrls)"
-            @export-article-markdown="exportFile('markdown', selectedArticleUrls)"
-            @export-article-word="exportFile('word', selectedArticleUrls)"
+            @export-article-html="exportFile('html', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-text="exportFile('text', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-markdown="exportFile('markdown', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-word="exportFile('word', selectedArticleUrls, contentNotDownloadedCount)"
           >
             <UButton
               :loading="exportBtnLoading"
