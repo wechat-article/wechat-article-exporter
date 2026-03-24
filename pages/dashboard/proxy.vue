@@ -15,7 +15,10 @@
         <div class="flex justify-between items-center">
           <p class="text-rose-500 text-sm">
             警告: 公共代理资源有限，请合理使用。 若需抓取大量数据，请搭建自己的私有代理节点。<br />
-            若发现某ip存在滥用公共代理从而导致官网无法使用，将有可能被封禁。<br />
+            若发现某ip存在滥用公共代理从而导致官网无法使用，将有可能被封禁。
+          </p>
+          <p class="mt-2 px-3 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-300 rounded-md dark:text-amber-300 dark:bg-amber-900/30 dark:border-amber-700">
+            所有代理额度将在每天早上 8:00 刷新。
           </p>
           <UPopover :popper="{ placement: 'left-start', arrow: true }">
             <UButton
