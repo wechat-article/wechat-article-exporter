@@ -108,8 +108,8 @@ onMounted(async () => {
     request('/api/web/misc/current-ip').then(data => {
       currentIP.value = data.ip;
     }),
-    request<string[]>('/api/web/worker/blocked-ip-list').then(data => {
-      blockedIPS.value = data;
+    request<{ ips: string[] } | string[]>('/api/web/worker/blocked-ip-list').then(data => {
+      blockedIPS.value = Array.isArray(data) ? data : (data.ips || []);
     }),
   ]);
 });
