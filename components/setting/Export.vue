@@ -15,6 +15,9 @@
 
               <template #panel>
                 <div class="p-4">
+                  <p class="my-2 text-sm text-gray-500">
+                    使用 <code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded font-mono text-xs">${变量名}</code> 的格式插入变量，例如：<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded font-mono text-xs">${YYYY}-${MM}-${DD}_${title}</code>
+                  </p>
                   <p class="my-2 font-medium">支持的变量：</p>
                   <table class="w-full border-collapse border">
                     <tbody>
@@ -44,6 +47,10 @@
           name="dirname"
           v-model="preferences.exportConfig.dirname"
         />
+        <p class="mt-2 text-sm text-gray-500">
+          <span class="mr-1">预览:</span>
+          <span class="font-mono text-gray-700 dark:text-gray-300">{{ dirnamePreview }}</span>
+        </p>
       </div>
       <div>
         <p class="mb-2 flex items-center gap-3">
@@ -92,6 +99,30 @@
 import type { Preferences } from '~/types/preferences';
 
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
+
+const sampleData: Record<string, string> = {
+  account: '人民日报',
+  title: '这是一篇示例文章标题',
+  aid: '100000001',
+  author: '张三',
+  YYYY: '2025',
+  MM: '03',
+  DD: '15',
+  HH: '10',
+  mm: '30',
+};
+
+const dirnamePreview = computed(() => {
+  let result = preferences.value.exportConfig.dirname || '';
+  for (const [key, value] of Object.entries(sampleData)) {
+    result = result.replace(new RegExp(`\\$\\{${key}}`, 'g'), value);
+  }
+  const maxlength = preferences.value.exportConfig.maxlength;
+  if (maxlength) {
+    result = result.slice(0, maxlength);
+  }
+  return result || '（空）';
+});
 
 const _variables = [
   { name: 'account', description: '公众号名称' },
