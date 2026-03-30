@@ -43,7 +43,7 @@ const toast = toastFactory();
 const modal = useModal();
 const { checkLogin } = useLoginCheck();
 
-const { getSyncTimestamp } = useSyncDeadline();
+const { getSyncTimestamp, getSyncRangeLabel, isSyncAll } = useSyncDeadline();
 const syncToTimestamp = getSyncTimestamp();
 
 const preferences = usePreferences();
@@ -179,7 +179,8 @@ async function loadSelectedAccountArticle() {
     for (const account of rows) {
       await loadAccountArticle(account);
     }
-    toast.success(`已成功同步 ${rows.length} 个公众号`);
+    const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
+    toast.success('同步完成', `已成功同步 ${rows.length} 个公众号${rangeHint}`);
   } catch (e: any) {
     toast.error('同步失败', e.message);
   }
@@ -312,7 +313,8 @@ const columnDefs = ref<ColDef[]>([
         isCanceled.value = false;
         loadAccountArticle(params.data)
           .then(() => {
-            toast.success('同步完成', `公众号【${params.data.nickname}】的文章已同步完毕`);
+            const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
+            toast.success('同步完成', `公众号【${params.data.nickname}】的文章已同步完毕${rangeHint}`);
           })
           .catch(e => {
             toast.error('同步失败', e.message);

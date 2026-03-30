@@ -106,9 +106,28 @@ export default () => {
     ];
   }
 
+  /**
+   * 获取当前同步范围的可读标签
+   */
+  function getSyncRangeLabel(): string {
+    const syncDateRange = (preferences.value as unknown as Preferences).syncDateRange;
+    const option = getSelectOptions().find(o => o.value === syncDateRange);
+    return option?.label ?? '全部';
+  }
+
+  /**
+   * 当前同步范围是否为全部
+   */
+  function isSyncAll(): boolean {
+    const syncDateRange = (preferences.value as unknown as Preferences).syncDateRange;
+    return syncDateRange === 'all';
+  }
+
   return {
     getSyncTimestamp,
     getActualDateRange,
     getSelectOptions,
+    getSyncRangeLabel,
+    isSyncAll,
   };
 };
