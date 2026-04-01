@@ -188,6 +188,36 @@ const modal = useModal();
 
 const addingBiz = ref<string | null>(null);
 
+/**
+ * 从 set_cookie 字符串中解析 appmsg_token 和完整 cookie 字符串
+ * set_cookie 格式: "name=value; Path=/; HttpOnly, name2=value2; Path=/; HttpOnly, ..."
+ */
+function parseSetCookie(setCookie: string): { appmsg_token: string; cookie: string } {
+  let appmsg_token = '';
+  const tokenMatch = setCookie.match(/appmsg_token=(?<token>[^;]+)/);
+  if (tokenMatch?.groups?.token) {
+    appmsg_token = decodeURIComponent(tokenMatch.groups.token.trim());
+  }
+
+  // 按逗号分隔各 cookie 条目，提取有效的 name=value 对
+  const cookieParts: string[] = [];
+  const entries = setCookie.split(',');
+  for (const entry of entries) {
+    const nameValue = entry.trim().split(';')[0].trim();
+    if (!nameValue || !nameValue.includes('=')) continue;
+    // 跳过 EXPIRED 值和纯属性条目
+    if (nameValue.includes('EXPIRED')) continue;
+    const name = nameValue.split('=')[0].trim();
+    if (['Path', 'Expires', 'HttpOnly', 'Secure', 'Domain', 'SameSite'].includes(name)) continue;
+    // 跳过空值（如 rewardsn=）
+    const value = nameValue.split('=').slice(1).join('=');
+    if (!value) continue;
+    cookieParts.push(nameValue);
+  }
+
+  return { appmsg_token, cookie: cookieParts.join('; ') };
+}
+
 async function refreshCredentialAddedState() {
   const pending = credentials.value.map(async credential => {
     const info = await getInfoCache(credential.biz);
@@ -369,6 +399,9 @@ async function fetchCredentials() {
     if (matchResult && matchResult.groups && matchResult.groups.wap_sid2) {
       wap_sid2 = matchResult.groups.wap_sid2;
     }
+
+    const { appmsg_token, cookie } = parseSetCookie(item.set_cookie);
+
     // 验证完整性
     if (!__biz || !uin || !key || !pass_ticket || !wap_sid2) {
       continue;
@@ -383,6 +416,8 @@ async function fetchCredentials() {
       key: key,
       pass_ticket: pass_ticket,
       wap_sid2: wap_sid2,
+      appmsg_token: appmsg_token,
+      cookie: cookie,
       timestamp: item.timestamp,
       time: dayjs(item.timestamp).format('YYYY-MM-DD HH:mm:ss'),
       valid: Date.now() < item.timestamp + 1000 * 60 * CREDENTIAL_LIVE_MINUTES,
@@ -432,6 +467,9 @@ async function startListenService(isManual = false) {
       if (matchResult && matchResult.groups && matchResult.groups.wap_sid2) {
         wap_sid2 = matchResult.groups.wap_sid2;
       }
+
+      const { appmsg_token, cookie } = parseSetCookie(item.set_cookie);
+
       // 验证完整性
       if (!__biz || !uin || !key || !pass_ticket || !wap_sid2) {
         continue;
@@ -446,6 +484,8 @@ async function startListenService(isManual = false) {
         key: key,
         pass_ticket: pass_ticket,
         wap_sid2: wap_sid2,
+        appmsg_token: appmsg_token,
+        cookie: cookie,
         timestamp: item.timestamp,
         time: dayjs(item.timestamp).format('YYYY-MM-DD HH:mm:ss'),
         valid: Date.now() < item.timestamp + 1000 * 60 * CREDENTIAL_LIVE_MINUTES,
