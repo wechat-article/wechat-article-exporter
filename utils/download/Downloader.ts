@@ -481,17 +481,11 @@ export class Downloader extends BaseDownloader {
       if (targetCredential.cookie) {
         headers.Cookie = targetCredential.cookie;
       }
+      const proxyUrl = `${proxy}?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}&authorization=${Authorization}`;
       const response = (await Promise.race([
-        fetch('/api/proxy/download', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            proxyUrl: proxy,
-            url,
-            headers,
-            authorization: Authorization,
-          }),
+        fetch(proxyUrl, {
           signal: abortController.signal,
+          referrerPolicy: 'unsafe-url',
         }),
         timeout(this.options.timeout),
       ])) as Response;
@@ -535,17 +529,11 @@ export class Downloader extends BaseDownloader {
       if (targetCredential.cookie) {
         headers.Cookie = targetCredential.cookie;
       }
+      const proxyUrl = `${proxy}?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}&authorization=${Authorization}`;
       const response = (await Promise.race([
-        fetch('/api/proxy/download', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            proxyUrl: proxy,
-            url,
-            headers,
-            authorization: Authorization,
-          }),
+        fetch(proxyUrl, {
           signal: abortController.signal,
+          referrerPolicy: 'unsafe-url',
         }),
         timeout(this.options.timeout),
       ])) as Response;

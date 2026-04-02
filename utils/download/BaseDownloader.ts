@@ -156,19 +156,11 @@ export class BaseDownloader {
       }
 
       const Authorization = (preferences.value as Preferences).privateProxyAuthorization || '';
-
-      // 通过服务端中转代理请求，避免浏览器直接请求代理时的 CORS / 网络不可达问题
+      const proxyUrl = `${proxy}?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}&authorization=${Authorization}`;
       const response = (await Promise.race([
-        fetch('/api/proxy/download', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            proxyUrl: proxy,
-            url,
-            headers,
-            authorization: Authorization,
-          }),
+        fetch(proxyUrl, {
           signal: abortController.signal,
+          referrerPolicy: 'unsafe-url',
         }),
         timeout(this.options.timeout),
       ])) as Response;
