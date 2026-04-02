@@ -23,8 +23,7 @@ import PreviewArticle from '~/components/preview/Article.vue';
 import toastFactory from '~/composables/toast';
 import { websiteName } from '~/config';
 import { sharedGridOptions } from '~/config/shared-grid-options';
-import { articleDeleted, updateArticleFakeid, updateArticleStatus } from '~/store/v2/article';
-import { db } from '~/store/v2/db';
+import { articleDeleted, deleteArticle, putArticle, updateArticleFakeid, updateArticleStatus } from '~/store/v2/article';
 import { getHtmlCache } from '~/store/v2/html';
 import type { Metadata } from '~/store/v2/metadata';
 import type { Preferences } from '~/types/preferences';
@@ -356,7 +355,7 @@ function buildVirtualArticle(row: SingleArticleRow): AppMsgExWithFakeID {
 }
 
 function upsertArticleStub(row: SingleArticleRow) {
-  return db.article.put(buildVirtualArticle(row), `${row.fakeid}:${row.aid}`);
+  return putArticle(buildVirtualArticle(row), `${row.fakeid}:${row.aid}`);
 }
 
 function getSelectedRows(): SingleArticleRow[] {
@@ -524,7 +523,7 @@ async function updateRowFromHtml(row: SingleArticleRow) {
     }
   }
 
-  await db.article.put(
+  await putArticle(
     {
       ...buildVirtualArticle(row),
       digest: row.digest,
@@ -558,9 +557,10 @@ const {
 
 async function deleteRowData(row: SingleArticleRow) {
   const key = `${row.fakeid}:${row.aid}`;
-  await db.transaction('rw', ['article', 'html'], async () => {
-    await db.article.delete(key);
-    await db.html.delete(row.link);
+  await deleteArticle(key);
+  await $fetch('/api/store/html', {
+    method: 'POST',
+    body: { action: 'delete', url: row.link },
   });
 }
 

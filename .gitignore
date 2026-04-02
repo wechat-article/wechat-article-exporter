@@ -23,9 +23,11 @@ docs
 samples/**/output
 
 # Local env files
-.env
 .env.*
 !.env.example
 
 # wrangler
 .wrangler
+
+package-lock.json
+yarn.lock

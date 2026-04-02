@@ -79,12 +79,13 @@ const logoutBtnLoading = ref(false);
 
 async function logout() {
   logoutBtnLoading.value = true;
-  const { statusCode, statusText } = await request<LogoutResponse>('/api/web/mp/logout');
-  if (statusCode === 200) {
-    loginAccount.value = null;
-  } else {
-    alert(statusText);
+  try {
+    await request<LogoutResponse>('/api/web/mp/logout');
+  } catch (e) {
+    console.warn('登出请求失败:', e);
   }
+  // 无论服务端是否成功，都清除本地登录状态
+  loginAccount.value = null;
   logoutBtnLoading.value = false;
 }
 

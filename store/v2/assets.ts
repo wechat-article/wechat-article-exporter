@@ -1,4 +1,4 @@
-import { db } from './db';
+import { base64ToBlob, blobToBase64 } from './helpers';
 
 interface Asset {
   url: string;
@@ -10,20 +10,35 @@ export type { Asset };
 
 /**
  * 更新 asset 缓存
- * @param asset
  */
 export async function updateAssetCache(asset: Asset): Promise<boolean> {
-  return db.transaction('rw', 'asset', () => {
-    db.asset.put(asset);
-    return true;
+  const fileBase64 = await blobToBase64(asset.file);
+  await $fetch('/api/store/asset', {
+    method: 'POST',
+    body: {
+      action: 'update',
+      asset: {
+        url: asset.url,
+        fakeid: asset.fakeid,
+        file: fileBase64,
+        fileType: asset.file.type || 'application/octet-stream',
+      },
+    },
   });
+  return true;
 }
 
 /**
  * 获取 asset 缓存
- * @param url
  */
 export async function getAssetCache(url: string): Promise<Asset | undefined> {
-  db.transaction('r', 'asset', () => {});
-  return db.asset.get(url);
+  const res = await $fetch<any>('/api/store/asset', {
+    query: { action: 'get', url },
+  });
+  if (!res) return undefined;
+  return {
+    url: res.url,
+    fakeid: res.fakeid,
+    file: base64ToBlob(res.file, res.fileType || 'application/octet-stream'),
+  };
 }

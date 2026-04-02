@@ -1,5 +1,3 @@
-import { db } from './db';
-
 export interface CommentReplyAsset {
   fakeid: string;
   url: string;
@@ -9,21 +7,22 @@ export interface CommentReplyAsset {
 }
 
 /**
- * 更新 comment 缓存
- * @param reply 缓存
+ * 更新 comment reply 缓存
  */
 export async function updateCommentReplyCache(reply: CommentReplyAsset): Promise<boolean> {
-  return db.transaction('rw', 'comment_reply', async () => {
-    await db.comment_reply.put(reply, `${reply.url}:${reply.contentID}`);
-    return true;
+  await $fetch('/api/store/comment-reply', {
+    method: 'POST',
+    body: { action: 'update', reply },
   });
+  return true;
 }
 
 /**
- * 获取 comment 缓存
- * @param url
- * @param contentID
+ * 获取 comment reply 缓存
  */
 export async function getCommentReplyCache(url: string, contentID: string): Promise<CommentReplyAsset | undefined> {
-  return db.comment_reply.get(`${url}:${contentID}`);
+  const res = await $fetch<CommentReplyAsset | null>('/api/store/comment-reply', {
+    query: { action: 'get', url, contentID },
+  });
+  return res || undefined;
 }

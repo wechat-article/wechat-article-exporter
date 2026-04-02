@@ -1,4 +1,4 @@
-import { db } from './db';
+import { base64ToBlob, blobToBase64 } from './helpers';
 
 export interface HtmlAsset {
   fakeid: string;
@@ -10,19 +10,37 @@ export interface HtmlAsset {
 
 /**
  * 更新 html 缓存
- * @param html 缓存
  */
 export async function updateHtmlCache(html: HtmlAsset): Promise<boolean> {
-  return db.transaction('rw', 'html', async () => {
-    await db.html.put(html);
-    return true;
+  const fileBase64 = await blobToBase64(html.file);
+  await $fetch('/api/store/html', {
+    method: 'POST',
+    body: {
+      action: 'update',
+      fakeid: html.fakeid,
+      url: html.url,
+      title: html.title,
+      commentID: html.commentID,
+      file: fileBase64,
+      fileType: html.file.type || 'text/html',
+    },
   });
+  return true;
 }
 
 /**
- * 获取 asset 缓存
- * @param url
+ * 获取 html 缓存
  */
 export async function getHtmlCache(url: string): Promise<HtmlAsset | undefined> {
-  return db.html.get(url);
+  const res = await $fetch<any>('/api/store/html', {
+    query: { action: 'get', url },
+  });
+  if (!res) return undefined;
+  return {
+    fakeid: res.fakeid,
+    url: res.url,
+    title: res.title,
+    commentID: res.commentID,
+    file: base64ToBlob(res.file, res.fileType || 'text/html'),
+  };
 }

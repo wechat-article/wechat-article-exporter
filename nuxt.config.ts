@@ -4,6 +4,9 @@ export default defineNuxtConfig({
   devtools: {
     enabled: false,
   },
+  devServer:{
+    port:3001
+  },
   modules: ['@vueuse/nuxt', '@nuxt/ui', 'nuxt-monaco-editor', '@sentry/nuxt/module', 'nuxt-umami'],
   ssr: false,
   runtimeConfig: {
@@ -40,6 +43,15 @@ export default defineNuxtConfig({
       kv: {
         driver: process.env.NITRO_KV_DRIVER || 'memory',
         base: process.env.NITRO_KV_BASE,
+      },
+    },
+    externals: {
+      inline: [],
+      external: ['pg'],
+    },
+    routeRules: {
+      '/api/store/**': {
+        headers: { 'x-nitro-max-body-size': '100mb' },
       },
     },
   },
