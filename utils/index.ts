@@ -29,11 +29,31 @@ async function downloadAssetWithProxy<T extends Blob | string>(
       headers.cookie = `pass_ticket=${credentials.pass_ticket};wap_sid2=${credentials.wap_sid2}`;
     } catch (e) {}
   }
-  let targetURL = proxy
-    ? `${proxy}?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}`
-    : url;
-  targetURL = targetURL.replace(/^http:\/\//, 'https://');
 
+  if (proxy) {
+    // 通过服务端中转代理请求
+    const response = await fetch('/api/proxy/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proxyUrl: proxy,
+        url,
+        headers,
+        authorization: '',
+      }),
+      signal: AbortSignal.timeout(timeout * 1000),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text') || contentType.includes('json') || contentType.includes('html')) {
+      return (await response.text()) as T;
+    }
+    return (await response.blob()) as T;
+  }
+
+  let targetURL = url.replace(/^http:\/\//, 'https://');
   return await request<T>(targetURL, {
     timeout: timeout * 1000,
     referrerPolicy: 'unsafe-url',
