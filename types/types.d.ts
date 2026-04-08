@@ -151,6 +151,7 @@ export interface AppMsgEx {
   has_red_packet_cover: number;
   is_deleted: boolean;
   is_pay_subscribe: number;
+  wecoin_count: number;
   item_show_type: number;
   itemidx: number;
   link: string;

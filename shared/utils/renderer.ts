@@ -116,6 +116,33 @@ export async function renderHTMLFromCgiDataNew(cgiData: any, comments = true) {
         img {
             max-width: 100%;
         }
+        .pay_subscribe_notice {
+            margin: 30px 0;
+            padding: 20px;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 8px;
+        }
+        .pay_subscribe_badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #faad14;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        .pay_subscribe_desc {
+            font-size: 15px;
+            line-height: 1.8;
+            color: rgba(0, 0, 0, 0.7);
+            margin-bottom: 12px;
+        }
+        .pay_subscribe_hint {
+            font-size: 13px;
+            color: rgba(0, 0, 0, 0.4);
+        }
         .__bottom-bar__ {
             display: flex;
             justify-content: space-between;
@@ -200,6 +227,11 @@ function extractTitle(cgiData: any): string {
  * @param cgiData
  */
 function extractContentHTML(cgiData: any): string {
+  // 未购买的付费文章：content_noencode 只包含占位元素，需展示付费预览信息
+  if (cgiData.is_pay_subscribe === 1 && isPayPreviewPlaceholder(cgiData.content_noencode)) {
+    return renderContent_paySubscribe(cgiData);
+  }
+
   let contentHTML = '';
   switch (cgiData.item_show_type) {
     case ITEM_SHOW_TYPE.图片分享:
@@ -216,6 +248,33 @@ function extractContentHTML(cgiData: any): string {
       break;
   }
   return contentHTML;
+}
+
+/**
+ * 判断 content_noencode 是否为未购买付费文章的占位内容
+ */
+function isPayPreviewPlaceholder(contentNoencode: string | undefined): boolean {
+  if (!contentNoencode) return true;
+  const trimmed = contentNoencode.trim();
+  return !trimmed || trimmed.includes('mp-pay-preview-filter');
+}
+
+/**
+ * 渲染【付费订阅】类文章的内容部分
+ * @param cgiData
+ */
+function renderContent_paySubscribe(cgiData: any): string {
+  const payInfo = cgiData.pay_subscribe_info || {};
+  const desc = (payInfo.desc || '').replace(/\r?\n/g, '<br />');
+  const fee = payInfo.fee ? `${payInfo.fee / 100} 元` : '';
+  const wecoinAmount = payInfo.wecoin_amount ? `${payInfo.wecoin_amount} 微币` : '';
+  const priceText = fee || wecoinAmount || '付费';
+
+  return `<section class="pay_subscribe_notice">
+<div class="pay_subscribe_badge">付费内容 · ${priceText}</div>
+${desc ? `<div class="pay_subscribe_desc">${desc}</div>` : ''}
+<div class="pay_subscribe_hint">本文为付费文章，完整内容需购买后查看</div>
+</section>`;
 }
 
 /**
@@ -306,6 +365,13 @@ function renderContent_0(cgiData: any): string {
 export function renderTextFromCgiDataNew(cgiData: any): string {
   const title = extractTitle(cgiData);
   let text = '';
+
+  // 未购买的付费文章：使用付费预览描述
+  if (cgiData.is_pay_subscribe === 1 && isPayPreviewPlaceholder(cgiData.content_noencode)) {
+    text = cgiData.pay_subscribe_info?.desc || '[付费内容]';
+    return `${title}\n\n[付费文章]\n${text.trim()}`;
+  }
+
   switch (cgiData.item_show_type) {
     case ITEM_SHOW_TYPE.普通图文: {
       // 普通图文 & 文章分享（都是 item_show_type=0）

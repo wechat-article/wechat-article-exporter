@@ -163,11 +163,14 @@ export class Downloader extends BaseDownloader {
       return;
     }
 
+    // 付费文章需要使用 credential 来获取完整内容
+    const withCredential = article.is_pay_subscribe === 1;
+
     for (let attempt = 0; attempt < this.options.maxRetries; attempt++) {
       const proxy = this.proxyManager.getBestProxy();
 
       try {
-        const blob = await this.download(article.fakeid, url, proxy, false);
+        const blob = await this.download(article.fakeid, url, proxy, withCredential);
         const html = await blob.text();
         const [status, commentID] = validateHTMLContent(html);
         if (status === 'Success') {
