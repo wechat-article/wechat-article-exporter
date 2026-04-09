@@ -113,6 +113,7 @@ export class Downloader extends BaseDownloader {
 
     const article = await getSingleArticleByLink(url);
     if (!article) {
+      console.warn(`文章(url: ${url} )跳过修复fakeid: 在数据库中未找到该单篇文章记录`);
       this.pending.delete(url);
       this.failed.add(url);
       return;
@@ -150,6 +151,7 @@ export class Downloader extends BaseDownloader {
     if (!preferences.value.downloadConfig.forceDownloadContent) {
       const cached = await getHtmlCache(url);
       if (cached) {
+        console.warn(`文章(url: ${url} )跳过下载: 缓存中已存在`);
         this.pending.delete(url);
         this.completed.add(url);
         return;
@@ -158,6 +160,7 @@ export class Downloader extends BaseDownloader {
 
     const article = await getArticleByLink(url);
     if (!article) {
+      console.warn(`文章(url: ${url} )跳过下载: 在数据库中未找到该文章记录`);
       this.pending.delete(url);
       this.failed.add(url);
       return;
@@ -244,6 +247,7 @@ export class Downloader extends BaseDownloader {
 
     const article = await getArticleByLink(url);
     if (!article) {
+      console.warn(`文章(url: ${url} )跳过抓取阅读量: 在数据库中未找到该文章记录`);
       this.pending.delete(url);
       this.failed.add(url);
       return;
@@ -253,6 +257,7 @@ export class Downloader extends BaseDownloader {
     try {
       this.validateCredential(article.fakeid);
     } catch (error) {
+      console.warn(`文章(url: ${url} )跳过抓取阅读量: Credential 校验失败 —`, (error as Error).message);
       this.pending.delete(url);
       this.failed.add(url);
       throw error;
@@ -341,6 +346,7 @@ export class Downloader extends BaseDownloader {
 
     const article = await getArticleByLink(url);
     if (!article) {
+      console.warn(`文章(url: ${url} )跳过抓取留言: 在数据库中未找到该文章记录`);
       this.pending.delete(url);
       this.failed.add(url);
       return;
@@ -350,6 +356,7 @@ export class Downloader extends BaseDownloader {
     try {
       this.validateCredential(article.fakeid);
     } catch (error) {
+      console.warn(`文章(url: ${url} )跳过抓取留言: Credential 校验失败 —`, (error as Error).message);
       this.pending.delete(url);
       this.failed.add(url);
       throw error;
@@ -359,6 +366,7 @@ export class Downloader extends BaseDownloader {
     const cached = await getHtmlCache(url);
     if (!cached) {
       // 文章还未下载，不能下载留言
+      console.warn(`文章(url: ${url} )跳过抓取留言: 文章HTML内容尚未下载`);
       this.pending.delete(url);
       this.failed.add(url);
       return;

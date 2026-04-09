@@ -49,11 +49,11 @@ export default defineEventHandler(async event => {
     query: params,
     parseJson: true,
   }).catch(e => {
-    console.error(e);
+    console.error('[appmsgpublish] 获取文章列表失败:', e);
     return {
       base_resp: {
         ret: -1,
-        err_msg: '获取文章列表接口失败，请重试',
+        err_msg: `获取文章列表接口失败: ${e instanceof Error ? e.message : String(e)}`,
       },
     };
   });

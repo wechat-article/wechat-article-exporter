@@ -71,6 +71,10 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       });
       downloader.on('download:finish', (seconds: number, status: DownloaderStatus) => {
         console.debug('耗时:', formatElapsedTime(seconds));
+        if (status.failed.length > 0) {
+          console.error(`【文章内容】抓取失败的文章列表 (${status.failed.length} 篇):`);
+          status.failed.forEach((url, i) => console.error(`  ${i + 1}. ${url}`));
+        }
         toast.success(
           '【文章内容】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}, 检测到已被删除:${status.deleted.length}`
@@ -130,6 +134,10 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       });
       downloader.on('download:finish', (seconds: number, status: DownloaderStatus) => {
         console.debug('耗时:', formatElapsedTime(seconds));
+        if (status.failed.length > 0) {
+          console.error(`【阅读量】抓取失败的文章列表 (${status.failed.length} 篇):`);
+          status.failed.forEach((url, i) => console.error(`  ${i + 1}. ${url}`));
+        }
         toast.success(
           '【阅读量】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}, 检测到已被删除:${status.deleted.length}`
@@ -174,6 +182,10 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
       });
       downloader.on('download:finish', (seconds: number, status: DownloaderStatus) => {
         console.debug('耗时:', formatElapsedTime(seconds));
+        if (status.failed.length > 0) {
+          console.error(`【留言内容】抓取失败的文章列表 (${status.failed.length} 篇):`);
+          status.failed.forEach((url, i) => console.error(`  ${i + 1}. ${url}`));
+        }
         toast.success(
           '【留言内容】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}`

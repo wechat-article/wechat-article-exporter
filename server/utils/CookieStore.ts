@@ -44,9 +44,37 @@ export class AccountCookie {
   }
 
   // 根据 cookie 中的 expires 来确定是否已过期
+  // 只要任意一个有过期时间的 cookie 已过期，就认为整体已失效
   public get isExpired(): boolean {
-    // todo
-    return false;
+    const now = Date.now();
+    return this._cookie.some(
+      cookie => typeof cookie.expires_timestamp === 'number' && cookie.expires_timestamp < now
+    );
+  }
+
+  /**
+   * 用微信响应中的新 set-cookie 更新已存储的 cookie（续期）
+   * 只更新已有字段，不引入全新的 cookie 名
+   * @returns 是否有实际变更
+   */
+  public update(newCookies: string[]): boolean {
+    if (!newCookies.length) return false;
+    const parsed = AccountCookie.parse(newCookies);
+    if (!parsed.length) return false;
+
+    let changed = false;
+    for (const newCookie of parsed) {
+      const name = newCookie.name as string;
+      if (!name) continue;
+      const idx = this._cookie.findIndex(c => c.name === name);
+      if (idx !== -1) {
+        // 用新值覆盖已有条目
+        this._cookie[idx] = newCookie;
+        changed = true;
+      }
+      // 忽略全新 cookie 名（只续期已有的）
+    }
+    return changed;
   }
 
   public static parse(cookies: string[]): CookieEntity[] {
@@ -103,6 +131,24 @@ export class AccountCookie {
       .filter(cookie => cookie.value && cookie.value !== 'EXPIRED')
       .map(cookie => `${cookie.name}=${cookie.value}`)
       .join('; ');
+  }
+
+  /**
+   * 返回各 cookie 的有效期摘要，用于日志打印
+   * 格式: "name=expires_date, ..."，无 expires 的 cookie 标注 "session"
+   */
+  public expiryInfo(): string {
+    return this._cookie
+      .map(cookie => {
+        const name = cookie.name as string;
+        const ts = cookie.expires_timestamp;
+        if (typeof ts === 'number') {
+          const date = new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+          return `${name}=${date}`;
+        }
+        return `${name}=session`;
+      })
+      .join(', ');
   }
 }
 
@@ -165,6 +211,26 @@ class CookieStore {
     this.evictIfNeeded();
     this.store.set(authKey, accountCookie);
     return await setMpCookie(authKey, accountCookie.toJSON());
+  }
+
+  /**
+   * 用微信响应返回的 set-cookie 更新已缓存的 cookie（自动续期）
+   * 异步写盘，不阻塞请求链路
+   * @param authKey
+   * @param newCookies 微信响应头中的 set-cookie 数组
+   */
+  async updateCookie(authKey: string, newCookies: string[]): Promise<void> {
+    if (!newCookies.length) return;
+    const accountCookie = await this.getAccountCookie(authKey);
+    if (!accountCookie) return;
+    const changed = accountCookie.update(newCookies);
+    if (changed) {
+      // 内存已更新（getAccountCookie 返回的是引用），异步持久化
+      setMpCookie(authKey, accountCookie.toJSON()).catch(e =>
+        console.warn('[cookie-store] 异步持久化更新 cookie 失败:', e)
+      );
+      console.log(`[cookie-store] cookie 已续期 — ${accountCookie.expiryInfo()}`);
+    }
   }
 
   /**

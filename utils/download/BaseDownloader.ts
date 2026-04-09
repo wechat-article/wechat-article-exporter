@@ -130,7 +130,10 @@ export class BaseDownloader {
   // 代理下载失败时的处理逻辑
   protected async handleDownloadFailure(proxy: string, url: string, attempt: number, error: any): Promise<void> {
     this.proxyManager.recordFailure(proxy);
-    console.warn(`Attempt ${attempt + 1} failed for ${url} using ${proxy}:`, error);
+    console.error(
+      `Attempt ${attempt + 1}/${this.options.maxRetries} failed for ${url} using ${proxy}:`,
+      error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : error
+    );
 
     if (attempt < this.options.maxRetries - 1) {
       const delay = Math.pow(2, attempt);

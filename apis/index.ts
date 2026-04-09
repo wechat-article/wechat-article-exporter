@@ -10,6 +10,7 @@ import type {
   AppMsgEx,
   AppMsgPublishResponse,
   PublishInfo,
+  PublishListItem,
   PublishPage,
   SearchBizResponse,
 } from '~/types/types';
@@ -27,7 +28,8 @@ const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials
 export async function getArticleList(
   account: MpAccount,
   begin = 0,
-  keyword = ''
+  keyword = '',
+  syncToTimestamp = 0
 ): Promise<[AppMsgEx[], boolean, number]> {
   const resp = await request<AppMsgPublishResponse>('/api/web/mp/appmsgpublish', {
     query: {
@@ -48,7 +50,22 @@ export async function getArticleList(
     // 更新缓存，注意带有关键字搜索的结果不能写入缓存
     if (!keyword) {
       try {
-        await updateArticleCache(account, publish_page);
+        // 按同步时间范围过滤，只保存用户配置时间范围内的文章
+        let pageToCache = publish_page;
+        if (syncToTimestamp > 0) {
+          const filteredList = publish_page.publish_list
+            .filter(item => !!item.publish_info)
+            .map(item => {
+              const info: PublishInfo = JSON.parse(item.publish_info);
+              const filtered = info.appmsgex.filter(a => a.update_time >= syncToTimestamp);
+              if (filtered.length === 0) return null;
+              return { ...item, publish_info: JSON.stringify({ ...info, appmsgex: filtered }) } as PublishListItem;
+            })
+            .filter((item): item is PublishListItem => item !== null);
+          pageToCache = { ...publish_page, publish_list: filteredList };
+        }
+
+        await updateArticleCache(account, pageToCache);
 
         if (begin === 0) {
           await updateLastUpdateTime(account.fakeid);

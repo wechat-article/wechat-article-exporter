@@ -73,12 +73,17 @@ async function createTables(pool: pg.Pool): Promise<void> {
         fakeid TEXT NOT NULL,
         link TEXT,
         create_time BIGINT,
+        update_time BIGINT,
         data JSONB NOT NULL
       )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_article_fakeid ON article (fakeid)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_article_link ON article (link)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_article_create_time ON article (create_time)`);
+
+    // 为已有表添加 update_time 列（兼容旧数据库）
+    await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS update_time BIGINT`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_article_update_time ON article (update_time)`);
 
     // info 表 (公众号元数据)
     await client.query(`
@@ -201,6 +206,15 @@ async function createTables(pool: pg.Pool): Promise<void> {
       )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_session_expires_at ON session (expires_at)`);
+
+    // preferences 表 (用户偏好设置)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS preferences (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        data JSONB NOT NULL,
+        update_time BIGINT
+      )
+    `);
 
     await client.query('COMMIT');
     console.log('[DB] 所有表创建完成');

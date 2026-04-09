@@ -97,18 +97,18 @@ async function handlePost(pool: any, table: string, action: string, body: any) {
 async function handleArticleGet(pool: any, action: string, query: any) {
   switch (action) {
     case 'hitCache': {
-      const { fakeid, create_time } = query;
+      const { fakeid, update_time } = query;
       const res = await pool.query(
-        `SELECT COUNT(*) as count FROM article WHERE fakeid = $1 AND create_time < $2`,
-        [fakeid, Number(create_time)]
+        `SELECT COUNT(*) as count FROM article WHERE fakeid = $1 AND COALESCE(update_time, create_time) < $2`,
+        [fakeid, Number(update_time)]
       );
       return { hit: Number(res.rows[0].count) > 0 };
     }
     case 'getCache': {
-      const { fakeid, create_time } = query;
+      const { fakeid, update_time } = query;
       const res = await pool.query(
-        `SELECT data FROM article WHERE fakeid = $1 AND create_time < $2 ORDER BY create_time DESC`,
-        [fakeid, Number(create_time)]
+        `SELECT data FROM article WHERE fakeid = $1 AND COALESCE(update_time, create_time) < $2 ORDER BY COALESCE(update_time, create_time) DESC`,
+        [fakeid, Number(update_time)]
       );
       return res.rows.map((r: any) => r.data);
     }
@@ -165,15 +165,16 @@ async function handleArticlePost(pool: any, action: string, body: any) {
             const data = { ...article, fakeid, _status: '' };
 
             const res = await client.query(
-              `INSERT INTO article (id, fakeid, link, create_time, data)
-               VALUES ($1, $2, $3, $4, $5)
+              `INSERT INTO article (id, fakeid, link, create_time, update_time, data)
+               VALUES ($1, $2, $3, $4, $5, $6)
                ON CONFLICT (id) DO UPDATE SET
                  fakeid = EXCLUDED.fakeid,
                  link = EXCLUDED.link,
                  create_time = EXCLUDED.create_time,
+                 update_time = EXCLUDED.update_time,
                  data = EXCLUDED.data
                RETURNING (xmax = 0) AS is_new`,
-              [key, fakeid, article.link, article.create_time, data]
+              [key, fakeid, article.link, article.create_time, article.update_time, data]
             );
 
             if (res.rows[0].is_new) {
@@ -212,15 +213,17 @@ async function handleArticlePost(pool: any, action: string, body: any) {
       const fakeid = data.fakeid || '';
       const link = data.link || null;
       const createTime = data.create_time || null;
+      const updateTime = data.update_time || null;
       await pool.query(
-        `INSERT INTO article (id, fakeid, link, create_time, data)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO article (id, fakeid, link, create_time, update_time, data)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (id) DO UPDATE SET
            fakeid = EXCLUDED.fakeid,
            link = EXCLUDED.link,
            create_time = EXCLUDED.create_time,
+           update_time = EXCLUDED.update_time,
            data = EXCLUDED.data`,
-        [id, fakeid, link, createTime, data]
+        [id, fakeid, link, createTime, updateTime, data]
       );
       return { success: true };
     }

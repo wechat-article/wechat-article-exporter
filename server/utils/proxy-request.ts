@@ -117,10 +117,9 @@ export async function proxyMpRequest(options: RequestOptions) {
     }
   }
 
-  // 这里是否需要执行？
-  // 更新 CookieStore 中的 cookie
+  // 用微信响应中的 set-cookie 更新已存储的 cookie，实现自动续期
   else {
-    // updateCookies(options.event, mpResponse.headers.getSetCookie());
+    updateCookies(options.event, mpResponse.headers.getSetCookie());
   }
 
   // 构造返回给客户端的响应
@@ -153,9 +152,12 @@ export function getAuthKeyFromRequest(event: H3Event): string {
   return authKey;
 }
 
-// function updateCookies(event: H3Event, cookies: string[]): void {
-//   const authKey = getAuthKeyFromRequest(event);
-//   if (authKey) {
-//     cookieStore.updateCookie(authKey, cookies);
-//   }
-// }
+function updateCookies(event: H3Event, cookies: string[]): void {
+  if (!cookies.length) return;
+  const authKey = getAuthKeyFromRequest(event);
+  if (authKey) {
+    cookieStore.updateCookie(authKey, cookies).catch(e =>
+      console.warn('[proxy] cookie 更新失败:', e)
+    );
+  }
+}

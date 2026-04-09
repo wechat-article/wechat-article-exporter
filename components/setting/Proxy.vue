@@ -57,21 +57,23 @@ const proxyList = computed(() => {
     .filter(line => line.length > 0 && line.startsWith('http'));
 });
 
-onMounted(() => {
-  try {
-    const configuredProxyList = (preferences.value as Preferences).privateProxyList;
-    if (configuredProxyList.length > 0) {
-      textareaValue.value = configuredProxyList.join('\n');
+// 监听 preferences 中的代理列表变化（含 DB 异步加载完成后的回填）
+watch(
+  () => preferences.value.privateProxyList,
+  (list) => {
+    if (list && list.length > 0) {
+      textareaValue.value = list.join('\n');
     }
-  } catch (e) {}
-});
+  },
+  { immediate: true },
+);
 
 const saveBtnText = ref('保存');
 async function save() {
+  (preferences.value as Preferences).privateProxyList = proxyList.value;
   saveBtnText.value = '保存成功';
   setTimeout(() => {
-    (preferences.value as Preferences).privateProxyList = proxyList.value;
     saveBtnText.value = '保存';
-  }, 1000);
+  }, 1500);
 }
 </script>

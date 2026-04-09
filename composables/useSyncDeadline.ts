@@ -44,7 +44,7 @@ export default () => {
   /**
    * 获取文章同步的截止时间戳
    *
-   * @description 该时间戳会与文章的发布时间(create_time)进行比对，若文章的发布时间早于该值，则不再继续同步该公众号
+   * @description 该时间戳会与文章的更新时间(update_time)进行比对，若文章的更新时间早于该值，则不再继续同步该公众号
    */
   function getSyncTimestamp() {
     return getDeadline().unix();
@@ -52,10 +52,10 @@ export default () => {
 
   function getActualDateRange() {
     const format = 'YYYY-MM-DD HH:mm';
+    const tzOffset = dayjs().format('Z'); // e.g. +08:00
     const now = dayjs().format(format);
     const deadline = getDeadline();
-
-    return now + ' ~ ' + deadline.format(format);
+    return `${deadline.format(format)} ~ ${now} (UTC${tzOffset})`;
   }
 
   /**

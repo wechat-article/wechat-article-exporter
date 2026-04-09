@@ -27,6 +27,7 @@ import { getArticleCache, hitCache } from '~/store/v2/article';
 import { getAllInfo, getInfoCache, importMpAccounts, type MpAccount } from '~/store/v2/info';
 import type { AccountManifest } from '~/types/account';
 import type { Preferences } from '~/types/preferences';
+import type { AppMsgEx } from '~/types/types';
 import { exportAccountJsonFile } from '~/utils/exporter';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
 
@@ -43,8 +44,9 @@ const toast = toastFactory();
 const modal = useModal();
 const { checkLogin } = useLoginCheck();
 
-const { getSyncTimestamp, getSyncRangeLabel, isSyncAll } = useSyncDeadline();
-const syncToTimestamp = getSyncTimestamp();
+const { getSyncTimestamp, getSyncRangeLabel, getActualDateRange, isSyncAll } = useSyncDeadline();
+// syncToTimestamp 在每次同步时重新计算，确保使用最新的时间范围配置
+let syncToTimestamp = getSyncTimestamp();
 
 const preferences = usePreferences();
 
@@ -66,10 +68,10 @@ function addAccount() {
 }
 async function onSelectAccount(account: MpAccount) {
   addBtnLoading.value = true;
-  await loadAccountArticle(account, false);
+  await importMpAccounts([account]);
   await refresh();
   addBtnLoading.value = false;
-  toast.success('公众号添加成功', `已成功添加公众号【${account.nickname}】，并同步了第一页的文章数据`);
+  toast.success('公众号添加成功', `已成功添加公众号【${account.nickname}】，请手动点击同步按钮获取文章数据`);
   // 通知 Credentials 面板按钮立即变更为“已添加”
   accountEventBus.emit('account-added', { fakeid: account.fakeid });
 }
@@ -84,6 +86,31 @@ const syncingRowId = ref<string | null>(null);
 
 const syncTimer = ref<number | null>(null);
 
+const MAX_PAGE_RETRIES = 3;
+async function fetchWithRetry(account: MpAccount, begin: number): Promise<[AppMsgEx[], boolean, number]> {
+  for (let attempt = 0; attempt < MAX_PAGE_RETRIES; attempt++) {
+    try {
+      return await getArticleList(account, begin, '', syncToTimestamp);
+    } catch (e: any) {
+      console.error(
+        `[sync] ${account.nickname} — 第 ${begin} 页请求失败 (第 ${attempt + 1}/${MAX_PAGE_RETRIES} 次尝试):`,
+        e
+      );
+      if (e.message === 'session expired') {
+        throw e;
+      }
+      if (attempt < MAX_PAGE_RETRIES - 1) {
+        const delay = Math.pow(2, attempt + 1); // 2s, 4s
+        console.warn(`[sync] ${account.nickname} — ${delay} 秒后重试...`);
+        await new Promise(resolve => setTimeout(resolve, delay * 1000));
+      } else {
+        throw e;
+      }
+    }
+  }
+  throw new Error('unreachable');
+}
+
 async function _load(account: MpAccount, begin: number, loadMore: boolean, promise: PromiseInstance) {
   if (isCanceled.value) {
     isCanceled.value = false; // 这里需要将状态复位
@@ -94,12 +121,29 @@ async function _load(account: MpAccount, begin: number, loadMore: boolean, promi
   syncingRowId.value = account.fakeid;
   isSyncing.value = true;
 
-  const [articles, completed] = await getArticleList(account, begin);
+  // 单页请求失败时自动重试，最多重试3次
+  const result = await fetchWithRetry(account, begin);
+  const [articles, completed] = result;
+
   if (isCanceled.value) {
     isCanceled.value = false;
     promise.reject(new Error('已取消同步'));
     return;
   }
+
+  // 打印本次获取的文章时间范围
+  if (articles.length > 0) {
+    const newest = articles[0];
+    const oldest = articles[articles.length - 1];
+    const fmtTs = (ts: number) => new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
+    console.log(
+      `[sync] ${account.nickname} — 本页 ${articles.length} 篇，` +
+      `最新: ${newest.title} (更新: ${fmtTs(newest.update_time)}, 发布: ${fmtTs(newest.create_time)})，` +
+      `最旧: ${oldest.title} (更新: ${fmtTs(oldest.update_time)}, 发布: ${fmtTs(oldest.create_time)})，` +
+      `截止: ${fmtTs(syncToTimestamp)}`
+    );
+  }
+
   if (completed) {
     await updateRow(account.fakeid);
     syncingRowId.value = null;
@@ -114,9 +158,9 @@ async function _load(account: MpAccount, begin: number, loadMore: boolean, promi
   // 检查是否可以「快进」，也就是存在比 lastArticle 更早的缓存数据
   // todo: 这里还可以继续优化，防止出现多段不连续的范围
   const lastArticle = articles.at(-1);
-  if (lastArticle && lastArticle.create_time < account.last_update_time!) {
-    if (await hitCache(account.fakeid, lastArticle.create_time)) {
-      const cachedArticles = await getArticleCache(account.fakeid, lastArticle.create_time);
+  if (lastArticle && lastArticle.update_time < account.last_update_time!) {
+    if (await hitCache(account.fakeid, lastArticle.update_time)) {
+      const cachedArticles = await getArticleCache(account.fakeid, lastArticle.update_time);
 
       // 更新 begin 参数
       const count = cachedArticles.filter(article => article.itemidx === 1).length;
@@ -125,7 +169,7 @@ async function _load(account: MpAccount, begin: number, loadMore: boolean, promi
     }
   }
 
-  if (articles.at(-1)!.create_time < syncToTimestamp) {
+  if (articles.at(-1)!.update_time < syncToTimestamp) {
     // 已同步到配置的时间范围
     loadMore = false;
   }
@@ -153,6 +197,13 @@ async function _load(account: MpAccount, begin: number, loadMore: boolean, promi
 
 // 同步指定公众号
 async function loadAccountArticle(account: MpAccount, loadMore = true) {
+  // 每次同步时重新计算截止时间戳，确保使用最新的时间范围配置
+  syncToTimestamp = getSyncTimestamp();
+  console.log(
+    `[sync] 开始同步【${account.nickname}】，` +
+    `同步范围: ${getSyncRangeLabel()}，` +
+    `时间区间: ${getActualDateRange()}`
+  );
   return new Promise((resolve, reject) => {
     const promise: PromiseInstance = { resolve, reject };
 
@@ -168,6 +219,28 @@ async function loadAccountArticle(account: MpAccount, loadMore = true) {
   });
 }
 
+// 自动导出文件（后台执行，不阻塞同步流程）
+async function autoGenerateDocx(account: MpAccount) {
+  try {
+    const result = await $fetch('/api/web/worker/auto-docx', {
+      method: 'POST',
+      body: { fakeid: account.fakeid, syncToTimestamp },
+    });
+    if (result.generated > 0) {
+      const formatLabel = result.formats?.join('/') || 'Word';
+      toast.success('自动导出', `公众号【${account.nickname}】新生成 ${result.generated} 篇 ${formatLabel} 文档，跳过 ${result.skipped} 篇已有文档`);
+    }
+    if (result.failed > 0) {
+      console.warn(`[auto-export] ${account.nickname}: ${result.failed} 篇生成失败`, result.errors);
+    }
+  } catch (e: any) {
+    // AUTO_EXPORT_DIR 未配置时静默跳过
+    if (e?.statusCode !== 500 || !e?.data?.message?.includes('AUTO_EXPORT_DIR')) {
+      console.error('[auto-export] 自动导出失败:', e);
+    }
+  }
+}
+
 // 同步所有公众号
 async function loadSelectedAccountArticle() {
   if (!checkLogin()) return;
@@ -178,6 +251,8 @@ async function loadSelectedAccountArticle() {
     const rows = getSelectedRows();
     for (const account of rows) {
       await loadAccountArticle(account);
+      // 同步完成后自动导出文件（后台执行）
+      autoGenerateDocx(account);
     }
     const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
     toast.success('同步完成', `已成功同步 ${rows.length} 个公众号${rangeHint}`);
@@ -315,6 +390,8 @@ const columnDefs = ref<ColDef[]>([
           .then(() => {
             const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
             toast.success('同步完成', `公众号【${params.data.nickname}】的文章已同步完毕${rangeHint}`);
+            // 同步完成后自动生成 DOCX（后台执行）
+            autoGenerateDocx(params.data);
           })
           .catch(e => {
             toast.error('同步失败', e.message);
@@ -482,8 +559,6 @@ function exportAccount() {
     exportBtnLoading.value = false;
   }
 }
-
-const { getActualDateRange } = useSyncDeadline();
 </script>
 
 <template>

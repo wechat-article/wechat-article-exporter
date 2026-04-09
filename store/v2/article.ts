@@ -24,21 +24,21 @@ export async function updateArticleCache(account: MpAccount, publish_page: Publi
 }
 
 /**
- * 检查是否存在指定时间之前的缓存
+ * 检查是否存在指定更新时间之前的缓存
  */
-export async function hitCache(fakeid: string, create_time: number): Promise<boolean> {
+export async function hitCache(fakeid: string, update_time: number): Promise<boolean> {
   const res = await $fetch<{ hit: boolean }>('/api/store/article', {
-    query: { action: 'hitCache', fakeid, create_time },
+    query: { action: 'hitCache', fakeid, update_time },
   });
   return res.hit;
 }
 
 /**
- * 读取缓存中的指定时间之前的历史文章
+ * 读取缓存中的指定更新时间之前的历史文章
  */
-export async function getArticleCache(fakeid: string, create_time: number): Promise<AppMsgExWithFakeID[]> {
+export async function getArticleCache(fakeid: string, update_time: number): Promise<AppMsgExWithFakeID[]> {
   return await $fetch<AppMsgExWithFakeID[]>('/api/store/article', {
-    query: { action: 'getCache', fakeid, create_time },
+    query: { action: 'getCache', fakeid, update_time },
   });
 }
 

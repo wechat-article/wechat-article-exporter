@@ -43,9 +43,7 @@ export async function logResponse(requestId: string, response: Response) {
   } else {
     responseBody = await response.text();
   }
-  // 日志里面只需要记录一部分即可，因为主要目的是查看整个通信过程
-  responseBody = responseBody.length > 200 ? responseBody.slice(0, 200) + '...' : responseBody;
-
+  // 完整记录响应体，不截断
   const responseLog = `Request-ID: ${requestId}
 HTTP/1.1 ${response.status} ${response.statusText}
 ${Array.from(response.headers.entries())
