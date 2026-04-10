@@ -37,6 +37,9 @@ LABEL maintainer="findsource@proton.me" \
       org.opencontainers.image.description="一个在线的微信公众号文章批量下载工具，支持下载阅读量与评论数据，支持私有化部署，通过浏览器进行使用，无需进行安装" \
       org.opencontainers.image.licenses="MIT"
 
+# 更新 CA 根证书，确保 TLS 请求能正常验证证书链
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 # 设置工作目录
 WORKDIR /app
 
