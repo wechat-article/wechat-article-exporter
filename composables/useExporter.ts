@@ -237,10 +237,52 @@ export default () => {
     }
   }
 
-  // 导出 pdf
-  async function export2pdf(urls: string[]) {}
+  // 导出 pdf（与 HTML 导出类似，需先下载资源再生成 PDF）
+  async function export2pdf(urls: string[]) {
+    if (urls.length === 0) {
+      toast.warning('提示', '请先选择文章');
+      return;
+    }
 
-  const needsContentFormats = new Set(['html', 'text', 'markdown', 'word']);
+    const manager = new Exporter(urls);
+    manager.on('export:begin', () => {
+      phase.value = '资源解析中';
+      completed_count.value = 0;
+      total_count.value = 0;
+    });
+    manager.on('export:download', (total: number) => {
+      phase.value = '资源下载中';
+      completed_count.value = 0;
+      total_count.value = total;
+    });
+    manager.on('export:download:progress', (url: string, success: boolean, status: ExporterStatus) => {
+      completed_count.value = status.completed.length;
+    });
+    manager.on('export:write', (total: number) => {
+      phase.value = 'PDF 生成中';
+      completed_count.value = 0;
+      total_count.value = total;
+    });
+    manager.on('export:write:progress', (index: number) => {
+      completed_count.value = index;
+    });
+    manager.on('export:finish', (seconds: number) => {
+      console.debug('耗时:', formatElapsedTime(seconds));
+      toast.success('PDF 导出完成', `本次导出耗时 ${formatElapsedTime(seconds)}`);
+    });
+
+    try {
+      loading.value = true;
+      await manager.startExport('pdf');
+    } catch (error) {
+      console.error('导出任务失败:', error);
+      alert((error as Error).message);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  const needsContentFormats = new Set(['html', 'text', 'markdown', 'word', 'pdf']);
 
   function exportFile(
     type: 'excel' | 'json' | 'html' | 'text' | 'markdown' | 'word' | 'pdf',

@@ -25,7 +25,7 @@ RUN yarn build
 
 
 # 运行时层
-FROM node:22-alpine
+FROM node:22-slim
 
 ARG VERSION=unknown
 
@@ -37,8 +37,13 @@ LABEL maintainer="findsource@proton.me" \
       org.opencontainers.image.description="一个在线的微信公众号文章批量下载工具，支持下载阅读量与评论数据，支持私有化部署，通过浏览器进行使用，无需进行安装" \
       org.opencontainers.image.licenses="MIT"
 
-# 更新 CA 根证书，确保 TLS 请求能正常验证证书链
-RUN apk add --no-cache ca-certificates && update-ca-certificates
+# 安装 Chromium、中文字体和 CA 证书
+RUN apt-get update && apt-get install -y \
+    chromium fonts-noto-cjk fonts-noto-color-emoji ca-certificates \
+    --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # 设置工作目录
 WORKDIR /app
