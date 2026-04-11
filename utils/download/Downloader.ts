@@ -1,5 +1,5 @@
 import { throwException, timeout } from '#shared/utils/helpers';
-import { parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
+import { isPolicyViolationMessage, parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
 import usePreferences from '~/composables/usePreferences';
 import { getArticleByLink, getSingleArticleByLink } from '~/store/v2/article';
 import { updateCommentCache } from '~/store/v2/comment';
@@ -107,6 +107,26 @@ export class Downloader extends BaseDownloader {
     }
   }
 
+  private logFullHtml(url: string, html: string, context: string) {
+    console.error(`${context} | ${url}`);
+    console.error(html);
+  }
+
+  private async saveDebugHtml(
+    article: { fakeid: string; title?: string },
+    url: string,
+    blob: Blob,
+    type: string
+  ) {
+    await updateDebugCache({
+      fakeid: article.fakeid,
+      type,
+      url,
+      title: article.title || '无标题',
+      file: blob,
+    });
+  }
+
   // 修复单篇文章下载时的虚假fakeid
   private async fixSingleFakeidTask(url: string) {
     this.pending.add(url);
@@ -168,6 +188,7 @@ export class Downloader extends BaseDownloader {
 
     // 付费文章需要使用 credential 来获取完整内容
     const withCredential = article.is_pay_subscribe === 1;
+    let lastExceptionReason: string | null = null;
 
     for (let attempt = 0; attempt < this.options.maxRetries; attempt++) {
       const proxy = this.proxyManager.getBestProxy();
@@ -199,37 +220,25 @@ export class Downloader extends BaseDownloader {
           this.deleted.add(url);
           this.proxyManager.recordSuccess(proxy);
           return;
-        } else if (status === 'Exception' && commentID) {
-          // 文章状态异常
-          console.warn(`文章(url: ${url} )状态异常: ${commentID}`);
-
-          // 通知外边更新文章状态
-          this.emit('download:exception', url, commentID);
-          this.pending.delete(url);
-          this.failed.add(url);
-          this.proxyManager.recordSuccess(proxy);
-          return;
-        } else if (status === 'Exception' && !commentID) {
-          // 文章下载失败(风控导致的)
-          console.warn(`文章(url: ${url} )下载失败(风控所致)`);
-          await updateDebugCache({
-            fakeid: article.fakeid,
-            type: `exception:${commentID}`,
-            url: url,
-            title: article.title,
-            file: blob,
-          });
-          throwException(`文章(url: ${url} )下载失败`);
+        } else if (status === 'Exception') {
+          if (isPolicyViolationMessage(commentID)) {
+            console.warn(`文章(url: ${url} )因违规不可查看: ${commentID}`);
+            this.emit('download:exception', url, commentID || '此内容因违规无法查看');
+            this.pending.delete(url);
+            this.failed.add(url);
+            this.proxyManager.recordSuccess(proxy);
+            return;
+          }
+          lastExceptionReason = commentID || '内容异常';
+          console.warn(`文章(url: ${url} )内容异常，准备重试: ${lastExceptionReason}`);
+          this.logFullHtml(url, html, '文章抓取返回异常HTML完整内容');
+          await this.saveDebugHtml(article, url, blob, `exception:${lastExceptionReason}`);
+          throwException(`文章(url: ${url} )内容异常: ${lastExceptionReason}`);
         } else if (status === 'Error') {
           // 下载失败
-          console.warn(`文章(url: ${url} )解析失败`);
-          await updateDebugCache({
-            fakeid: article.fakeid,
-            type: 'parse error',
-            url: url,
-            title: article.title,
-            file: blob,
-          });
+          console.warn(`文章(url: ${url} )解析失败，准备重试`);
+          this.logFullHtml(url, html, '文章抓取返回无法识别的HTML完整内容');
+          await this.saveDebugHtml(article, url, blob, 'parse error');
           throwException(`文章(url: ${url} )解析失败`);
         }
       } catch (error) {
@@ -237,6 +246,9 @@ export class Downloader extends BaseDownloader {
       }
     }
 
+    if (lastExceptionReason) {
+      this.emit('download:exception', url, lastExceptionReason);
+    }
     this.pending.delete(url);
     this.failed.add(url);
   }
@@ -262,6 +274,8 @@ export class Downloader extends BaseDownloader {
       this.failed.add(url);
       throw error;
     }
+
+    let lastExceptionReason: string | null = null;
 
     for (let attempt = 0; attempt < this.options.maxRetries; attempt++) {
       const proxy = this.proxyManager.getBestProxy();
@@ -298,37 +312,25 @@ export class Downloader extends BaseDownloader {
           this.deleted.add(url);
           this.proxyManager.recordSuccess(proxy);
           return;
-        } else if (status === 'Exception' && commentID) {
-          // 文章状态异常，此时 commentID 表示的异常原因
-          console.warn(`获取阅读量时发现文章(url: ${url} )状态异常: ${commentID}`);
-
-          // 通知外边更新文章状态
-          this.emit('download:exception', url, commentID);
-          this.pending.delete(url);
-          this.failed.add(url);
-          this.proxyManager.recordSuccess(proxy);
-          return;
-        } else if (status === 'Exception' && !commentID) {
-          // 文章下载失败(风控导致的)
-          console.warn(`文章(url: ${url} )下载失败(风控所致)`);
-          await updateDebugCache({
-            fakeid: article.fakeid,
-            type: `exception:${commentID}`,
-            url: url,
-            title: article.title,
-            file: blob,
-          });
-          throwException(`文章(url: ${url} )下载失败`);
+        } else if (status === 'Exception') {
+          if (isPolicyViolationMessage(commentID)) {
+            console.warn(`获取阅读量时发现文章(url: ${url} )因违规不可查看: ${commentID}`);
+            this.emit('download:exception', url, commentID || '此内容因违规无法查看');
+            this.pending.delete(url);
+            this.failed.add(url);
+            this.proxyManager.recordSuccess(proxy);
+            return;
+          }
+          lastExceptionReason = commentID || '内容异常';
+          console.warn(`获取阅读量时发现文章(url: ${url} )内容异常，准备重试: ${lastExceptionReason}`);
+          this.logFullHtml(url, html, '抓取阅读量时返回异常HTML完整内容');
+          await this.saveDebugHtml(article, url, blob, `exception:${lastExceptionReason}`);
+          throwException(`文章(url: ${url} )内容异常: ${lastExceptionReason}`);
         } else if (status === 'Error') {
           // 下载文章失败，需要重试
-          console.warn(`获取阅读量时发现文章(url: ${url} )解析失败`);
-          await updateDebugCache({
-            fakeid: article.fakeid,
-            type: 'parse error',
-            url: url,
-            title: article.title,
-            file: blob,
-          });
+          console.warn(`获取阅读量时发现文章(url: ${url} )解析失败，准备重试`);
+          this.logFullHtml(url, html, '抓取阅读量时返回无法识别的HTML完整内容');
+          await this.saveDebugHtml(article, url, blob, 'parse error');
           throwException(`文章(url: ${url} )解析失败`);
         }
       } catch (error) {
@@ -336,6 +338,9 @@ export class Downloader extends BaseDownloader {
       }
     }
 
+    if (lastExceptionReason) {
+      this.emit('download:exception', url, lastExceptionReason);
+    }
     this.pending.delete(url);
     this.failed.add(url);
   }

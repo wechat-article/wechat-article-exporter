@@ -1,9 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { compactEscapedJson } from '~/server/utils/async-log';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const logFilePath = path.resolve(__dirname, '.data/request.log');
+
+function isJsonContentType(contentType: string | null): boolean {
+  return contentType?.toLowerCase().includes('application/json') ?? false;
+}
+
+function compactJsonText(body: string): string {
+  try {
+    return compactEscapedJson(JSON.parse(body));
+  } catch {
+    return body;
+  }
+}
 
 // 写入日志文件
 function logToFile(prefix: string, message: string) {
@@ -24,6 +37,9 @@ export async function logRequest(requestId: string, request: Request) {
   let requestBody = '<nil>';
   if (request.body) {
     requestBody = await request.text();
+    if (isJsonContentType(request.headers.get('Content-Type'))) {
+      requestBody = compactJsonText(requestBody);
+    }
   }
 
   const requestLog = `Request-ID: ${requestId}
@@ -38,8 +54,8 @@ ${requestBody}`;
 // 记录 HTTP 响应报文
 export async function logResponse(requestId: string, response: Response) {
   let responseBody = '';
-  if (response.headers.get('Content-Type') === 'application/json') {
-    responseBody = JSON.stringify(await response.json(), null, 2);
+  if (isJsonContentType(response.headers.get('Content-Type'))) {
+    responseBody = compactJsonText(await response.text());
   } else {
     responseBody = await response.text();
   }

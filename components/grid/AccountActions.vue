@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import type { ICellRendererParams } from 'ag-grid-community';
 import { Loader } from 'lucide-vue-next';
+import type { Ref } from 'vue';
 
 interface Props {
   params: ICellRendererParams & {
     onSync?: (params: ICellRendererParams) => void;
     onStop?: (params: ICellRendererParams) => void;
-    isDeleting: boolean;
-    isSyncing: boolean;
-    syncingRowId: string | null;
+    isDeleting: boolean | Ref<boolean>;
+    isSyncing: boolean | Ref<boolean>;
+    syncingRowId: string | null | Ref<string | null>;
   };
 }
 const props = defineProps<Props>();
+
+function unwrap<T>(value: T | Ref<T>): T {
+  return isRef(value) ? value.value : value;
+}
 
 function sync() {
   props.params.onSync && props.params.onSync(props.params);
@@ -19,8 +24,8 @@ function sync() {
 function stop() {
   props.params.onStop && props.params.onStop(props.params);
 }
-const isDisabled = computed(() => props.params.isDeleting || props.params.isSyncing);
-const isLoading = computed(() => props.params.isSyncing && props.params.node.id === props.params.syncingRowId);
+const isDisabled = computed(() => unwrap(props.params.isDeleting) || unwrap(props.params.isSyncing));
+const isLoading = computed(() => unwrap(props.params.isSyncing) && props.params.node.id === unwrap(props.params.syncingRowId));
 </script>
 
 <template>

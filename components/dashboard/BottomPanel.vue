@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { formatDistance } from 'date-fns';
 import { request } from '#shared/utils/request';
 import LoginModal from '~/components/modal/Login.vue';
 import StorageUsage from '~/components/StorageUsage.vue';
@@ -11,64 +10,24 @@ const modal = useModal();
 
 const now = ref(new Date());
 const distance = computed(() => {
-  return (
-    loginAccount.value &&
-    formatDistance(new Date(loginAccount.value.expires), now.value, {
-      includeSeconds: true,
-      locale: {
-        formatDistance: function (token, count, options) {
-          if (now.value >= new Date(loginAccount.value.expires)) {
-            window.clearInterval(timer);
-            setTimeout(() => {
-              loginAccount.value = null;
-            }, 0);
-            return '已过期';
-          }
-
-          switch (token) {
-            case 'aboutXHours':
-              return '大约' + count + '个小时';
-            case 'aboutXMonths':
-              return '大约' + count + '个月';
-            case 'aboutXWeeks':
-              return '大约' + count + '周';
-            case 'aboutXYears':
-              return '大约' + count + '年';
-            case 'lessThanXMinutes':
-              return '小于' + count + '分钟';
-            case 'almostXYears':
-              return '接近' + count + '年';
-            case 'halfAMinute':
-              return '半分钟';
-            case 'lessThanXSeconds':
-              return '小于' + count + '秒';
-            case 'overXYears':
-              return '超过' + count + '年';
-            case 'xDays':
-              return count + '天';
-            case 'xHours':
-              return count + '个小时';
-            case 'xMinutes':
-              return count + '分钟';
-            case 'xMonths':
-              return count + '个月';
-            case 'xSeconds':
-              return count + '秒';
-            case 'xWeeks':
-              return count + '周';
-            case 'xYears':
-              return count + '年';
-            default:
-              return 'unknown';
-          }
-        },
-      },
-    })
-  );
+  if (!loginAccount.value) return '';
+  const expiresDate = new Date(loginAccount.value.expires);
+  if (now.value >= expiresDate) {
+    window.clearInterval(timer);
+    setTimeout(() => {
+      loginAccount.value = null;
+    }, 0);
+    return '已过期';
+  }
+  const remainMs = expiresDate.getTime() - now.value.getTime();
+  const remainHours = remainMs / (1000 * 60 * 60);
+  return `${remainHours.toFixed(1)} 小时`;
 });
 const warning = computed(() => {
-  const value = distance.value;
-  return value === '已过期' || value.includes('分钟') || value.includes('秒');
+  if (!loginAccount.value) return false;
+  const expiresDate = new Date(loginAccount.value.expires);
+  const remainMs = expiresDate.getTime() - now.value.getTime();
+  return remainMs <= 0 || remainMs < 60 * 60 * 1000; // 小于1小时告警
 });
 
 function login() {
@@ -89,14 +48,38 @@ async function logout() {
   logoutBtnLoading.value = false;
 }
 
+/** 从服务端获取最新 cookie 过期时间并更新前端 */
+async function refreshCookieExpiry() {
+  if (!loginAccount.value) return;
+  try {
+    const data = await request<{ valid: boolean; expiresAt: number | null }>('/api/web/worker/cookie-info');
+    if (data.valid && data.expiresAt) {
+      const serverExpires = new Date(data.expiresAt).toString();
+      if (loginAccount.value.expires !== serverExpires) {
+        loginAccount.value = { ...loginAccount.value, expires: serverExpires };
+      }
+      return;
+    }
+
+    loginAccount.value = null;
+  } catch {
+    // 静默忽略
+  }
+}
+
 let timer: number;
+let refreshTimer: number;
 onMounted(() => {
   timer = window.setInterval(() => {
     now.value = new Date();
   }, 1000);
+  // 每60秒从服务端同步cookie过期时间
+  refreshCookieExpiry();
+  refreshTimer = window.setInterval(refreshCookieExpiry, 60000);
 });
 onUnmounted(() => {
   window.clearInterval(timer);
+  window.clearInterval(refreshTimer);
 });
 </script>
 

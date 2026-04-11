@@ -25,6 +25,60 @@ const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials
  * @param keyword
  * @return [文章列表, 是否加载完毕, 文章总数]
  */
+const MAX_EMPTY_PAGE_RETRIES = 2; // 空页重试次数（微信偶尔返回空列表）
+const EMPTY_PAGE_RETRY_DELAY = 3000; // 空页重试间隔(ms)
+
+async function processArticleResponse(
+  account: MpAccount,
+  publish_page: PublishPage,
+  publish_list: PublishListItem[],
+  keyword: string,
+  begin: number,
+  syncToTimestamp: number,
+): Promise<[AppMsgEx[], boolean, number]> {
+  const isCompleted = publish_list.length === 0;
+
+  // 更新缓存，注意带有关键字搜索的结果不能写入缓存
+  if (!keyword) {
+    try {
+      // 按同步时间范围过滤，只保存用户配置时间范围内的文章
+      let pageToCache = publish_page;
+      if (syncToTimestamp > 0) {
+        const filteredList = publish_page.publish_list
+          .filter(item => !!item.publish_info)
+          .map(item => {
+            const info: PublishInfo = JSON.parse(item.publish_info);
+            const filtered = info.appmsgex.filter(a => a.update_time >= syncToTimestamp);
+            if (filtered.length === 0) return null;
+            return { ...item, publish_info: JSON.stringify({ ...info, appmsgex: filtered }) } as PublishListItem;
+          })
+          .filter((item): item is PublishListItem => item !== null);
+        pageToCache = { ...publish_page, publish_list: filteredList };
+      }
+
+      await updateArticleCache(account, pageToCache);
+
+      if (begin === 0) {
+        await updateLastUpdateTime(account.fakeid);
+      }
+    } catch (e) {
+      console.error('写入文章缓存失败:', e);
+    }
+  }
+
+  const articles = publish_list.flatMap(item => {
+    const publish_info: PublishInfo = JSON.parse(item.publish_info);
+    return publish_info.appmsgex;
+  });
+
+  const msgCount = articles.filter(a => a.itemidx === 1).length;
+  console.log(
+    `[manual-sync] 【${account.nickname}】本页解析: 文章数=${articles.length}, 消息数=${msgCount}, 总数=${publish_page.total_count}, completed=${isCompleted}`
+  );
+
+  return [articles, isCompleted, publish_page.total_count];
+}
+
 export async function getArticleList(
   account: MpAccount,
   begin = 0,
@@ -43,43 +97,44 @@ export async function getArticleList(
   if (resp.base_resp.ret === 0) {
     const publish_page: PublishPage = JSON.parse(resp.publish_page);
     const publish_list = publish_page.publish_list.filter(item => !!item.publish_info);
+    const rawCount = publish_page.publish_list?.length ?? 0;
 
-    // 返回的文章数量为0就表示已加载完毕
-    const isCompleted = publish_list.length === 0;
+    console.log(
+      `[manual-sync] 微信API返回 publish_page 字段: total_count=${publish_page.total_count}, publish_list.length=${rawCount}`
+    );
 
-    // 更新缓存，注意带有关键字搜索的结果不能写入缓存
-    if (!keyword) {
-      try {
-        // 按同步时间范围过滤，只保存用户配置时间范围内的文章
-        let pageToCache = publish_page;
-        if (syncToTimestamp > 0) {
-          const filteredList = publish_page.publish_list
-            .filter(item => !!item.publish_info)
-            .map(item => {
-              const info: PublishInfo = JSON.parse(item.publish_info);
-              const filtered = info.appmsgex.filter(a => a.update_time >= syncToTimestamp);
-              if (filtered.length === 0) return null;
-              return { ...item, publish_info: JSON.stringify({ ...info, appmsgex: filtered }) } as PublishListItem;
-            })
-            .filter((item): item is PublishListItem => item !== null);
-          pageToCache = { ...publish_page, publish_list: filteredList };
+    let isCompleted = publish_list.length === 0;
+
+    // 空页处理：微信偶尔返回空列表，需要区分"真的完成"和"临时抽风"
+    if (isCompleted && begin < publish_page.total_count && !keyword) {
+      for (let retry = 1; retry <= MAX_EMPTY_PAGE_RETRIES; retry++) {
+        console.warn(
+          `[manual-sync] 【${account.nickname}】begin=${begin} 收到空列表但 total_count=${publish_page.total_count}，` +
+          `疑似微信临时异常，${EMPTY_PAGE_RETRY_DELAY / 1000}s 后重试 (${retry}/${MAX_EMPTY_PAGE_RETRIES})`
+        );
+        await new Promise(resolve => setTimeout(resolve, EMPTY_PAGE_RETRY_DELAY));
+        const retryResp = await request<AppMsgPublishResponse>('/api/web/mp/appmsgpublish', {
+          query: {
+            id: account.fakeid,
+            begin: begin,
+            size: ARTICLE_LIST_PAGE_SIZE,
+            keyword: keyword,
+          },
+        });
+        if (retryResp.base_resp.ret === 0) {
+          const retryPage: PublishPage = JSON.parse(retryResp.publish_page);
+          const retryList = retryPage.publish_list.filter(item => !!item.publish_info);
+          if (retryList.length > 0) {
+            console.log(`[manual-sync] 【${account.nickname}】空页重试成功，获取到 ${retryList.length} 条数据`);
+            // 使用重试得到的数据继续处理
+            return processArticleResponse(account, retryPage, retryList, keyword, begin, syncToTimestamp);
+          }
         }
-
-        await updateArticleCache(account, pageToCache);
-
-        if (begin === 0) {
-          await updateLastUpdateTime(account.fakeid);
-        }
-      } catch (e) {
-        console.error('写入文章缓存失败:', e);
       }
+      console.warn(`[manual-sync] 【${account.nickname}】连续 ${MAX_EMPTY_PAGE_RETRIES} 次空列表，视为已完成`);
     }
 
-    const articles = publish_list.flatMap(item => {
-      const publish_info: PublishInfo = JSON.parse(item.publish_info);
-      return publish_info.appmsgex;
-    });
-    return [articles, isCompleted, publish_page.total_count];
+    return processArticleResponse(account, publish_page, publish_list, keyword, begin, syncToTimestamp);
   } else if (resp.base_resp.ret === 200003) {
     loginAccount.value = null;
     throw new Error('session expired');

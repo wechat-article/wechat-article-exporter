@@ -6,7 +6,8 @@ import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import TurndownService from 'turndown';
 import { getPool } from '~/server/db/postgres';
-import { validateHTMLContent } from '~/shared/utils/html';
+import { compactEscapedJson } from '~/server/utils/async-log';
+import { isPolicyViolationMessage, validateHTMLContent } from '~/shared/utils/html';
 
 // ==================== 支持的导出格式 ====================
 
@@ -520,24 +521,46 @@ export function getAutoExportFormats(): AutoExportFormat[] {
 
 // ==================== 主逻辑 ====================
 
-// 不可重试的文章状态关键词（已删除、违规、无法查看等）
-const NON_RETRYABLE_PATTERNS = [
-  '该内容已被发布者删除',
-  'The content has been deleted by the author.',
-  '此内容因违规无法查看',
-  '该内容暂时无法查看',
-];
-
 // 最大重试次数
 const MAX_RETRY = 3;
 // 重试间隔（毫秒）
 const RETRY_DELAY = 5000;
 
-function isNonRetryableHtml(html: string): { skip: boolean; reason: string } {
+function validateFetchedHtml(html: string): {
+  status: 'Success' | 'Deleted' | 'Exception' | 'Error';
+  reason: string;
+  retryable: boolean;
+  skip: boolean;
+} {
   const [status, msg] = validateHTMLContent(html);
-  if (status === 'Deleted') return { skip: true, reason: msg || '该内容已被发布者删除' };
-  if (status === 'Exception') return { skip: true, reason: msg || '内容异常' };
-  return { skip: false, reason: '' };
+  if (status === 'Deleted') {
+    return { status, reason: msg || '该内容已被发布者删除', retryable: false, skip: true };
+  }
+  if (status === 'Exception') {
+    if (isPolicyViolationMessage(msg)) {
+      return { status, reason: msg || '此内容因违规无法查看', retryable: false, skip: true };
+    }
+    return { status, reason: msg || '内容异常', retryable: true, skip: false };
+  }
+  if (status === 'Error') {
+    return { status, reason: '页面结构异常', retryable: true, skip: false };
+  }
+  return { status, reason: '', retryable: false, skip: false };
+}
+
+function logFullHtmlOnFetchFailure(
+  tag: string,
+  accountName: string,
+  title: string,
+  url: string,
+  reason: string,
+  html: string,
+  context = '抓取到异常内容'
+) {
+  console.error(`${tag} 公众号：【${accountName}】${context}: ${title} — ${reason} | ${url}`);
+  console.error(
+    `${tag} 公众号：【${accountName}】异常HTML完整内容: ${compactEscapedJson({ title, url, reason, html })}`
+  );
 }
 
 function delay(ms: number): Promise<void> {
@@ -556,55 +579,129 @@ export interface AutoExportResult {
 // 保留旧名称兼容
 export type AutoDocxResult = AutoExportResult;
 
-export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: number): Promise<AutoExportResult> {
+export type ExportSource = 'auto-export' | 'schedule' | 'manual-sync';
+
+export interface ArticleExportProgress {
+  accountName: string;
+  title: string;
+  url: string;
+  index: number;
+  total: number;
+}
+
+export interface ArticleExportRetryProgress {
+  stage: 'exporting';
+  scope: 'article-fetch' | 'cgi-parse';
+  accountName: string;
+  title: string;
+  url: string;
+  index: number;
+  total: number;
+  attempt: number;
+  maxAttempts: number;
+  delayMs: number;
+  message: string;
+}
+
+interface GenerateDocxInternalOptions {
+  source: ExportSource;
+  syncToTimestamp?: number;
+  articleUrls?: string[];
+  formats?: AutoExportFormat[];
+  onArticleStart?: (progress: ArticleExportProgress) => void | Promise<void>;
+  onRetry?: (progress: ArticleExportRetryProgress) => void | Promise<void>;
+  isCancelled?: () => boolean;
+}
+
+function assertNotCancelled(isCancelled?: () => boolean) {
+  if (isCancelled?.()) {
+    throw new Error('cancelled');
+  }
+}
+
+function createEmptyExportResult(formats: AutoExportFormat[]): AutoExportResult {
+  return {
+    total: 0,
+    generated: 0,
+    skipped: 0,
+    failed: 0,
+    formats,
+    errors: [],
+  };
+}
+
+async function queryArticlesForExport(pool: ReturnType<typeof getPool>, fakeid: string, options: GenerateDocxInternalOptions) {
+  if (options.articleUrls && options.articleUrls.length > 0) {
+    const articleUrls = [...new Set(options.articleUrls.filter(Boolean))];
+    if (articleUrls.length === 0) {
+      return [];
+    }
+
+    const res = await pool.query(
+      `SELECT data, array_position($2::text[], link) AS sort_order
+       FROM article
+       WHERE fakeid = $1 AND link = ANY($2::text[])
+       ORDER BY sort_order ASC NULLS LAST, COALESCE(update_time, create_time) DESC`,
+      [fakeid, articleUrls]
+    );
+    return res.rows.map((row: any) => row.data);
+  }
+
+  if (options.syncToTimestamp) {
+    const res = await pool.query(
+      `SELECT data FROM article WHERE fakeid = $1 AND COALESCE(update_time, create_time) >= $2 ORDER BY COALESCE(update_time, create_time) DESC`,
+      [fakeid, options.syncToTimestamp]
+    );
+    return res.rows.map((row: any) => row.data);
+  }
+
+  const res = await pool.query(
+    `SELECT data FROM article WHERE fakeid = $1 ORDER BY COALESCE(update_time, create_time) DESC`,
+    [fakeid]
+  );
+  return res.rows.map((row: any) => row.data);
+}
+
+async function generateDocxForAccountInternal(fakeid: string, options: GenerateDocxInternalOptions): Promise<AutoExportResult> {
   const outputDir = getDocxOutputDir();
   if (!outputDir) {
     throw new Error('AUTO_EXPORT_DIR 环境变量未配置');
   }
 
-  const formats = getAutoExportFormats();
+  const formats = options.formats || getAutoExportFormats();
   if (formats.length === 0) {
     throw new Error('AUTO_EXPORT_FORMATS 未配置有效格式（支持: html,txt,markdown,word,json,excel）');
   }
 
   const pool = getPool();
-  const result: AutoExportResult = { total: 0, generated: 0, skipped: 0, failed: 0, formats, errors: [] };
+  const result = createEmptyExportResult(formats);
 
-  console.log(`[auto-export] 开始为公众号 ${fakeid} 生成文件，格式: [${formats.join(',')}]，输出目录: ${outputDir}`);
+  const tag = `[${options.source}]`;
+
+  console.log(`${tag} 公众号：【${fakeid}】开始生成文件，格式: [${formats.join(',')}]，输出目录: ${outputDir}`);
+  assertNotCancelled(options.isCancelled);
 
   // 1. 获取公众号名称
   const infoRes = await pool.query(`SELECT nickname FROM info WHERE fakeid = $1`, [fakeid]);
   const accountName = infoRes.rows.length > 0 ? (infoRes.rows[0].nickname || fakeid) : fakeid;
   const safeDirName = filterInvalidFilenameChars(accountName);
-  console.log(`[auto-export] 公众号名称: ${accountName}，目录名: ${safeDirName}`);
+  console.log(`${tag} 公众号：【${accountName}】目录名: ${safeDirName}`);
 
   // 2. 获取该公众号的所有文章（如果有时间范围限制则过滤）
-  let articlesRes;
-  if (syncToTimestamp) {
-    articlesRes = await pool.query(
-      `SELECT data FROM article WHERE fakeid = $1 AND COALESCE(update_time, create_time) >= $2 ORDER BY COALESCE(update_time, create_time) DESC`,
-      [fakeid, syncToTimestamp]
-    );
-  } else {
-    articlesRes = await pool.query(
-      `SELECT data FROM article WHERE fakeid = $1 ORDER BY COALESCE(update_time, create_time) DESC`,
-      [fakeid]
-    );
-  }
-  const articles = articlesRes.rows.map((r: any) => r.data);
+  const articles = await queryArticlesForExport(pool, fakeid, options);
   result.total = articles.length;
-  const syncInfo = syncToTimestamp
-    ? `（过滤: >= ${new Date(syncToTimestamp * 1000).toLocaleDateString()}）`
-    : '（全部）';
-  console.log(`[auto-export] 查询到 ${articles.length} 篇文章${syncInfo}（数据来自本地数据库）`);
-  // if (articles.length > 0) {
-  //   console.log(`[auto-export] 第一篇文章数据示例:`, JSON.stringify(articles[0], null, 2));
-  // }
+  const syncInfo = options.articleUrls?.length
+    ? `（本批 ${articles.length} 篇）`
+    : options.syncToTimestamp
+      ? `（过滤: >= ${new Date(options.syncToTimestamp * 1000).toLocaleDateString()}）`
+      : '（全部）';
+  console.log(`${tag} 公众号：【${accountName}】查询到 ${articles.length} 篇文章${syncInfo}（数据来自本地数据库）`);
+  assertNotCancelled(options.isCancelled);
 
   // 3. 确保输出目录存在
   const accountDir = path.resolve(outputDir, safeDirName);
   fs.mkdirSync(accountDir, { recursive: true });
-  console.log(`[auto-export] 输出目录已就绪: ${accountDir}`);
+  console.log(`${tag} 公众号：【${accountName}】输出目录已就绪: ${accountDir}`);
 
   // 4. 区分逐篇格式和汇总格式
   const perArticleFormats = formats.filter((f) => PER_ARTICLE_FORMATS.includes(f));
@@ -615,13 +712,15 @@ export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: n
 
   if (perArticleFormats.length > 0) {
     for (let articleIndex = 0; articleIndex < articles.length; articleIndex++) {
+      assertNotCancelled(options.isCancelled);
+
       const article = articles[articleIndex];
       const title = article.title || '无标题';
       const url = article.link;
       if (!url) {
         result.failed++;
         result.errors.push(`无链接: ${title}`);
-        console.error(`[auto-export] 文章无链接，跳过: ${title}，article keys: ${Object.keys(article).join(', ')}`);
+        console.error(`${tag} 公众号：【${accountName}】文章无链接，跳过: ${title}，article keys: ${Object.keys(article).join(', ')}`);
         continue;
       }
 
@@ -635,7 +734,7 @@ export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: n
       const safeTitle = filterInvalidFilenameChars(title);
       const fileBaseName = `${dateSuffix}-${safeTitle}`;
 
-      console.log(`[auto-export] [${articleIndex + 1}/${articles.length}] 处理文章: ${title} (${articleDate})`);
+      console.log(`${tag} 公众号：【${accountName}】 [${articleIndex + 1}/${articles.length}] 处理文章: ${title} (${articleDate}) | ${url}`);
 
       // 检查是否所有格式的文件都已存在
       const missingFormats = perArticleFormats.filter((fmt) => {
@@ -645,95 +744,188 @@ export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: n
 
       if (missingFormats.length === 0) {
         result.skipped++;
-        console.log(`[auto-export] 跳过已存在（全部格式）: ${fileBaseName}`);
+        console.log(`${tag} 公众号：【${accountName}】跳过已存在（全部格式）: ${fileBaseName}`);
         continue;
       }
+
+      await options.onArticleStart?.({
+        accountName,
+        title,
+        url,
+        index: articleIndex + 1,
+        total: articles.length,
+      });
 
       // 获取原始 HTML 内容（带重试逻辑）
       let rawHtml: string | null = null;
       let cgiData: any = null;
-      let articleFailed = false;
+      let skippedDuringParseRetry = false;
+      let skipReason: string | null = null;
+      let lastFailureReason: string | null = null;
 
       // 从 html 表获取已缓存的 HTML 内容
       const htmlRes = await pool.query(`SELECT file, file_type FROM html WHERE url = $1`, [url]);
       if (htmlRes.rows.length > 0 && htmlRes.rows[0].file) {
         const fileBuffer: Buffer = htmlRes.rows[0].file;
         rawHtml = fileBuffer.toString('utf-8');
+        const cachedHtmlStatus = validateFetchedHtml(rawHtml);
+        if (cachedHtmlStatus.skip) {
+          result.skipped++;
+          console.log(`${tag} 公众号：【${accountName}】跳过不可导出文章: ${title} — ${cachedHtmlStatus.reason} | ${url}`);
+          continue;
+        }
+        if (cachedHtmlStatus.retryable) {
+          lastFailureReason = cachedHtmlStatus.reason;
+          logFullHtmlOnFetchFailure(
+            tag,
+            accountName,
+            title,
+            url,
+            cachedHtmlStatus.reason,
+            rawHtml,
+            '缓存 HTML 内容异常，准备重新抓取'
+          );
+          rawHtml = null;
+        }
       }
 
       // 如果没有缓存，尝试在线抓取（带重试）
       if (!rawHtml) {
-        console.log(`[auto-export] HTML 缓存不存在，尝试在线抓取: ${title}`);
+        console.log(`${tag} 公众号：【${accountName}】HTML 缓存不存在，尝试在线抓取: ${title} | ${url}`);
         for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+          assertNotCancelled(options.isCancelled);
           if (attempt > 0) {
-            console.log(`[auto-export] 第 ${attempt} 次重试抓取: ${title}`);
+            const retryMessage = `正在重试抓取第 ${articleIndex + 1}/${articles.length} 篇《${title}》，第 ${attempt}/${MAX_RETRY} 次`;
+            console.warn(`${tag} 公众号：【${accountName}】${retryMessage}，${RETRY_DELAY / 1000} 秒后继续 | ${url}`);
+            await options.onRetry?.({
+              stage: 'exporting',
+              scope: 'article-fetch',
+              accountName,
+              title,
+              url,
+              index: articleIndex + 1,
+              total: articles.length,
+              attempt,
+              maxAttempts: MAX_RETRY,
+              delayMs: RETRY_DELAY,
+              message: retryMessage,
+            });
             await delay(RETRY_DELAY);
           }
           try {
-            rawHtml = await fetchArticleHtml(url);
-            if (rawHtml) break;
+            const fetchedHtml = await fetchArticleHtml(url);
+            if (!fetchedHtml) {
+              continue;
+            }
+
+            const fetchedHtmlStatus = validateFetchedHtml(fetchedHtml);
+            if (fetchedHtmlStatus.skip) {
+              skipReason = fetchedHtmlStatus.reason;
+              rawHtml = fetchedHtml;
+              break;
+            }
+            if (fetchedHtmlStatus.retryable) {
+              lastFailureReason = fetchedHtmlStatus.reason;
+              logFullHtmlOnFetchFailure(tag, accountName, title, url, fetchedHtmlStatus.reason, fetchedHtml);
+              continue;
+            }
+
+            rawHtml = fetchedHtml;
+            break;
           } catch (e: any) {
-            console.error(`[auto-export] 抓取异常（第 ${attempt + 1} 次）: ${title} - ${e.message}`);
+            console.error(`${tag} 公众号：【${accountName}】抓取异常（第 ${attempt + 1} 次）: ${title} - ${e.message} | ${url}`);
           }
+        }
+        if (skipReason) {
+          result.skipped++;
+          console.log(`${tag} 公众号：【${accountName}】跳过不可导出文章: ${title} — ${skipReason} | ${url}`);
+          continue;
         }
         if (!rawHtml) {
           result.failed++;
-          const reason = '抓取失败（已重试）';
+          const reason = lastFailureReason ? `抓取失败（已重试）: ${lastFailureReason}` : '抓取失败（已重试）';
           result.errors.push(`${reason}: ${title} | ${url}`);
           failedUrls.push({ title, url, reason });
-          console.error(`[auto-export] 在线抓取 HTML 最终失败: ${title}`);
-          console.error(`[auto-export]   链接: ${url}`);
+          console.error(`${tag} 公众号：【${accountName}】在线抓取 HTML 最终失败: ${title} | ${url}`);
           continue;
         }
-      }
-
-      // 检查是否为不可重试的文章（已删除、违规、无法查看等）
-      const nonRetryable = isNonRetryableHtml(rawHtml);
-      if (nonRetryable.skip) {
-        result.skipped++;
-        console.log(`[auto-export] 跳过不可导出文章: ${title} — ${nonRetryable.reason}`);
-        continue;
       }
 
       // 解析 cgiData（带重试：可能网络抓取到的是临时错误页面）
       cgiData = parseCgiDataNewServer(rawHtml);
       if (!cgiData && rawHtml) {
+        lastFailureReason = '解析 cgiData 失败';
         // cgiData 解析失败，尝试重新抓取
         for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
-          console.log(`[auto-export] cgiData 解析失败，第 ${attempt} 次重试抓取: ${title}`);
+          assertNotCancelled(options.isCancelled);
+          const retryMessage = `正在重试解析第 ${articleIndex + 1}/${articles.length} 篇《${title}》，第 ${attempt}/${MAX_RETRY} 次`;
+          console.warn(`${tag} 公众号：【${accountName}】${retryMessage}，${RETRY_DELAY / 1000} 秒后继续 | ${url}`);
+          await options.onRetry?.({
+            stage: 'exporting',
+            scope: 'cgi-parse',
+            accountName,
+            title,
+            url,
+            index: articleIndex + 1,
+            total: articles.length,
+            attempt,
+            maxAttempts: MAX_RETRY,
+            delayMs: RETRY_DELAY,
+            message: retryMessage,
+          });
           await delay(RETRY_DELAY);
           try {
             const retryHtml = await fetchArticleHtml(url);
-            if (retryHtml) {
-              const retryNonRetryable = isNonRetryableHtml(retryHtml);
-              if (retryNonRetryable.skip) {
-                result.skipped++;
-                console.log(`[auto-export] 重试后发现不可导出文章: ${title} — ${retryNonRetryable.reason}`);
-                articleFailed = false;
-                break;
-              }
-              cgiData = parseCgiDataNewServer(retryHtml);
-              if (cgiData) {
-                rawHtml = retryHtml;
-                break;
-              }
+            if (!retryHtml) {
+              continue;
+            }
+
+            const retryHtmlStatus = validateFetchedHtml(retryHtml);
+            if (retryHtmlStatus.skip) {
+              result.skipped++;
+              skippedDuringParseRetry = true;
+              console.log(`${tag} 公众号：【${accountName}】重试后发现不可导出文章: ${title} — ${retryHtmlStatus.reason} | ${url}`);
+              break;
+            }
+            if (retryHtmlStatus.retryable) {
+              lastFailureReason = retryHtmlStatus.reason;
+              logFullHtmlOnFetchFailure(
+                tag,
+                accountName,
+                title,
+                url,
+                retryHtmlStatus.reason,
+                retryHtml,
+                `重试抓取返回异常内容（第 ${attempt} 次）`
+              );
+              continue;
+            }
+
+            cgiData = parseCgiDataNewServer(retryHtml);
+            rawHtml = retryHtml;
+            if (cgiData) {
+              break;
             }
           } catch (e: any) {
-            console.error(`[auto-export] 重试抓取异常（第 ${attempt} 次）: ${title} - ${e.message}`);
+            console.error(`${tag} 公众号：【${accountName}】重试抓取异常（第 ${attempt} 次）: ${title} - ${e.message} | ${url}`);
           }
         }
       }
 
+      if (skippedDuringParseRetry) {
+        continue;
+      }
+
       if (!cgiData) {
-        if (articleFailed !== false) {
-          result.failed++;
-          const reason = '解析 cgiData 失败（已重试）';
-          result.errors.push(`${reason}: ${title} | ${url}`);
-          failedUrls.push({ title, url, reason });
-          console.error(`[auto-export] 解析 cgiData 最终失败: ${title}`);
-          console.error(`[auto-export]   链接: ${url}`);
-          const htmlTail = rawHtml ? rawHtml.slice(-300) : '(empty)';
-          console.error(`[auto-export]   HTML尾部(300字符): ${htmlTail}`);
+        result.failed++;
+        const reason = lastFailureReason ? `解析 cgiData 失败（已重试）: ${lastFailureReason}` : '解析 cgiData 失败（已重试）';
+        result.errors.push(`${reason}: ${title} | ${url}`);
+        failedUrls.push({ title, url, reason });
+        console.error(`${tag} 公众号：【${accountName}】解析 cgiData 最终失败: ${title} | ${url}`);
+        if (rawHtml) {
+          console.error(
+            `${tag} 公众号：【${accountName}】最终失败时的HTML完整内容: ${compactEscapedJson({ title, url, reason, html: rawHtml })}`
+          );
         }
         continue;
       }
@@ -743,18 +935,18 @@ export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: n
       let articleGenerated = false;
 
       for (const fmt of missingFormats) {
+        assertNotCancelled(options.isCancelled);
         const filePath = path.join(accountDir, `${fileBaseName}${FORMAT_EXT[fmt]}`);
         try {
           const buf = await convertToFormat(fmt, cgiData, () => renderedHtml, async (html) => { renderedHtml = html; });
           fs.writeFileSync(filePath, buf);
           articleGenerated = true;
-          console.log(`[auto-export] 生成成功: ${fileBaseName}${FORMAT_EXT[fmt]}`);
+          console.log(`${tag} 公众号：【${accountName}】生成成功: ${fileBaseName}${FORMAT_EXT[fmt]}`);
         } catch (e: any) {
           result.errors.push(`[${fmt}] ${title}: ${e.message} | ${url}`);
-          console.error(`[auto-export] 生成 ${fmt} 异常: ${title}`);
-          console.error(`[auto-export]   链接: ${url}`);
-          console.error(`[auto-export]   错误: ${e.message}`);
-          console.error(`[auto-export]   堆栈:`, e.stack);
+          console.error(`${tag} 公众号：【${accountName}】生成 ${fmt} 异常: ${title} | ${url}`);
+          console.error(`${tag}   错误: ${e.message}`);
+          console.error(`${tag}   堆栈:`, e.stack);
         }
       }
 
@@ -769,9 +961,12 @@ export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: n
 
   // 6. 汇总格式导出（json/excel）— 每个公众号生成一个汇总文件
   if (aggregateFormats.length > 0) {
+    assertNotCancelled(options.isCancelled);
+
     // 构建导出数据：文章 + 元数据
     const exportEntities: any[] = [];
     for (const article of articles) {
+      assertNotCancelled(options.isCancelled);
       const url = article.link;
       let metadata: ArticleMetadata | null = null;
       if (url) {
@@ -789,38 +984,90 @@ export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: n
     }
 
     for (const fmt of aggregateFormats) {
+      assertNotCancelled(options.isCancelled);
       const filePath = path.join(accountDir, `${safeDirName}${FORMAT_EXT[fmt]}`);
       // 汇总文件每次同步都重新生成（数据可能有更新）
       try {
         if (fmt === 'json') {
           const jsonStr = JSON.stringify(exportEntities, null, 2);
           fs.writeFileSync(filePath, jsonStr, 'utf-8');
-          console.log(`[auto-export] JSON 汇总生成成功: ${safeDirName}${FORMAT_EXT[fmt]}（${exportEntities.length} 篇）`);
+          console.log(`${tag} 公众号：【${accountName}】JSON 汇总生成成功: ${safeDirName}${FORMAT_EXT[fmt]}（${exportEntities.length} 篇）`);
         } else if (fmt === 'excel') {
           const buf = await generateExcelBuffer(exportEntities);
           fs.writeFileSync(filePath, buf);
-          console.log(`[auto-export] Excel 汇总生成成功: ${safeDirName}${FORMAT_EXT[fmt]}（${exportEntities.length} 篇）`);
+          console.log(`${tag} 公众号：【${accountName}】Excel 汇总生成成功: ${safeDirName}${FORMAT_EXT[fmt]}（${exportEntities.length} 篇）`);
         }
       } catch (e: any) {
         result.errors.push(`[${fmt}] 汇总文件: ${e.message}`);
-        console.error(`[auto-export] 生成 ${fmt} 汇总文件异常`);
-        console.error(`[auto-export]   错误: ${e.message}`);
-        console.error(`[auto-export]   堆栈:`, e.stack);
+        console.error(`${tag} 公众号：【${accountName}】生成 ${fmt} 汇总文件异常`);
+        console.error(`${tag}   错误: ${e.message}`);
+        console.error(`${tag}   堆栈:`, e.stack);
       }
     }
   }
 
   // 打印失败 URL 列表
   if (failedUrls.length > 0) {
-    console.error(`[auto-export] 公众号【${accountName}】失败文章列表（共 ${failedUrls.length} 篇）:`);
+    console.error(`${tag} 公众号：【${accountName}】失败文章列表（共 ${failedUrls.length} 篇）:`);
     for (const item of failedUrls) {
-      console.error(`[auto-export]   - [${item.reason}] ${item.title}`);
-      console.error(`[auto-export]     ${item.url}`);
+      console.error(`${tag}   - [${item.reason}] ${item.title}`);
+      console.error(`${tag}     ${item.url}`);
     }
   }
 
-  console.log(`[auto-export] 公众号【${accountName}】处理完成 — 总计: ${result.total}, 生成: ${result.generated}, 跳过: ${result.skipped}, 失败: ${result.failed}, 格式: [${formats.join(',')}]`);
+  console.log(`${tag} 公众号：【${accountName}】处理完成 — 总计: ${result.total}, 生成: ${result.generated}, 跳过: ${result.skipped}, 失败: ${result.failed}, 格式: [${formats.join(',')}]`);
   return result;
+}
+
+export async function generateDocxForAccount(fakeid: string, syncToTimestamp?: number, source: 'auto-export' | 'schedule' = 'auto-export'): Promise<AutoExportResult> {
+  return generateDocxForAccountInternal(fakeid, {
+    source,
+    syncToTimestamp,
+  });
+}
+
+export async function generateDocxForArticleUrls(
+  fakeid: string,
+  articleUrls: string[],
+  source: ExportSource = 'manual-sync',
+  onArticleStart?: (progress: ArticleExportProgress) => void | Promise<void>,
+  isCancelled?: () => boolean,
+  onRetry?: (progress: ArticleExportRetryProgress) => void | Promise<void>,
+): Promise<AutoExportResult> {
+  const formats = getAutoExportFormats().filter((format) => PER_ARTICLE_FORMATS.includes(format));
+  if (formats.length === 0) {
+    const result = createEmptyExportResult(formats);
+    result.total = articleUrls.length;
+    return result;
+  }
+
+  return generateDocxForAccountInternal(fakeid, {
+    source,
+    articleUrls,
+    formats,
+    onArticleStart,
+    onRetry,
+    isCancelled,
+  });
+}
+
+export async function generateAggregateExportsForAccount(
+  fakeid: string,
+  syncToTimestamp?: number,
+  source: ExportSource = 'manual-sync',
+  isCancelled?: () => boolean,
+): Promise<AutoExportResult> {
+  const formats = getAutoExportFormats().filter((format) => AGGREGATE_FORMATS.includes(format));
+  if (formats.length === 0) {
+    return createEmptyExportResult(formats);
+  }
+
+  return generateDocxForAccountInternal(fakeid, {
+    source,
+    syncToTimestamp,
+    formats,
+    isCancelled,
+  });
 }
 
 // ==================== Excel 生成 ====================

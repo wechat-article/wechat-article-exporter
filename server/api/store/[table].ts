@@ -165,16 +165,27 @@ async function handleArticlePost(pool: any, action: string, body: any) {
             const data = { ...article, fakeid, _status: '' };
 
             const res = await client.query(
-              `INSERT INTO article (id, fakeid, link, create_time, update_time, data)
-               VALUES ($1, $2, $3, $4, $5, $6)
+              `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, data)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                ON CONFLICT (id) DO UPDATE SET
                  fakeid = EXCLUDED.fakeid,
                  link = EXCLUDED.link,
                  create_time = EXCLUDED.create_time,
                  update_time = EXCLUDED.update_time,
+                 article_title = EXCLUDED.article_title,
+                 article_status = EXCLUDED.article_status,
                  data = EXCLUDED.data
                RETURNING (xmax = 0) AS is_new`,
-              [key, fakeid, article.link, article.create_time, article.update_time, data]
+              [
+                key,
+                fakeid,
+                article.link,
+                article.create_time,
+                article.update_time,
+                article.title || null,
+                Number.isFinite(article.mediaapi_publish_status) ? article.mediaapi_publish_status : null,
+                data,
+              ]
             );
 
             if (res.rows[0].is_new) {
@@ -214,16 +225,20 @@ async function handleArticlePost(pool: any, action: string, body: any) {
       const link = data.link || null;
       const createTime = data.create_time || null;
       const updateTime = data.update_time || null;
+      const articleTitle = data.title || null;
+      const articleStatus = Number.isFinite(data.mediaapi_publish_status) ? data.mediaapi_publish_status : null;
       await pool.query(
-        `INSERT INTO article (id, fakeid, link, create_time, update_time, data)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (id) DO UPDATE SET
            fakeid = EXCLUDED.fakeid,
            link = EXCLUDED.link,
            create_time = EXCLUDED.create_time,
            update_time = EXCLUDED.update_time,
+           article_title = EXCLUDED.article_title,
+           article_status = EXCLUDED.article_status,
            data = EXCLUDED.data`,
-        [id, fakeid, link, createTime, updateTime, data]
+        [id, fakeid, link, createTime, updateTime, articleTitle, articleStatus, data]
       );
       return { success: true };
     }

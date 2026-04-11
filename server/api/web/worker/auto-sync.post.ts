@@ -9,10 +9,16 @@ import { runAutoSync, checkCookieExpiry } from '~/server/utils/scheduler';
 export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => ({}));
   const action = body?.action || 'sync';
+  const awaitCompletion = body?.awaitCompletion === true;
 
   if (action === 'check-cookie') {
     await checkCookieExpiry();
     return { success: true, message: 'Cookie 检查完成' };
+  }
+
+  if (awaitCompletion) {
+    await runAutoSync();
+    return { success: true, message: '同步任务已完成' };
   }
 
   // 异步执行同步任务，不阻塞响应

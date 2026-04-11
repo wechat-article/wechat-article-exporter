@@ -9,18 +9,22 @@ export class AccountCookie {
   private readonly _token: string;
   private _cookie: CookieEntity[];
 
+  private static isActiveCookie(cookie: CookieEntity): boolean {
+    return Boolean(cookie.name) && cookie.value !== 'EXPIRED';
+  }
+
   /**
    * @param token
    * @param cookies response.headers.getSetCookie() 的结果，是一个字符串数组
    */
   constructor(token: string, cookies: string[]) {
     this._token = token;
-    this._cookie = AccountCookie.parse(cookies);
+    this._cookie = AccountCookie.parse(cookies).filter(AccountCookie.isActiveCookie);
   }
 
   static create(token: string, cookies: CookieEntity[]): AccountCookie {
     const value = new AccountCookie(token, []);
-    value._cookie = cookies;
+    value._cookie = cookies.filter(AccountCookie.isActiveCookie);
     return value;
   }
 
@@ -46,8 +50,13 @@ export class AccountCookie {
   // 根据 cookie 中的 expires 来确定是否已过期
   // 只要任意一个有过期时间的 cookie 已过期，就认为整体已失效
   public get isExpired(): boolean {
+    const activeCookies = this._cookie.filter(AccountCookie.isActiveCookie);
+    if (activeCookies.length === 0) {
+      return true;
+    }
+
     const now = Date.now();
-    return this._cookie.some(
+    return activeCookies.every(
       cookie => typeof cookie.expires_timestamp === 'number' && cookie.expires_timestamp < now
     );
   }
@@ -67,13 +76,25 @@ export class AccountCookie {
       const name = newCookie.name as string;
       if (!name) continue;
       const idx = this._cookie.findIndex(c => c.name === name);
+      const shouldRemove = !AccountCookie.isActiveCookie(newCookie);
+
       if (idx !== -1) {
-        // 用新值覆盖已有条目
-        this._cookie[idx] = newCookie;
+        if (shouldRemove) {
+          this._cookie.splice(idx, 1);
+        } else {
+          // 用新值覆盖已有条目
+          this._cookie[idx] = newCookie;
+        }
+        changed = true;
+        continue;
+      }
+
+      if (!shouldRemove) {
+        this._cookie.push(newCookie);
         changed = true;
       }
-      // 忽略全新 cookie 名（只续期已有的）
     }
+
     return changed;
   }
 
@@ -128,7 +149,7 @@ export class AccountCookie {
 
   private stringify(parsedCookie: CookieEntity[]): string {
     return parsedCookie
-      .filter(cookie => cookie.value && cookie.value !== 'EXPIRED')
+      .filter(AccountCookie.isActiveCookie)
       .map(cookie => `${cookie.name}=${cookie.value}`)
       .join('; ');
   }
@@ -139,6 +160,7 @@ export class AccountCookie {
    */
   public expiryInfo(): string {
     return this._cookie
+      .filter(AccountCookie.isActiveCookie)
       .map(cookie => {
         const name = cookie.name as string;
         const ts = cookie.expires_timestamp;

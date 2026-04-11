@@ -1,5 +1,5 @@
 import { Cron } from 'croner';
-import { runAutoSync } from '~/server/utils/scheduler';
+import { getSchedulerSyncDays, runAutoSync } from '~/server/utils/scheduler';
 
 // 模块级变量，防止开发模式热重载时创建重复的 cron 实例
 let _cronJob: Cron | null = null;
@@ -18,6 +18,7 @@ export default defineNitroPlugin(() => {
   }
 
   const cronExpr = process.env.SCHEDULER_CRON || '0 8 * * *';
+  const syncDays = getSchedulerSyncDays();
 
   _cronJob = new Cron(cronExpr, { timezone: 'Asia/Shanghai' }, async () => {
     console.log(`[scheduler] Cron 触发: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })}`);
@@ -30,5 +31,5 @@ export default defineNitroPlugin(() => {
 
   const nextRun = _cronJob.nextRun();
   const nextRunStr = nextRun ? nextRun.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '未知';
-  console.log(`[scheduler] 定时任务已启动，Cron: "${cronExpr}"，下次执行: ${nextRunStr}`);
+  console.log(`[scheduler] 定时任务已启动，Cron: "${cronExpr}"，同步范围: 最近 ${syncDays} 天，下次执行: ${nextRunStr}`);
 });

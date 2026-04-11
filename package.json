@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "debug": "nuxt dev --inspect",
-    "dev": "nuxt dev",
+    "dev": "nuxt build && node --env-file=.env .output/server/index.mjs",
+    "dev:watch": "nuxt dev",
     "build": "nuxt build",
     "start": "node --env-file=.env .output/server/index.mjs",
     "preview": "NITRO_PRESET=cloudflare_pages nuxt build && npx wrangler --cwd dist pages dev",

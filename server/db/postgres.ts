@@ -74,6 +74,8 @@ async function createTables(pool: pg.Pool): Promise<void> {
         link TEXT,
         create_time BIGINT,
         update_time BIGINT,
+        article_title TEXT,
+        article_status INTEGER,
         data JSONB NOT NULL
       )
     `);
@@ -83,7 +85,22 @@ async function createTables(pool: pg.Pool): Promise<void> {
 
     // 为已有表添加 update_time 列（兼容旧数据库）
     await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS update_time BIGINT`);
+    await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS article_title TEXT`);
+    await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS article_status INTEGER`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_article_update_time ON article (update_time)`);
+    await client.query(`
+      UPDATE article
+      SET
+        article_title = COALESCE(NULLIF(article_title, ''), data->>'title'),
+        article_status = COALESCE(
+          article_status,
+          CASE
+            WHEN (data->>'mediaapi_publish_status') ~ '^-?\\d+$' THEN (data->>'mediaapi_publish_status')::INTEGER
+            ELSE NULL
+          END
+        )
+      WHERE article_title IS NULL OR article_title = '' OR article_status IS NULL
+    `);
 
     // info 表 (公众号元数据)
     await client.query(`

@@ -72,5 +72,8 @@ Nuxt UI v2 + TailwindCSS 提供组件和样式。AG Grid Enterprise 用于文章
 - `NUXT_AGGRID_LICENSE` — AG Grid 企业版授权密钥
 - `NITRO_KV_DRIVER` — 存储驱动（本地/Docker 用 `fs`，Cloudflare 用 `cloudflare-kv-binding`）
 - `NITRO_KV_BASE` — KV 数据目录（默认：`.data/kv`）
+- `LOG_DIR` — 日志文件保存目录（默认：`log`）
+- `LOG_RETENTION_DAYS` — 日志保留天数（默认：14）
 - `NUXT_DEBUG_MP_REQUEST` — 开启微信代理请求调试（仅开发环境）
 - `DEBUG_KEY` — 调试端点认证密钥
+- `SCHEDULER_SYNC_DAYS` — 定时任务每次回溯同步并生成文档的天数（默认：3）

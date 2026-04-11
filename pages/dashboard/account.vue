@@ -6,13 +6,13 @@ import type {
   GridOptions,
   GridReadyEvent,
   ICellRendererParams,
+  RowHeightParams,
   SelectionChangedEvent,
   ValueGetterParams,
 } from 'ag-grid-community';
 import { AgGridVue } from 'ag-grid-vue3';
 import { defu } from 'defu';
 import { formatTimeStamp } from '#shared/utils/helpers';
-import { getArticleList } from '~/apis';
 import GlobalSearchAccountDialog from '~/components/global/SearchAccountDialog.vue';
 import GridAccountActions from '~/components/grid/AccountActions.vue';
 import GridLoadProgress from '~/components/grid/LoadProgress.vue';
@@ -23,11 +23,8 @@ import useLoginCheck from '~/composables/useLoginCheck';
 import { IMAGE_PROXY, websiteName } from '~/config';
 import { sharedGridOptions } from '~/config/shared-grid-options';
 import { deleteAccountData } from '~/store/v2';
-import { getArticleCache, hitCache } from '~/store/v2/article';
 import { getAllInfo, getInfoCache, importMpAccounts, type MpAccount } from '~/store/v2/info';
 import type { AccountManifest } from '~/types/account';
-import type { Preferences } from '~/types/preferences';
-import type { AppMsgEx } from '~/types/types';
 import { exportAccountJsonFile } from '~/utils/exporter';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
 
@@ -35,9 +32,34 @@ useHead({
   title: `公众号管理 | ${websiteName}`,
 });
 
-interface PromiseInstance {
-  resolve: (value: unknown) => void;
-  reject: (reason?: any) => void;
+type ManualSyncStage = 'queued' | 'syncing' | 'exporting' | 'finalizing' | 'completed' | 'failed' | 'cancelled' | 'cancelling';
+
+interface ManualSyncJobStatus {
+  jobId: string;
+  fakeid: string;
+  nickname: string;
+  stage: ManualSyncStage;
+  syncToTimestamp: number;
+  startedAt: number;
+  updatedAt: number;
+  cancelRequested: boolean;
+  pageNumber: number;
+  begin: number;
+  totalCount: number;
+  currentPageArticleCount: number;
+  currentPageFilteredCount: number;
+  currentArticleTitle: string | null;
+  currentArticleUrl: string | null;
+  currentArticleIndex: number;
+  currentArticleTotal: number;
+  retrying: boolean;
+  retryMessage: string | null;
+  articleCount: number;
+  generated: number;
+  skipped: number;
+  failed: number;
+  failedUrls: string[];
+  error?: string;
 }
 
 const toast = toastFactory();
@@ -47,8 +69,6 @@ const { checkLogin } = useLoginCheck();
 const { getSyncTimestamp, getSyncRangeLabel, getActualDateRange, isSyncAll } = useSyncDeadline();
 // syncToTimestamp 在每次同步时重新计算，确保使用最新的时间范围配置
 let syncToTimestamp = getSyncTimestamp();
-
-const preferences = usePreferences();
 
 // 账号事件总线，用于和 Credentials 面板保持列表同步
 const { accountEventBus } = useAccountEventBus();
@@ -84,160 +104,213 @@ const isSyncing = ref(false);
 // 当前正在同步的公众号id
 const syncingRowId = ref<string | null>(null);
 
-const syncTimer = ref<number | null>(null);
+const currentSyncJobId = ref<string | null>(null);
+const syncStatus = ref<ManualSyncJobStatus | null>(null);
+const SYNC_PROGRESS_ROW_HEIGHT = 64;
+let syncPollSequence = 0;
 
-const MAX_PAGE_RETRIES = 3;
-async function fetchWithRetry(account: MpAccount, begin: number): Promise<[AppMsgEx[], boolean, number]> {
-  for (let attempt = 0; attempt < MAX_PAGE_RETRIES; attempt++) {
-    try {
-      return await getArticleList(account, begin, '', syncToTimestamp);
-    } catch (e: any) {
-      console.error(
-        `[sync] ${account.nickname} — 第 ${begin} 页请求失败 (第 ${attempt + 1}/${MAX_PAGE_RETRIES} 次尝试):`,
-        e
-      );
-      if (e.message === 'session expired') {
-        throw e;
-      }
-      if (attempt < MAX_PAGE_RETRIES - 1) {
-        const delay = Math.pow(2, attempt + 1); // 2s, 4s
-        console.warn(`[sync] ${account.nickname} — ${delay} 秒后重试...`);
-        await new Promise(resolve => setTimeout(resolve, delay * 1000));
-      } else {
-        throw e;
-      }
-    }
-  }
-  throw new Error('unreachable');
+function sleep(ms: number) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
-async function _load(account: MpAccount, begin: number, loadMore: boolean, promise: PromiseInstance) {
-  if (isCanceled.value) {
-    isCanceled.value = false; // 这里需要将状态复位
-    promise.reject(new Error('已取消同步'));
-    return;
+function isTerminalSyncStage(stage: ManualSyncStage) {
+  return stage === 'completed' || stage === 'failed' || stage === 'cancelled';
+}
+
+function displayPageNumber(pageNumber: number) {
+  return Math.max(1, Number(pageNumber || 0));
+}
+
+function applySyncStatus(status: ManualSyncJobStatus) {
+  currentSyncJobId.value = status.jobId;
+  syncStatus.value = status;
+  syncingRowId.value = status.fakeid;
+  isSyncing.value = !isTerminalSyncStage(status.stage);
+}
+
+const syncStatusText = computed(() => {
+  const status = syncStatus.value;
+  if (!status) return '';
+
+  if (status.retrying && status.retryMessage) {
+    return `【${status.nickname}】${status.retryMessage}`;
   }
 
-  syncingRowId.value = account.fakeid;
-  isSyncing.value = true;
+  if (status.stage === 'exporting' && status.currentArticleTitle) {
+    return `正在为【${status.nickname}】生成文档 ${status.currentArticleIndex}/${status.currentArticleTotal}：${status.currentArticleTitle}`;
+  }
+  if (status.stage === 'finalizing') {
+    return `正在为【${status.nickname}】生成汇总文档`;
+  }
+  if (status.stage === 'cancelling') {
+    return `正在取消【${status.nickname}】的同步任务`;
+  }
+  if (status.stage === 'syncing' || status.stage === 'queued') {
+    const pageText = `第 ${displayPageNumber(status.pageNumber)} 页`;
+    const articleText = status.currentPageFilteredCount > 0
+      ? `，本页命中 ${status.currentPageFilteredCount} 篇文章`
+      : '';
+    return `正在同步【${status.nickname}】${pageText}${articleText}`;
+  }
+  return '';
+});
 
-  // 单页请求失败时自动重试，最多重试3次
-  const result = await fetchWithRetry(account, begin);
-  const [articles, completed] = result;
-
-  if (isCanceled.value) {
-    isCanceled.value = false;
-    promise.reject(new Error('已取消同步'));
-    return;
+const syncStatusUrl = computed(() => {
+  const status = syncStatus.value;
+  if (!status?.currentArticleUrl) {
+    return '';
   }
 
-  // 打印本次获取的文章时间范围
-  if (articles.length > 0) {
-    const newest = articles[0];
-    const oldest = articles[articles.length - 1];
-    const fmtTs = (ts: number) => new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
-    console.log(
-      `[sync] ${account.nickname} — 本页 ${articles.length} 篇，` +
-      `最新: ${newest.title} (更新: ${fmtTs(newest.update_time)}, 发布: ${fmtTs(newest.create_time)})，` +
-      `最旧: ${oldest.title} (更新: ${fmtTs(oldest.update_time)}, 发布: ${fmtTs(oldest.create_time)})，` +
-      `截止: ${fmtTs(syncToTimestamp)}`
-    );
+  if (status.stage === 'exporting') {
+    return status.currentArticleUrl;
   }
 
-  if (completed) {
-    await updateRow(account.fakeid);
-    syncingRowId.value = null;
-    isSyncing.value = false;
-    promise.resolve(account);
-    return;
+  if (status.retrying && status.currentArticleTitle) {
+    return status.currentArticleUrl;
   }
 
-  const count = articles.filter(article => article.itemidx === 1).length; // 消息数
-  begin += count;
+  return '';
+});
 
-  // 检查是否可以「快进」，也就是存在比 lastArticle 更早的缓存数据
-  // todo: 这里还可以继续优化，防止出现多段不连续的范围
-  const lastArticle = articles.at(-1);
-  if (lastArticle && lastArticle.update_time < account.last_update_time!) {
-    if (await hitCache(account.fakeid, lastArticle.update_time)) {
-      const cachedArticles = await getArticleCache(account.fakeid, lastArticle.update_time);
+const syncStatusClass = computed(() => {
+  const stage = syncStatus.value?.stage;
+  if (syncStatus.value?.retrying) return 'text-orange-600';
+  if (stage === 'exporting' || stage === 'finalizing') return 'text-amber-600';
+  if (stage === 'cancelling') return 'text-orange-500';
+  return 'text-blue-500';
+});
 
-      // 更新 begin 参数
-      const count = cachedArticles.filter(article => article.itemidx === 1).length;
-      begin += count;
-      articles.push(...cachedArticles);
-    }
-  }
+function clearSyncRuntimeState() {
+  isCanceled.value = false;
+  isSyncing.value = false;
+  syncingRowId.value = null;
+  currentSyncJobId.value = null;
+  syncStatus.value = null;
+}
 
-  if (articles.at(-1)!.update_time < syncToTimestamp) {
-    // 已同步到配置的时间范围
-    loadMore = false;
-  }
+async function startManualSyncRequest(account: MpAccount) {
+  return await $fetch<{ jobId: string; status: ManualSyncJobStatus }>('/api/web/worker/manual-sync', {
+    method: 'POST',
+    body: {
+      fakeid: account.fakeid,
+      nickname: account.nickname,
+      roundHeadImg: account.round_head_img,
+      syncToTimestamp,
+    },
+  });
+}
 
-  await updateRow(account.fakeid);
-  if (loadMore) {
-    syncTimer.value = window.setTimeout(
-      () => {
-        if (isCanceled.value) {
-          console.warn('已取消同步');
-          isCanceled.value = false;
-          promise.reject(new Error('已取消同步'));
-          return;
-        }
-        _load(account, begin, true, promise);
-      },
-      ((preferences.value as unknown as Preferences).accountSyncSeconds || 5) * 1000
-    );
-  } else {
-    syncingRowId.value = null;
-    isSyncing.value = false;
-    promise.resolve(account);
+async function getManualSyncStatus(jobId?: string) {
+  return await $fetch<ManualSyncJobStatus>('/api/web/worker/manual-sync-status', jobId
+    ? {
+        query: { jobId },
+      }
+    : undefined);
+}
+
+async function cancelCurrentSync() {
+  if (!currentSyncJobId.value) return;
+  isCanceled.value = true;
+  try {
+    await $fetch('/api/web/worker/manual-sync-cancel', {
+      method: 'POST',
+      body: { jobId: currentSyncJobId.value },
+    });
+  } catch (error) {
+    console.warn('[sync] 取消同步请求失败:', error);
   }
 }
 
-// 同步指定公众号
-async function loadAccountArticle(account: MpAccount, loadMore = true) {
-  // 每次同步时重新计算截止时间戳，确保使用最新的时间范围配置
+async function waitForManualSyncJob(fakeid: string, jobId: string) {
+  const pollSequence = ++syncPollSequence;
+
+  while (true) {
+    const status = await getManualSyncStatus(jobId);
+    if (pollSequence !== syncPollSequence) {
+      return status;
+    }
+
+    applySyncStatus(status);
+    await updateRow(fakeid);
+
+    if (isTerminalSyncStage(status.stage)) {
+      return status;
+    }
+
+    await sleep(1000);
+  }
+}
+
+async function restoreActiveManualSyncJob() {
+  try {
+    const status = await getManualSyncStatus();
+    if (!status || isTerminalSyncStage(status.stage)) {
+      clearSyncRuntimeState();
+      return;
+    }
+
+    applySyncStatus(status);
+    await updateRow(status.fakeid);
+
+    void waitForManualSyncJob(status.fakeid, status.jobId)
+      .catch(error => {
+        console.warn('[sync] 恢复手动同步状态失败:', error);
+      })
+      .finally(() => {
+        clearSyncRuntimeState();
+      });
+  } catch (error: any) {
+    const statusCode = error?.statusCode || error?.data?.statusCode || error?.response?.status;
+    if (statusCode === 404) {
+      clearSyncRuntimeState();
+      return;
+    }
+    console.warn('[sync] 获取当前手动同步任务失败:', error);
+  }
+}
+
+async function loadAccountArticle(account: MpAccount) {
   syncToTimestamp = getSyncTimestamp();
   console.log(
     `[sync] 开始同步【${account.nickname}】，` +
     `同步范围: ${getSyncRangeLabel()}，` +
     `时间区间: ${getActualDateRange()}`
   );
-  return new Promise((resolve, reject) => {
-    const promise: PromiseInstance = { resolve, reject };
 
-    _load(account, 0, loadMore, promise).catch(e => {
-      syncingRowId.value = null;
-      isSyncing.value = false;
+  isCanceled.value = false;
+  isSyncing.value = true;
+  syncingRowId.value = account.fakeid;
 
-      if (e.message === 'session expired') {
+  try {
+    const { jobId, status } = await startManualSyncRequest(account);
+    applySyncStatus(status);
+
+    const finalStatus = await waitForManualSyncJob(account.fakeid, jobId);
+    await updateRow(account.fakeid);
+
+    if (finalStatus.stage === 'cancelled') {
+      throw new Error('已取消同步');
+    }
+
+    if (finalStatus.stage === 'failed') {
+      if (finalStatus.error === 'session expired' || finalStatus.error?.includes('未登录')) {
         modal.open(LoginModal);
       }
-      reject(e);
-    });
-  });
-}
+      throw new Error(finalStatus.error || '同步失败');
+    }
 
-// 自动导出文件（后台执行，不阻塞同步流程）
-async function autoGenerateDocx(account: MpAccount) {
-  try {
-    const result = await $fetch('/api/web/worker/auto-docx', {
-      method: 'POST',
-      body: { fakeid: account.fakeid, syncToTimestamp },
-    });
-    if (result.generated > 0) {
-      const formatLabel = result.formats?.join('/') || 'Word';
-      toast.success('自动导出', `公众号【${account.nickname}】新生成 ${result.generated} 篇 ${formatLabel} 文档，跳过 ${result.skipped} 篇已有文档`);
+    return finalStatus;
+  } catch (error: any) {
+    if (error?.data?.message) {
+      throw new Error(error.data.message);
     }
-    if (result.failed > 0) {
-      console.warn(`[auto-export] ${account.nickname}: ${result.failed} 篇生成失败`, result.errors);
+    if (error?.message === 'session expired') {
+      modal.open(LoginModal);
     }
-  } catch (e: any) {
-    // AUTO_EXPORT_DIR 未配置时静默跳过
-    if (e?.statusCode !== 500 || !e?.data?.message?.includes('AUTO_EXPORT_DIR')) {
-      console.error('[auto-export] 自动导出失败:', e);
-    }
+    throw error;
+  } finally {
+    syncPollSequence += 1;
+    clearSyncRuntimeState();
   }
 }
 
@@ -249,15 +322,26 @@ async function loadSelectedAccountArticle() {
 
   try {
     const rows = getSelectedRows();
+    let totalGenerated = 0;
+    let totalSkipped = 0;
+    let totalFailed = 0;
     for (const account of rows) {
-      await loadAccountArticle(account);
-      // 同步完成后自动导出文件（后台执行）
-      autoGenerateDocx(account);
+      const status = await loadAccountArticle(account);
+      totalGenerated += status.generated;
+      totalSkipped += status.skipped;
+      totalFailed += status.failed;
     }
     const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
-    toast.success('同步完成', `已成功同步 ${rows.length} 个公众号${rangeHint}`);
+    toast.success(
+      '同步完成',
+      `已成功同步 ${rows.length} 个公众号${rangeHint}，文档生成 ${totalGenerated} 篇，跳过 ${totalSkipped} 篇，失败 ${totalFailed} 篇`
+    );
   } catch (e: any) {
-    toast.error('同步失败', e.message);
+    if (e.message === '已取消同步') {
+      toast.warning('同步已取消', '当前同步任务已停止');
+    } else {
+      toast.error('同步失败', e.message);
+    }
   }
 }
 
@@ -360,8 +444,13 @@ const columnDefs = ref<ColDef[]>([
     valueGetter: params => (params.data.total_count === 0 ? 0 : params.data.count / params.data.total_count),
     cellDataType: 'number',
     cellRenderer: GridLoadProgress,
+    autoHeight: true,
+    cellRendererParams: {
+      syncingRowId,
+      syncStatus,
+    },
     filter: 'agNumberColumnFilter',
-    minWidth: 200,
+    minWidth: 260,
   },
   {
     colId: 'completed',
@@ -387,25 +476,21 @@ const columnDefs = ref<ColDef[]>([
 
         isCanceled.value = false;
         loadAccountArticle(params.data)
-          .then(() => {
+          .then((status) => {
             const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
-            toast.success('同步完成', `公众号【${params.data.nickname}】的文章已同步完毕${rangeHint}`);
-            // 同步完成后自动生成 DOCX（后台执行）
-            autoGenerateDocx(params.data);
+            const exportSummary = `生成 ${status.generated} 篇，跳过 ${status.skipped} 篇，失败 ${status.failed} 篇`;
+            toast.success('同步完成', `公众号【${params.data.nickname}】已同步完毕${rangeHint}，${exportSummary}`);
           })
           .catch(e => {
-            toast.error('同步失败', e.message);
+            if (e.message === '已取消同步') {
+              toast.warning('同步已取消', `公众号【${params.data.nickname}】的同步任务已停止`);
+            } else {
+              toast.error('同步失败', e.message);
+            }
           });
       },
-      onStop: (params: ICellRendererParams) => {
-        isCanceled.value = true;
-        if (syncTimer.value) {
-          window.clearTimeout(syncTimer.value);
-          syncTimer.value = null;
-        }
-
-        syncingRowId.value = null;
-        isSyncing.value = false;
+      onStop: () => {
+        void cancelCurrentSync();
       },
       isDeleting: isDeleting,
       isSyncing: isSyncing,
@@ -421,6 +506,7 @@ const columnDefs = ref<ColDef[]>([
 const gridOptions: GridOptions = defu(
   {
     getRowId: (params: GetRowIdParams) => String(params.data.fakeid),
+    getRowHeight: (params: RowHeightParams) => (params.data?.fakeid === syncingRowId.value ? SYNC_PROGRESS_ROW_HEIGHT : undefined),
   },
   sharedGridOptions
 );
@@ -430,8 +516,13 @@ function onGridReady(params: GridReadyEvent) {
   gridApi.value = params.api;
 
   restoreColumnState();
-  refresh();
+  void refresh().then(() => restoreActiveManualSyncJob());
 }
+
+watch([syncingRowId, syncStatus], async () => {
+  await nextTick();
+  gridApi.value?.resetRowHeights();
+}, { deep: true });
 
 function onColumnStateChange() {
   if (gridApi.value) {
@@ -608,6 +699,21 @@ function exportAccount() {
           <span class="self-end text-sm text-blue-500 font-medium">同步范围: {{ getActualDateRange() }}</span>
         </div>
       </header>
+
+      <div v-if="syncStatusText" class="px-3 py-2 border-b border-gray-200 bg-slate-50">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+          <span :class="syncStatusClass">{{ syncStatusText }}</span>
+          <a
+            v-if="syncStatusUrl"
+            :href="syncStatusUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-mono text-xs text-sky-600 hover:text-sky-700 underline break-all"
+          >
+            {{ syncStatusUrl }}
+          </a>
+        </div>
+      </div>
 
       <!-- 数据表格 -->
       <ag-grid-vue

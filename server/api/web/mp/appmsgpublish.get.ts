@@ -4,6 +4,7 @@
 
 import { getTokenFromStore } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { compactJson } from '~/server/utils/async-log';
 
 interface AppMsgPublishQuery {
   begin?: number;
@@ -42,19 +43,16 @@ export default defineEventHandler(async event => {
     ajax: 1,
   };
 
-  return proxyMpRequest({
+  const data = await proxyMpRequest({
     event: event,
     method: 'GET',
     endpoint: 'https://mp.weixin.qq.com/cgi-bin/appmsgpublish',
     query: params,
     parseJson: true,
-  }).catch(e => {
-    console.error('[appmsgpublish] 获取文章列表失败:', e);
-    return {
-      base_resp: {
-        ret: -1,
-        err_msg: `获取文章列表接口失败: ${e instanceof Error ? e.message : String(e)}`,
-      },
-    };
   });
+
+  // 打印微信原始响应数据（压缩转义）
+  console.log(`[manual-sync] 微信API原始响应 (fakeid=${id}, begin=${begin}):\n${compactJson(data)}`);
+
+  return data;
 });

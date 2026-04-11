@@ -6,6 +6,32 @@ import { RequestOptions } from '~/server/types';
 import { cookieStore, getCookieFromStore } from '~/server/utils/CookieStore';
 import { logRequest, logResponse } from '~/server/utils/logger';
 
+const AUTH_KEY_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 4;
+
+function createAuthKeyCookie(authKey: string): string {
+  return [
+    `auth-key=${authKey}`,
+    'Path=/',
+    `Expires=${dayjs().add(AUTH_KEY_COOKIE_MAX_AGE_SECONDS, 'second').toDate().toUTCString()}`,
+    `Max-Age=${AUTH_KEY_COOKIE_MAX_AGE_SECONDS}`,
+    'Secure',
+    'HttpOnly',
+    'SameSite=Lax',
+  ].join('; ');
+}
+
+function createExpiredCookie(name: string): string {
+  return [
+    `${name}=EXPIRED`,
+    'Path=/',
+    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+    'Max-Age=0',
+    'Secure',
+    'HttpOnly',
+    'SameSite=Lax',
+  ].join('; ');
+}
+
 /**
  * 代理微信公众号请求
  * @description 备注：只有登录请求(`action=login`)中的 `set-cookie` 才会被写入到 CookieStore 中
@@ -93,10 +119,10 @@ export async function proxyMpRequest(options: RequestOptions) {
       console.log('cookie 写入成功');
 
       setCookies = [
-        `auth-key=${authKey}; Path=/; Expires=${dayjs().add(4, 'days').toString()}; Secure; HttpOnly`,
+        createAuthKeyCookie(authKey),
 
         // 登录成功后，删除浏览器的 uuid cookie
-        `uuid=EXPIRED; Path=/; Expires=${dayjs().subtract(1, 'days').toString()}; Secure; HttpOnly`,
+        createExpiredCookie('uuid'),
       ];
     } catch (error) {
       console.error('action(login) failed:', error);
@@ -120,6 +146,11 @@ export async function proxyMpRequest(options: RequestOptions) {
   // 用微信响应中的 set-cookie 更新已存储的 cookie，实现自动续期
   else {
     updateCookies(options.event, mpResponse.headers.getSetCookie());
+
+    const authKey = getAuthKeyFromRequest(options.event);
+    if (authKey) {
+      setCookies.unshift(createAuthKeyCookie(authKey));
+    }
   }
 
   // 构造返回给客户端的响应

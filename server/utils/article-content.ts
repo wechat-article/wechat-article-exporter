@@ -1,0 +1,171 @@
+import TurndownService from 'turndown';
+import { urlIsValidMpArticle } from '#shared/utils';
+import { isPolicyViolationMessage, normalizeHtml, parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
+import { USER_AGENT } from '~/config';
+import { getPool } from '~/server/db/postgres';
+import { compactEscapedJson } from '~/server/utils/async-log';
+
+export type ArticleContentFormat = 'html' | 'markdown' | 'text' | 'json';
+
+export const SUPPORTED_ARTICLE_CONTENT_FORMATS: ArticleContentFormat[] = ['html', 'markdown', 'text', 'json'];
+
+const MAX_FETCH_RETRIES = 3;
+const FETCH_RETRY_DELAY_MS = 5000;
+
+export function isSupportedArticleContentFormat(format: string): format is ArticleContentFormat {
+  return SUPPORTED_ARTICLE_CONTENT_FORMATS.includes(format as ArticleContentFormat);
+}
+
+export function validateArticleUrl(url: string): boolean {
+  return urlIsValidMpArticle(url);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function validateFetchedHtml(html: string): {
+  status: 'Success' | 'Deleted' | 'Exception' | 'Error';
+  reason: string;
+  retryable: boolean;
+} {
+  const [status, message] = validateHTMLContent(html);
+  if (status === 'Deleted') {
+    return { status, reason: message || '该内容已被发布者删除', retryable: false };
+  }
+  if (status === 'Exception') {
+    if (isPolicyViolationMessage(message)) {
+      return { status, reason: message || '此内容因违规无法查看', retryable: false };
+    }
+    return { status, reason: message || '内容异常', retryable: true };
+  }
+  if (status === 'Error') {
+    return { status, reason: '页面结构异常', retryable: true };
+  }
+  return { status, reason: '', retryable: false };
+}
+
+function logFullHtml(url: string, reason: string, html: string, context = '抓取到异常内容') {
+  console.error(`[article-content] ${context}: ${reason} | ${url}`);
+  console.error(`[article-content] 异常HTML完整内容: ${compactEscapedJson({ url, reason, html })}`);
+}
+
+async function getCachedArticleHtml(url: string): Promise<string | null> {
+  const pool = getPool();
+  const res = await pool.query(`SELECT file FROM html WHERE url = $1 LIMIT 1`, [url]);
+  if (res.rows.length === 0 || !res.rows[0].file) {
+    return null;
+  }
+
+  return Buffer.from(res.rows[0].file).toString('utf-8');
+}
+
+async function fetchRemoteArticleHtml(url: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      Referer: 'https://mp.weixin.qq.com/',
+      Origin: 'https://mp.weixin.qq.com',
+      'User-Agent': USER_AGENT,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return await response.text();
+}
+
+async function fetchValidatedRemoteArticleHtml(url: string): Promise<string> {
+  let lastErrorMessage = '获取文章内容失败，请重试';
+
+  for (let attempt = 0; attempt <= MAX_FETCH_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.warn(`[article-content] 正在重试抓取文章，第 ${attempt}/${MAX_FETCH_RETRIES} 次 | ${url}`);
+      await delay(FETCH_RETRY_DELAY_MS);
+    }
+
+    try {
+      const remoteHtml = await fetchRemoteArticleHtml(url);
+      const remoteStatus = validateFetchedHtml(remoteHtml);
+      if (remoteStatus.status === 'Success') {
+        return remoteHtml;
+      }
+      if (!remoteStatus.retryable) {
+        throw new Error(remoteStatus.reason);
+      }
+
+      lastErrorMessage = remoteStatus.reason;
+      logFullHtml(url, remoteStatus.reason, remoteHtml, `抓取返回异常内容（第 ${attempt + 1} 次）`);
+    } catch (error: any) {
+      lastErrorMessage = error?.message || '获取文章内容失败，请重试';
+      if (attempt === MAX_FETCH_RETRIES) {
+        break;
+      }
+    }
+  }
+
+  throw new Error(lastErrorMessage);
+}
+
+async function getRawArticleHtml(url: string): Promise<{ html: string; source: 'db' | 'remote' }> {
+  const cachedHtml = await getCachedArticleHtml(url);
+  if (cachedHtml) {
+    const cachedStatus = validateFetchedHtml(cachedHtml);
+    if (cachedStatus.status === 'Success') {
+      return { html: cachedHtml, source: 'db' };
+    }
+    if (!cachedStatus.retryable) {
+      throw new Error(cachedStatus.reason);
+    }
+
+    logFullHtml(url, cachedStatus.reason, cachedHtml, '缓存 HTML 内容异常，准备重新抓取');
+  }
+
+  const remoteHtml = await fetchValidatedRemoteArticleHtml(url);
+  return { html: remoteHtml, source: 'remote' };
+}
+
+async function parseArticleJson(rawHtml: string, source: 'db' | 'remote', url: string) {
+  const cachedData = await parseCgiDataNew(rawHtml);
+  if (cachedData || source === 'remote') {
+    return cachedData;
+  }
+
+  const remoteHtml = await fetchValidatedRemoteArticleHtml(url);
+  return await parseCgiDataNew(remoteHtml);
+}
+
+export async function resolveArticleContent(url: string, format: ArticleContentFormat): Promise<{
+  content: string | Record<string, any> | null;
+  contentType: string;
+}> {
+  const { html, source } = await getRawArticleHtml(url);
+
+  switch (format) {
+    case 'html':
+      return {
+        content: normalizeHtml(html, 'html'),
+        contentType: 'text/html; charset=UTF-8',
+      };
+    case 'text':
+      return {
+        content: normalizeHtml(html, 'text'),
+        contentType: 'text/plain; charset=UTF-8',
+      };
+    case 'markdown':
+      return {
+        content: new TurndownService().turndown(normalizeHtml(html, 'html')),
+        contentType: 'text/markdown; charset=UTF-8',
+      };
+    case 'json': {
+      const data = await parseArticleJson(html, source, url);
+      return {
+        content: data,
+        contentType: 'application/json; charset=UTF-8',
+      };
+    }
+    default:
+      throw new Error(`Unknown format ${format}`);
+  }
+}

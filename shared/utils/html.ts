@@ -2,6 +2,10 @@ import * as cheerio from 'cheerio';
 import { EXTERNAL_API_SERVICE } from '~/config';
 import { extractCommentId } from '~/utils/comment';
 
+const POLICY_VIOLATION_MESSAGES = [
+  '此内容因违规无法查看',
+];
+
 /**
  * 处理文章的 html 内容
  * @description 采用 cheerio 库解析并修改 html 内容
@@ -122,6 +126,14 @@ export function validateHTMLContent(html: string): ['Success' | 'Deleted' | 'Exc
   } else {
     return ['Error', null];
   }
+}
+
+export function isPolicyViolationMessage(message: string | null | undefined): boolean {
+  if (!message) {
+    return false;
+  }
+
+  return POLICY_VIOLATION_MESSAGES.some(item => message.includes(item));
 }
 
 /**
