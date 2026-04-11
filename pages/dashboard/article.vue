@@ -566,7 +566,7 @@ function copyWechatLink() {
               { label: 'Txt', event: 'export-article-text' },
               { label: 'Markdown', event: 'export-article-markdown' },
               { label: 'Word (内测中)', event: 'export-article-word' },
-              // { label: 'PDF (计划中)', event: 'export-article-pdf', disabled: true },
+              { label: 'PDF (内测中)', event: 'export-article-pdf' },
             ]"
             @export-article-excel="exportFile('excel', selectedArticleUrls)"
             @export-article-json="exportFile('json', selectedArticleUrls)"
@@ -574,6 +574,7 @@ function copyWechatLink() {
             @export-article-text="exportFile('text', selectedArticleUrls, contentNotDownloadedCount)"
             @export-article-markdown="exportFile('markdown', selectedArticleUrls, contentNotDownloadedCount)"
             @export-article-word="exportFile('word', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-pdf="exportFile('pdf', selectedArticleUrls, contentNotDownloadedCount)"
           >
             <UButton
               :loading="exportBtnLoading"
