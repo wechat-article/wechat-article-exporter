@@ -476,7 +476,13 @@ export class Exporter extends BaseDownloader {
           }
         }
 
-        const finalHtml = await this.normalizeHtml(cached, html, urlmap);
+        let finalHtml = await this.normalizeHtml(cached, html, urlmap);
+
+        const pdfStyleTag = `<style>
+  html, body { background: white !important; background-color: white !important; }
+  p { margin-block: 0.3em !important; }
+</style>`;
+        finalHtml = finalHtml.replace('</head>', `${pdfStyleTag}\n</head>`);
 
         const response = await fetch('/api/web/pdf/generate', {
           method: 'POST',
