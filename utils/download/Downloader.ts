@@ -107,11 +107,6 @@ export class Downloader extends BaseDownloader {
     }
   }
 
-  private logFullHtml(url: string, html: string, context: string) {
-    console.error(`${context} | ${url}`);
-    console.error(html);
-  }
-
   private async saveDebugHtml(
     article: { fakeid: string; title?: string },
     url: string,
@@ -231,13 +226,11 @@ export class Downloader extends BaseDownloader {
           }
           lastExceptionReason = commentID || '内容异常';
           console.warn(`文章(url: ${url} )内容异常，准备重试: ${lastExceptionReason}`);
-          this.logFullHtml(url, html, '文章抓取返回异常HTML完整内容');
           await this.saveDebugHtml(article, url, blob, `exception:${lastExceptionReason}`);
           throwException(`文章(url: ${url} )内容异常: ${lastExceptionReason}`);
         } else if (status === 'Error') {
           // 下载失败
           console.warn(`文章(url: ${url} )解析失败，准备重试`);
-          this.logFullHtml(url, html, '文章抓取返回无法识别的HTML完整内容');
           await this.saveDebugHtml(article, url, blob, 'parse error');
           throwException(`文章(url: ${url} )解析失败`);
         }
@@ -323,13 +316,11 @@ export class Downloader extends BaseDownloader {
           }
           lastExceptionReason = commentID || '内容异常';
           console.warn(`获取阅读量时发现文章(url: ${url} )内容异常，准备重试: ${lastExceptionReason}`);
-          this.logFullHtml(url, html, '抓取阅读量时返回异常HTML完整内容');
           await this.saveDebugHtml(article, url, blob, `exception:${lastExceptionReason}`);
           throwException(`文章(url: ${url} )内容异常: ${lastExceptionReason}`);
         } else if (status === 'Error') {
           // 下载文章失败，需要重试
           console.warn(`获取阅读量时发现文章(url: ${url} )解析失败，准备重试`);
-          this.logFullHtml(url, html, '抓取阅读量时返回无法识别的HTML完整内容');
           await this.saveDebugHtml(article, url, blob, 'parse error');
           throwException(`文章(url: ${url} )解析失败`);
         }

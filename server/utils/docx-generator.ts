@@ -6,7 +6,6 @@ import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import TurndownService from 'turndown';
 import { getPool } from '~/server/db/postgres';
-import { compactEscapedJson } from '~/server/utils/async-log';
 import { isPolicyViolationMessage, validateHTMLContent } from '~/shared/utils/html';
 
 // ==================== 支持的导出格式 ====================
@@ -548,21 +547,6 @@ function validateFetchedHtml(html: string): {
   return { status, reason: '', retryable: false, skip: false };
 }
 
-function logFullHtmlOnFetchFailure(
-  tag: string,
-  accountName: string,
-  title: string,
-  url: string,
-  reason: string,
-  html: string,
-  context = '抓取到异常内容'
-) {
-  console.error(`${tag} 公众号：【${accountName}】${context}: ${title} — ${reason} | ${url}`);
-  console.error(
-    `${tag} 公众号：【${accountName}】异常HTML完整内容: ${compactEscapedJson({ title, url, reason, html })}`
-  );
-}
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -776,15 +760,6 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
         }
         if (cachedHtmlStatus.retryable) {
           lastFailureReason = cachedHtmlStatus.reason;
-          logFullHtmlOnFetchFailure(
-            tag,
-            accountName,
-            title,
-            url,
-            cachedHtmlStatus.reason,
-            rawHtml,
-            '缓存 HTML 内容异常，准备重新抓取'
-          );
           rawHtml = null;
         }
       }
@@ -826,7 +801,6 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
             }
             if (fetchedHtmlStatus.retryable) {
               lastFailureReason = fetchedHtmlStatus.reason;
-              logFullHtmlOnFetchFailure(tag, accountName, title, url, fetchedHtmlStatus.reason, fetchedHtml);
               continue;
             }
 
@@ -889,15 +863,6 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
             }
             if (retryHtmlStatus.retryable) {
               lastFailureReason = retryHtmlStatus.reason;
-              logFullHtmlOnFetchFailure(
-                tag,
-                accountName,
-                title,
-                url,
-                retryHtmlStatus.reason,
-                retryHtml,
-                `重试抓取返回异常内容（第 ${attempt} 次）`
-              );
               continue;
             }
 
@@ -922,11 +887,6 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
         result.errors.push(`${reason}: ${title} | ${url}`);
         failedUrls.push({ title, url, reason });
         console.error(`${tag} 公众号：【${accountName}】解析 cgiData 最终失败: ${title} | ${url}`);
-        if (rawHtml) {
-          console.error(
-            `${tag} 公众号：【${accountName}】最终失败时的HTML完整内容: ${compactEscapedJson({ title, url, reason, html: rawHtml })}`
-          );
-        }
         continue;
       }
 

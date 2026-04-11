@@ -3,7 +3,6 @@ import { urlIsValidMpArticle } from '#shared/utils';
 import { isPolicyViolationMessage, normalizeHtml, parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
 import { USER_AGENT } from '~/config';
 import { getPool } from '~/server/db/postgres';
-import { compactEscapedJson } from '~/server/utils/async-log';
 
 export type ArticleContentFormat = 'html' | 'markdown' | 'text' | 'json';
 
@@ -43,11 +42,6 @@ function validateFetchedHtml(html: string): {
     return { status, reason: '页面结构异常', retryable: true };
   }
   return { status, reason: '', retryable: false };
-}
-
-function logFullHtml(url: string, reason: string, html: string, context = '抓取到异常内容') {
-  console.error(`[article-content] ${context}: ${reason} | ${url}`);
-  console.error(`[article-content] 异常HTML完整内容: ${compactEscapedJson({ url, reason, html })}`);
 }
 
 async function getCachedArticleHtml(url: string): Promise<string | null> {
@@ -96,7 +90,6 @@ async function fetchValidatedRemoteArticleHtml(url: string): Promise<string> {
       }
 
       lastErrorMessage = remoteStatus.reason;
-      logFullHtml(url, remoteStatus.reason, remoteHtml, `抓取返回异常内容（第 ${attempt + 1} 次）`);
     } catch (error: any) {
       lastErrorMessage = error?.message || '获取文章内容失败，请重试';
       if (attempt === MAX_FETCH_RETRIES) {
@@ -118,8 +111,6 @@ async function getRawArticleHtml(url: string): Promise<{ html: string; source: '
     if (!cachedStatus.retryable) {
       throw new Error(cachedStatus.reason);
     }
-
-    logFullHtml(url, cachedStatus.reason, cachedHtml, '缓存 HTML 内容异常，准备重新抓取');
   }
 
   const remoteHtml = await fetchValidatedRemoteArticleHtml(url);

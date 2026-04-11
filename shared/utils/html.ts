@@ -4,6 +4,8 @@ import { extractCommentId } from '~/utils/comment';
 
 const POLICY_VIOLATION_MESSAGES = [
   '此内容因违规无法查看',
+  '此内容发送失败无法查看',
+  '该内容暂时无法查看'
 ];
 
 /**
