@@ -625,12 +625,16 @@ async function removeRows() {
               { label: 'HTML', event: 'export-article-html' },
               { label: 'Txt', event: 'export-article-text' },
               { label: 'Markdown', event: 'export-article-markdown' },
+              { label: 'Word (内测中)', event: 'export-article-word' },
+              { label: 'PDF (内测中)', event: 'export-article-pdf' },
             ]"
             @export-article-excel="exportFile('excel', selectedArticleUrls)"
             @export-article-json="exportFile('json', selectedArticleUrls)"
             @export-article-html="exportFile('html', selectedArticleUrls, contentNotDownloadedCount)"
             @export-article-text="exportFile('text', selectedArticleUrls, contentNotDownloadedCount)"
             @export-article-markdown="exportFile('markdown', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-word="exportFile('word', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-pdf="exportFile('pdf', selectedArticleUrls, contentNotDownloadedCount)"
           >
             <UButton
               :loading="exportBtnLoading"

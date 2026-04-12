@@ -80,6 +80,14 @@ export class Exporter extends BaseDownloader {
       } else if (this.exportType === 'markdown') {
         await this.exportMarkdownFiles();
       } else if (this.exportType === 'pdf') {
+        // 1. 提取出所有html中需要下载的资源链接（复用HTML导出管线）
+        await this.extractResources();
+        this.emit('export:download', this.resources.size);
+
+        // 2. 采用队列下载 resources 资源
+        await this.processExportQueue();
+
+        // 3. 将资源以 data URL 嵌入，生成 PDF 文件
         await this.exportPdfFiles();
       }
     } finally {
@@ -475,8 +483,74 @@ export class Exporter extends BaseDownloader {
     await sleep(100);
   }
 
-  // 导出 pdf 文件
-  private async exportPdfFiles() {}
+  /**
+   * 导出 PDF：调用服务端 Puppeteer API 静默生成
+   * 复用 normalizeHtml 保留原始微信排版，资源以 data URL 内嵌，
+   * 逐篇文章 POST HTML 到服务端，接收 PDF Blob 后写入文件系统。
+   */
+  private async exportPdfFiles() {
+    const total = this.urls.length;
+    this.emit('export:write', total);
+
+    await this.processFileExportQueue(
+      this.urls,
+      async (url) => {
+        const cached = await getHtmlCache(url);
+        if (!cached) {
+          console.warn(`文章(url: ${url} )的 html 还未下载，不能导出`);
+          return;
+        }
+
+        const filename = await this.exportDirName(url);
+        console.log(`开始导出 PDF: ${cached.title}，文件名: ${filename}`);
+
+        const html = await cached.file.text();
+        const resourceMap = await getResourceMapCache(url);
+
+        const urlmap = new Map<string, string>();
+        if (resourceMap) {
+          for (const resourceUrl of resourceMap.resources) {
+            const resource = await getResourceCache(resourceUrl);
+            if (resource) {
+              urlmap.set(resourceUrl, await this.blobToDataUrl(resource.file));
+            }
+          }
+        }
+
+        let finalHtml = await this.normalizeHtml(cached, html, urlmap);
+
+        const pdfStyleTag = `<style>
+  html, body { background: white !important; background-color: white !important; }
+  p { margin-block: 0.3em !important; }
+</style>`;
+        finalHtml = finalHtml.replace('</head>', `${pdfStyleTag}\n</head>`);
+
+        const response = await fetch('/api/web/pdf/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          body: finalHtml,
+        });
+
+        if (!response.ok) {
+          throw new Error(`PDF 生成失败: ${response.status} ${response.statusText}`);
+        }
+
+        const pdfBlob = await response.blob();
+        await this.writeFile(filename + '.pdf', pdfBlob);
+      },
+      { concurrency: 2, progressEvent: 'export:write:progress' },
+    );
+    await sleep(100);
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
 
   /**
    * 获取渲染后的完整 HTML 文档
@@ -534,7 +608,7 @@ export class Exporter extends BaseDownloader {
       (_, p1, url, p3) => {
         if (urlmap.has(url)) {
           const path = urlmap.get(url)!;
-          return `${p1}./${path}${p3}`;
+          return `${p1}${path}${p3}`;
         } else {
           console.warn('背景图片丢失: ', url);
           return `${p1}${url}${p3}`;
