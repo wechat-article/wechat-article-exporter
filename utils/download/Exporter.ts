@@ -400,20 +400,61 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const turndownService = new TurndownService();
+    const turndownService = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+    });
+
+    turndownService.addRule('removeBottomBar', {
+      filter: (node) => {
+        const cls = node.getAttribute?.('class') || '';
+        return cls.includes('__bottom-bar__') || cls.includes('sns_opr_btn');
+      },
+      replacement: () => '',
+    });
+
+    turndownService.addRule('removeUselessImages', {
+      filter: (node) => {
+        if (node.nodeName !== 'IMG') return false;
+        const src = node.getAttribute?.('src') || '';
+        return src.startsWith('data:image/svg') || src.startsWith('data:image/png') || src.includes('wx.qlogo.cn');
+      },
+      replacement: () => '',
+    });
+
+    turndownService.addRule('cleanSpans', {
+      filter: (node) => node.nodeName === 'SPAN' && !node.textContent?.trim(),
+      replacement: () => '',
+    });
 
     await this.processFileExportQueue(this.urls, async url => {
       const filename = await this.exportDirName(url);
       console.log(`开始导出: ${filename}(${url})`);
 
-      const content = await this.getRenderedHTML(url);
+      const content = await this.getRenderedHTML(url, true);
       if (!content) return;
-      const markdown = turndownService.turndown(content);
+
+      const cleanedHtml = this.cleanHtmlForMarkdown(content);
+      const markdown = turndownService.turndown(cleanedHtml);
 
       const blob = new Blob([markdown], { type: 'text/markdown' });
       await this.writeFile(filename + '.md', blob);
     });
     await sleep(100);
+  }
+
+  private cleanHtmlForMarkdown(html: string): string {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    doc.querySelectorAll('style, script, link[rel="stylesheet"]').forEach(el => el.remove());
+    doc.querySelector('.__bottom-bar__')?.remove();
+
+    doc.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
+    doc.querySelectorAll('[class]').forEach(el => el.removeAttribute('class'));
+
+    return doc.body.innerHTML;
   }
 
   // 导出 word 文件（并发处理）
