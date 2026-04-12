@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const page = await browser.newPage();
 
   try {
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.setContent(html, { waitUntil: 'load', timeout: 60_000 });
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
