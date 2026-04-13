@@ -1,4 +1,5 @@
-import { getTokenFromStore } from '~/server/utils/CookieStore';
+import { getPool } from '~/server/db/postgres';
+import { AccountCookie, getTokenFromStore } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
 
 interface SearchBizQuery {
@@ -8,13 +9,28 @@ interface SearchBizQuery {
 }
 
 export default defineEventHandler(async event => {
-  const token = await getTokenFromStore(event);
+  let token = await getTokenFromStore(event);
+  let cookie: string | null = null;
+
+  if (!token) {
+    const pool = getPool();
+    const now = Math.round(Date.now() / 1000);
+    const sessionRes = await pool.query(
+      `SELECT auth_key, token, cookies FROM session WHERE expires_at > $1 ORDER BY created_at DESC LIMIT 1`,
+      [now]
+    );
+    const session = sessionRes.rows[0];
+    if (session?.token && session?.cookies) {
+      token = session.token;
+      cookie = AccountCookie.create(session.token, session.cookies).toString();
+    }
+  }
 
   if (!token) {
     return {
       base_resp: {
         ret: -1,
-        err_msg: '认证信息无效',
+        err_msg: '未登录或登录已过期',
       },
     };
   }
@@ -49,6 +65,7 @@ export default defineEventHandler(async event => {
     method: 'GET',
     endpoint: 'https://mp.weixin.qq.com/cgi-bin/searchbiz',
     query: params,
+    cookie: cookie || undefined,
     parseJson: true,
   }).catch(e => {
     return {

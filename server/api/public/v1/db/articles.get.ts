@@ -62,7 +62,6 @@ export default defineEventHandler(async (event) => {
       link: row.link,
       update_time: Number(row.update_time || 0),
       article_title: row.article_title || '',
-      article_titel: row.article_title || '',
     }));
 
     return success({

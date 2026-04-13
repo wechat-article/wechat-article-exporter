@@ -6,7 +6,8 @@ import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import TurndownService from 'turndown';
 import { getPool } from '~/server/db/postgres';
-import { isPolicyViolationMessage, validateHTMLContent } from '~/shared/utils/html';
+import { notifyArticleAccessTooFrequent, waitRandomArticleFetchDelay } from '~/server/utils/article-fetch';
+import { isArticleAccessTooFrequentMessage, isPolicyViolationMessage, validateHTMLContent } from '~/shared/utils/html';
 
 // ==================== 支持的导出格式 ====================
 
@@ -530,21 +531,31 @@ function validateFetchedHtml(html: string): {
   reason: string;
   retryable: boolean;
   skip: boolean;
+  notify: boolean;
 } {
   const [status, msg] = validateHTMLContent(html);
   if (status === 'Deleted') {
-    return { status, reason: msg || '该内容已被发布者删除', retryable: false, skip: true };
+    return { status, reason: msg || '该内容已被发布者删除', retryable: false, skip: true, notify: false };
   }
   if (status === 'Exception') {
     if (isPolicyViolationMessage(msg)) {
-      return { status, reason: msg || '此内容因违规无法查看', retryable: false, skip: true };
+      return { status, reason: msg || '此内容因违规无法查看', retryable: false, skip: true, notify: false };
     }
-    return { status, reason: msg || '内容异常', retryable: true, skip: false };
+    if (isArticleAccessTooFrequentMessage(msg)) {
+      return {
+        status,
+        reason: msg || '访问过于频繁，请用微信扫描二维码进行访问',
+        retryable: false,
+        skip: false,
+        notify: true,
+      };
+    }
+    return { status, reason: msg || '内容异常', retryable: true, skip: false, notify: false };
   }
   if (status === 'Error') {
-    return { status, reason: '页面结构异常', retryable: true, skip: false };
+    return { status, reason: '页面结构异常', retryable: true, skip: false, notify: false };
   }
-  return { status, reason: '', retryable: false, skip: false };
+  return { status, reason: '', retryable: false, skip: false, notify: false };
 }
 
 function delay(ms: number): Promise<void> {
@@ -758,6 +769,17 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
           console.log(`${tag} 公众号：【${accountName}】跳过不可导出文章: ${title} — ${cachedHtmlStatus.reason} | ${url}`);
           continue;
         }
+        if (cachedHtmlStatus.notify) {
+          lastFailureReason = cachedHtmlStatus.reason;
+          await notifyArticleAccessTooFrequent({
+            source: 'docx-generator-cache',
+            accountName,
+            title,
+            url,
+            reason: cachedHtmlStatus.reason,
+          });
+          rawHtml = null;
+        }
         if (cachedHtmlStatus.retryable) {
           lastFailureReason = cachedHtmlStatus.reason;
           rawHtml = null;
@@ -788,7 +810,7 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
             await delay(RETRY_DELAY);
           }
           try {
-            const fetchedHtml = await fetchArticleHtml(url);
+            const fetchedHtml = await fetchArticleHtml(url, `公众号：【${accountName}】《${title}》`);
             if (!fetchedHtml) {
               continue;
             }
@@ -797,6 +819,17 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
             if (fetchedHtmlStatus.skip) {
               skipReason = fetchedHtmlStatus.reason;
               rawHtml = fetchedHtml;
+              break;
+            }
+            if (fetchedHtmlStatus.notify) {
+              lastFailureReason = fetchedHtmlStatus.reason;
+              await notifyArticleAccessTooFrequent({
+                source: 'docx-generator',
+                accountName,
+                title,
+                url,
+                reason: fetchedHtmlStatus.reason,
+              });
               break;
             }
             if (fetchedHtmlStatus.retryable) {
@@ -849,7 +882,7 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
           });
           await delay(RETRY_DELAY);
           try {
-            const retryHtml = await fetchArticleHtml(url);
+            const retryHtml = await fetchArticleHtml(url, `公众号：【${accountName}】《${title}》重试`);
             if (!retryHtml) {
               continue;
             }
@@ -859,6 +892,17 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
               result.skipped++;
               skippedDuringParseRetry = true;
               console.log(`${tag} 公众号：【${accountName}】重试后发现不可导出文章: ${title} — ${retryHtmlStatus.reason} | ${url}`);
+              break;
+            }
+            if (retryHtmlStatus.notify) {
+              lastFailureReason = retryHtmlStatus.reason;
+              await notifyArticleAccessTooFrequent({
+                source: 'docx-generator-parse-retry',
+                accountName,
+                title,
+                url,
+                reason: retryHtmlStatus.reason,
+              });
               break;
             }
             if (retryHtmlStatus.retryable) {
@@ -1140,8 +1184,9 @@ async function convertToFormat(
   }
 }
 
-async function fetchArticleHtml(url: string): Promise<string | null> {
+async function fetchArticleHtml(url: string, context?: string): Promise<string | null> {
   try {
+    await waitRandomArticleFetchDelay(`[docx-generator] ${context || '发起文章抓取'} | ${url}`);
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

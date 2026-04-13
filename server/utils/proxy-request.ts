@@ -3,7 +3,7 @@ import { H3Event, parseCookies } from 'h3';
 import { v4 as uuidv4 } from 'uuid';
 import { isDev, USER_AGENT } from '~/config';
 import { RequestOptions } from '~/server/types';
-import { cookieStore, getCookieFromStore } from '~/server/utils/CookieStore';
+import { AccountCookie, cookieStore, getCookieFromStore } from '~/server/utils/CookieStore';
 import { logRequest, logResponse } from '~/server/utils/logger';
 
 const AUTH_KEY_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 4;
@@ -30,6 +30,24 @@ function createExpiredCookie(name: string): string {
     'HttpOnly',
     'SameSite=Lax',
   ].join('; ');
+}
+
+function maskAuthKey(authKey: string): string {
+  if (!authKey) {
+    return 'unknown';
+  }
+  if (authKey.length <= 12) {
+    return authKey;
+  }
+  return `${authKey.slice(0, 6)}...${authKey.slice(-4)}`;
+}
+
+function describeSetCookieNames(cookies: string[]): string {
+  const names = AccountCookie.parse(cookies)
+    .map(cookie => String(cookie.name || ''))
+    .filter(Boolean);
+
+  return names.length ? names.join(',') : 'unknown';
 }
 
 /**
@@ -186,9 +204,19 @@ export function getAuthKeyFromRequest(event: H3Event): string {
 function updateCookies(event: H3Event, cookies: string[]): void {
   if (!cookies.length) return;
   const authKey = getAuthKeyFromRequest(event);
-  if (authKey) {
-    cookieStore.updateCookie(authKey, cookies).catch(e =>
-      console.warn('[proxy] cookie 更新失败:', e)
+  const cookieNames = describeSetCookieNames(cookies);
+
+  if (!authKey) {
+    console.warn(
+      `[proxy] 微信响应携带 set-cookie，但当前请求未带 auth-key，跳过自动续期 | count=${cookies.length} | cookies=${cookieNames}`,
     );
+    return;
   }
+
+  console.log(
+    `[proxy] 检测到微信响应 set-cookie，开始自动续期 | authKey=${maskAuthKey(authKey)} | count=${cookies.length} | cookies=${cookieNames}`,
+  );
+  cookieStore.updateCookie(authKey, cookies).catch(e =>
+    console.warn(`[proxy] cookie 更新失败 | authKey=${maskAuthKey(authKey)} | cookies=${cookieNames}:`, e)
+  );
 }

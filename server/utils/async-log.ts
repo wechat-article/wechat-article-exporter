@@ -7,6 +7,10 @@ const retentionDays = parseInt(process.env.LOG_RETENTION_DAYS ?? '7', 10);
 const MAX_RETENTION_DAYS = Number.isSafeInteger(retentionDays) && retentionDays >= 0 ? retentionDays : 14;
 const FLUSH_INTERVAL_MS = 500;
 
+export function getAsyncLogDir(): string {
+  return LOG_DIR;
+}
+
 // ==================== 工具函数（导出给 logger.ts 等模块使用） ====================
 
 /** 格式化时间戳: 2026-04-10 17:22:05 */
@@ -173,6 +177,7 @@ export function initAsyncFileLog() {
   cleanOldLogs();
 
   console.log(`[file-log] 异步文件日志已启用，目录: ${LOG_DIR}，保留天数: ${MAX_RETENTION_DAYS}，刷盘间隔: ${FLUSH_INTERVAL_MS}ms`);
+  flushBuffer();
 }
 
 // 自动初始化

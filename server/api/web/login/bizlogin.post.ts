@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { request } from '#shared/utils/request';
 import { getCookieFromResponse, getCookiesFromRequest } from '~/server/utils/CookieStore';
+import { cookieStore } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
 
 export default defineEventHandler(async event => {
@@ -50,10 +51,13 @@ export default defineEventHandler(async event => {
     };
   }
 
+  const accountCookie = await cookieStore.getAccountCookie(authKey);
+  const expiresAt = accountCookie?.expiresAt || dayjs().add(4, 'days').valueOf();
+
   const body = JSON.stringify({
     nickname: nick_name,
     avatar: head_img,
-    expires: dayjs().add(4, 'days').toString(),
+    expires: new Date(expiresAt).toString(),
   });
   const headers = new Headers(response.headers);
   headers.set('Content-Length', new TextEncoder().encode(body).length.toString());

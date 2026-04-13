@@ -5,6 +5,14 @@ interface EmailOptions {
   html: string;
 }
 
+interface ArticleAccessTooFrequentWarningOptions {
+  source: string;
+  url: string;
+  title?: string;
+  accountName?: string;
+  reason?: string;
+}
+
 function getSmtpConfig() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT) || 465;
@@ -17,6 +25,15 @@ function getSmtpConfig() {
   }
 
   return { host, port, user, pass, to };
+}
+
+function escapeHtml(text: string | null | undefined): string {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
@@ -84,6 +101,37 @@ export function sendSyncReport(report: { total: number; success: number; failed:
           <pre style="margin: 0; font-size: 13px; white-space: pre-wrap; color: #333;">${report.details}</pre>
         </div>
         <p style="color: #999; font-size: 12px;">执行时间：${now}</p>
+      </div>
+    `,
+  });
+}
+
+export function sendArticleAccessTooFrequentWarning(
+  options: ArticleAccessTooFrequentWarningOptions,
+): Promise<boolean> {
+  const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+  const titleBlock = options.title
+    ? `<p><strong>文章标题：</strong>${escapeHtml(options.title)}</p>`
+    : '';
+  const accountBlock = options.accountName
+    ? `<p><strong>公众号：</strong>${escapeHtml(options.accountName)}</p>`
+    : '';
+
+  return sendEmail({
+    subject: '⚠️ 微信文章抓取触发访问频率限制',
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; max-width: 680px;">
+        <h2 style="color: #e65100;">⚠️ 微信文章抓取触发访问频率限制</h2>
+        <p>服务端在抓取公众号文章时，命中了微信的访问频率限制，请尽快检查登录状态、IP 环境或降低抓取频率。</p>
+        <div style="background: #fff3e0; padding: 12px 16px; border-radius: 6px; margin: 16px 0; color: #333;">
+          <p><strong>来源：</strong>${escapeHtml(options.source)}</p>
+          ${accountBlock}
+          ${titleBlock}
+          <p><strong>文章链接：</strong><a href="${escapeHtml(options.url)}">${escapeHtml(options.url)}</a></p>
+          <p><strong>触发原因：</strong>${escapeHtml(options.reason || '访问过于频繁，请用微信扫描二维码进行访问')}</p>
+        </div>
+        <p style="color: #999; font-size: 12px;">检测时间：${now}</p>
+        <p style="color: #999; font-size: 12px;">此邮件由 wechat-article-exporter 自动发送。</p>
       </div>
     `,
   });

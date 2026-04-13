@@ -5,6 +5,8 @@ export interface MpAccount {
   articles: number;
   nickname?: string;
   round_head_img?: string;
+  service_type?: number;
+  is_semiconductor?: number;
   total_count: number;
   create_time?: number;
   update_time?: number;

@@ -47,6 +47,19 @@ export class AccountCookie {
     return this._token;
   }
 
+  public get expiresAt(): number | null {
+    const timestamps = this._cookie
+      .filter(AccountCookie.isActiveCookie)
+      .map(cookie => cookie.expires_timestamp)
+      .filter((timestamp): timestamp is number => typeof timestamp === 'number' && Number.isFinite(timestamp));
+
+    if (!timestamps.length) {
+      return null;
+    }
+
+    return Math.min(...timestamps);
+  }
+
   // 根据 cookie 中的 expires 来确定是否已过期
   // 只要任意一个有过期时间的 cookie 已过期，就认为整体已失效
   public get isExpired(): boolean {
@@ -55,10 +68,12 @@ export class AccountCookie {
       return true;
     }
 
-    const now = Date.now();
-    return activeCookies.every(
-      cookie => typeof cookie.expires_timestamp === 'number' && cookie.expires_timestamp < now
-    );
+    const expiresAt = this.expiresAt;
+    if (typeof expiresAt !== 'number') {
+      return false;
+    }
+
+    return expiresAt < Date.now();
   }
 
   /**
@@ -174,6 +189,16 @@ export class AccountCookie {
   }
 }
 
+function maskAuthKey(authKey: string): string {
+  if (!authKey) {
+    return 'unknown';
+  }
+  if (authKey.length <= 12) {
+    return authKey;
+  }
+  return `${authKey.slice(0, 6)}...${authKey.slice(-4)}`;
+}
+
 // 所有用户的 cookie 仓库
 class CookieStore {
   // key 为 authKey, value 为 AccountCookie 实例
@@ -241,18 +266,25 @@ class CookieStore {
    * @param authKey
    * @param newCookies 微信响应头中的 set-cookie 数组
    */
-  async updateCookie(authKey: string, newCookies: string[]): Promise<void> {
-    if (!newCookies.length) return;
+  async updateCookie(authKey: string, newCookies: string[]): Promise<boolean> {
+    if (!newCookies.length) return false;
     const accountCookie = await this.getAccountCookie(authKey);
-    if (!accountCookie) return;
+    if (!accountCookie) {
+      console.warn(`[cookie-store] 未找到对应登录态，跳过自动续期 | authKey=${maskAuthKey(authKey)}`);
+      return false;
+    }
     const changed = accountCookie.update(newCookies);
     if (changed) {
       // 内存已更新（getAccountCookie 返回的是引用），异步持久化
       setMpCookie(authKey, accountCookie.toJSON()).catch(e =>
         console.warn('[cookie-store] 异步持久化更新 cookie 失败:', e)
       );
-      console.log(`[cookie-store] cookie 已续期 — ${accountCookie.expiryInfo()}`);
+      console.log(`[cookie-store] cookie 已续期 | authKey=${maskAuthKey(authKey)} | ${accountCookie.expiryInfo()}`);
+      return true;
     }
+
+    console.log(`[cookie-store] 微信返回了 set-cookie，但未产生实际变更 | authKey=${maskAuthKey(authKey)}`);
+    return false;
   }
 
   /**

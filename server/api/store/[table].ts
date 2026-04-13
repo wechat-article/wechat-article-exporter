@@ -286,6 +286,11 @@ async function handleArticlePost(pool: any, action: string, body: any) {
  */
 async function upsertInfo(client: any, mpAccount: any) {
   const existing = await client.query(`SELECT * FROM info WHERE fakeid = $1`, [mpAccount.fakeid]);
+  const serviceType = Number.isFinite(Number(mpAccount.service_type)) ? Number(mpAccount.service_type) : null;
+  const hasIsSemiconductor = mpAccount.is_semiconductor !== undefined && mpAccount.is_semiconductor !== null;
+  const isSemiconductor = hasIsSemiconductor && Number.isFinite(Number(mpAccount.is_semiconductor))
+    ? Number(mpAccount.is_semiconductor)
+    : null;
   if (existing.rows.length > 0) {
     const row = existing.rows[0];
     const newCompleted = mpAccount.completed ? true : row.completed;
@@ -297,7 +302,9 @@ async function upsertInfo(client: any, mpAccount: any) {
          nickname = COALESCE($5, nickname),
          round_head_img = COALESCE($6, round_head_img),
          total_count = $7,
-         update_time = $8
+         update_time = $8,
+         service_type = COALESCE($9, service_type),
+         is_semiconductor = COALESCE($10, is_semiconductor, 0)
        WHERE fakeid = $1`,
       [
         mpAccount.fakeid,
@@ -308,13 +315,15 @@ async function upsertInfo(client: any, mpAccount: any) {
         mpAccount.round_head_img,
         mpAccount.total_count,
         Math.round(Date.now() / 1000),
+        serviceType,
+        isSemiconductor,
       ]
     );
   } else {
     const now = Math.round(Date.now() / 1000);
     await client.query(
-      `INSERT INTO info (fakeid, completed, count, articles, nickname, round_head_img, total_count, create_time, update_time)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `INSERT INTO info (fakeid, completed, count, articles, nickname, round_head_img, service_type, is_semiconductor, total_count, create_time, update_time)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), $9, $10, $11)`,
       [
         mpAccount.fakeid,
         mpAccount.completed,
@@ -322,6 +331,8 @@ async function upsertInfo(client: any, mpAccount: any) {
         mpAccount.articles,
         mpAccount.nickname,
         mpAccount.round_head_img,
+        serviceType,
+        isSemiconductor,
         mpAccount.total_count,
         now,
         now,
@@ -361,6 +372,8 @@ function toInfoObject(row: any) {
     articles: row.articles,
     nickname: row.nickname,
     round_head_img: row.round_head_img,
+    service_type: row.service_type ?? undefined,
+    is_semiconductor: Number(row.is_semiconductor || 0),
     total_count: row.total_count,
     create_time: row.create_time ? Number(row.create_time) : undefined,
     update_time: row.update_time ? Number(row.update_time) : undefined,

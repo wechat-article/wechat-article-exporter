@@ -23,7 +23,7 @@ export default defineEventHandler(async () => {
   try {
     const pool = getPool();
     const res = await pool.query(
-      `SELECT nickname, fakeid
+      `SELECT nickname, fakeid, round_head_img, service_type, is_semiconductor
        FROM info
        WHERE fakeid IS NOT NULL
        ORDER BY COALESCE(NULLIF(nickname, ''), fakeid) ASC`

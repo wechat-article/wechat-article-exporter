@@ -1,8 +1,20 @@
 import TurndownService from 'turndown';
 import { urlIsValidMpArticle } from '#shared/utils';
-import { isPolicyViolationMessage, normalizeHtml, parseCgiDataNew, validateHTMLContent } from '#shared/utils/html';
+import {
+  isArticleAccessTooFrequentMessage,
+  isPolicyViolationMessage,
+  normalizeHtml,
+  parseCgiDataNew,
+  validateHTMLContent,
+} from '#shared/utils/html';
 import { USER_AGENT } from '~/config';
 import { getPool } from '~/server/db/postgres';
+import {
+  isNonRetryableArticleFetchError,
+  NonRetryableArticleFetchError,
+  notifyArticleAccessTooFrequent,
+  waitRandomArticleFetchDelay,
+} from '~/server/utils/article-fetch';
 
 export type ArticleContentFormat = 'html' | 'markdown' | 'text' | 'json';
 
@@ -27,21 +39,30 @@ function validateFetchedHtml(html: string): {
   status: 'Success' | 'Deleted' | 'Exception' | 'Error';
   reason: string;
   retryable: boolean;
+  notify: boolean;
 } {
   const [status, message] = validateHTMLContent(html);
   if (status === 'Deleted') {
-    return { status, reason: message || '该内容已被发布者删除', retryable: false };
+    return { status, reason: message || '该内容已被发布者删除', retryable: false, notify: false };
   }
   if (status === 'Exception') {
     if (isPolicyViolationMessage(message)) {
-      return { status, reason: message || '此内容因违规无法查看', retryable: false };
+      return { status, reason: message || '此内容因违规无法查看', retryable: false, notify: false };
     }
-    return { status, reason: message || '内容异常', retryable: true };
+    if (isArticleAccessTooFrequentMessage(message)) {
+      return {
+        status,
+        reason: message || '访问过于频繁，请用微信扫描二维码进行访问',
+        retryable: false,
+        notify: true,
+      };
+    }
+    return { status, reason: message || '内容异常', retryable: true, notify: false };
   }
   if (status === 'Error') {
-    return { status, reason: '页面结构异常', retryable: true };
+    return { status, reason: '页面结构异常', retryable: true, notify: false };
   }
-  return { status, reason: '', retryable: false };
+  return { status, reason: '', retryable: false, notify: false };
 }
 
 async function getCachedArticleHtml(url: string): Promise<string | null> {
@@ -55,6 +76,7 @@ async function getCachedArticleHtml(url: string): Promise<string | null> {
 }
 
 async function fetchRemoteArticleHtml(url: string): Promise<string> {
+  await waitRandomArticleFetchDelay(`[article-content] 发起文章抓取 | ${url}`);
   const response = await fetch(url, {
     headers: {
       Referer: 'https://mp.weixin.qq.com/',
@@ -85,13 +107,23 @@ async function fetchValidatedRemoteArticleHtml(url: string): Promise<string> {
       if (remoteStatus.status === 'Success') {
         return remoteHtml;
       }
+      if (remoteStatus.notify) {
+        await notifyArticleAccessTooFrequent({
+          source: 'article-content',
+          url,
+          reason: remoteStatus.reason,
+        });
+      }
       if (!remoteStatus.retryable) {
-        throw new Error(remoteStatus.reason);
+        throw new NonRetryableArticleFetchError(remoteStatus.reason);
       }
 
       lastErrorMessage = remoteStatus.reason;
     } catch (error: any) {
       lastErrorMessage = error?.message || '获取文章内容失败，请重试';
+      if (isNonRetryableArticleFetchError(error)) {
+        throw error;
+      }
       if (attempt === MAX_FETCH_RETRIES) {
         break;
       }
@@ -109,7 +141,14 @@ async function getRawArticleHtml(url: string): Promise<{ html: string; source: '
       return { html: cachedHtml, source: 'db' };
     }
     if (!cachedStatus.retryable) {
-      throw new Error(cachedStatus.reason);
+      if (cachedStatus.notify) {
+        await notifyArticleAccessTooFrequent({
+          source: 'article-content-cache',
+          url,
+          reason: cachedStatus.reason,
+        });
+      }
+      throw new NonRetryableArticleFetchError(cachedStatus.reason);
     }
   }
 

@@ -111,12 +111,18 @@ async function createTables(pool: pg.Pool): Promise<void> {
         articles INTEGER DEFAULT 0,
         nickname TEXT,
         round_head_img TEXT,
+        service_type INTEGER,
+        is_semiconductor INTEGER DEFAULT 0,
         total_count INTEGER DEFAULT 0,
         create_time BIGINT,
         update_time BIGINT,
         last_update_time BIGINT
       )
     `);
+    await client.query(`ALTER TABLE info ADD COLUMN IF NOT EXISTS service_type INTEGER`);
+    await client.query(`ALTER TABLE info ADD COLUMN IF NOT EXISTS is_semiconductor INTEGER DEFAULT 0`);
+    await client.query(`ALTER TABLE info ALTER COLUMN is_semiconductor SET DEFAULT 0`);
+    await client.query(`UPDATE info SET is_semiconductor = 0 WHERE is_semiconductor IS NULL`);
 
     // html 表 (文章HTML内容)
     await client.query(`

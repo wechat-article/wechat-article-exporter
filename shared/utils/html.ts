@@ -5,8 +5,11 @@ import { extractCommentId } from '~/utils/comment';
 const POLICY_VIOLATION_MESSAGES = [
   '此内容因违规无法查看',
   '此内容发送失败无法查看',
-  '该内容暂时无法查看'
+  '该内容暂时无法查看',
+  '此内容被多人投诉，相关的内容无法进行查看',
 ];
+
+const ARTICLE_ACCESS_TOO_FREQUENT_KEYWORDS = ['访问过于频繁', '扫描二维码进行访问'];
 
 /**
  * 处理文章的 html 内容
@@ -136,6 +139,14 @@ export function isPolicyViolationMessage(message: string | null | undefined): bo
   }
 
   return POLICY_VIOLATION_MESSAGES.some(item => message.includes(item));
+}
+
+export function isArticleAccessTooFrequentMessage(message: string | null | undefined): boolean {
+  if (!message) {
+    return false;
+  }
+
+  return ARTICLE_ACCESS_TOO_FREQUENT_KEYWORDS.every(item => message.includes(item));
 }
 
 /**

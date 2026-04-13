@@ -1,10 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { compactEscapedJson } from '~/server/utils/async-log';
+import { compactEscapedJson, getAsyncLogDir } from '~/server/utils/async-log';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const logFilePath = path.resolve(__dirname, '.data/request.log');
+const logFilePath = path.resolve(getAsyncLogDir(), 'request.log');
 
 function isJsonContentType(contentType: string | null): boolean {
   return contentType?.toLowerCase().includes('application/json') ?? false;

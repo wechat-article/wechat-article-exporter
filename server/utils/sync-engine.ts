@@ -2,6 +2,7 @@ import { ARTICLE_LIST_PAGE_SIZE, USER_AGENT } from '~/config';
 import type { AppMsgEx, PublishInfo, PublishListItem } from '~/types/types';
 import { getPool } from '~/server/db/postgres';
 import { AccountCookie } from '~/server/utils/CookieStore';
+import { compactEscapedJson } from '~/server/utils/async-log';
 import {
   generateAggregateExportsForAccount,
   generateDocxForArticleUrls,
@@ -297,7 +298,7 @@ async function fetchArticlesPageOnce(
 
   const data = await response.json();
   const tag = `[${source}]`;
-  // console.log(`${tag} 微信API原始响应 (fakeid=${fakeid}, begin=${begin}):\n${compactJson(data)}`);
+  console.log(`${tag} 微信API原始响应 (fakeid=${fakeid}, begin=${begin}):\n${compactEscapedJson(data)}`);
 
   if (data.base_resp?.ret === 200003) {
     throw new Error('session expired');
