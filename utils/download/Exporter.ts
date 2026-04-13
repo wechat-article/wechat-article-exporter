@@ -506,7 +506,6 @@ export class Exporter extends BaseDownloader {
 
         const html = await cached.file.text();
         const resourceMap = await getResourceMapCache(url);
-
         const urlmap = new Map<string, string>();
         if (resourceMap) {
           for (const resourceUrl of resourceMap.resources) {
@@ -518,6 +517,15 @@ export class Exporter extends BaseDownloader {
         }
 
         let finalHtml = await this.normalizeHtml(cached, html, urlmap);
+
+        const doc = new DOMParser().parseFromString(finalHtml, 'text/html');
+        const jsContentText = doc.querySelector('#js_content')?.textContent?.replace(/[\s\u00A0]+/g, '') || '';
+        if (!jsContentText) {
+          const renderedHTML = await this.getRenderedHTML(url, true);
+          if (renderedHTML) {
+            finalHtml = renderedHTML;
+          }
+        }
 
         const pdfStyleTag = `<style>
   html, body { background: white !important; background-color: white !important; }
@@ -621,7 +629,13 @@ export class Exporter extends BaseDownloader {
     const $jsArticleContent = document.querySelector('#js_article')!;
 
     // #js_content 默认是不可见的(通过js修改为可见)，需要移除该样式
-    $jsArticleContent.querySelector('#js_content')?.removeAttribute('style');
+    const $jsContent = $jsArticleContent.querySelector('#js_content');
+    $jsContent?.removeAttribute('style');
+
+    const contentText = $jsContent?.textContent?.replace(/[\s\u00A0]+/g, '') || '';
+    if ($jsContent && !contentText && cachedHtml.title) {
+      $jsContent.innerHTML = `<p style="font-size:17px;line-height:1.6;white-space:pre-wrap;">${cachedHtml.title.replace(/\n/g, '<br />')}</p>`;
+    }
 
     // 删除无用dom元素
     $jsArticleContent.querySelector('#js_top_ad_area')?.remove();
@@ -993,7 +1007,8 @@ ${commentHTML}
     }
 
     const title = article.title.length > 20 ? article.title.slice(0, 20) : article.title;
-    dirnameTpl = dirnameTpl.replace(/\$\{title}/g, filterInvalidFilenameChars(title));
+    const datePrefix = articleUpdateTime.format('YYYY-MM-DD');
+    dirnameTpl = dirnameTpl.replace(/\$\{title}/g, `[${datePrefix}]${filterInvalidFilenameChars(title)}`);
     dirnameTpl = dirnameTpl.replace(/\$\{aid}/g, article.aid);
     dirnameTpl = dirnameTpl.replace(/\$\{author}/g, article.author_name);
     dirnameTpl = dirnameTpl.replace(/\$\{YYYY}/g, articleUpdateTime.format('YYYY'));
