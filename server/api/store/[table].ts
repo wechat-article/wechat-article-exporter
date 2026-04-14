@@ -1,4 +1,5 @@
 import { getPool } from '~/server/db/postgres';
+import { resolveArticleCover, resolveArticleDeleted, resolveArticleDigest } from '~/server/utils/article-record';
 
 /**
  * 统一的数据库存储 API 端点
@@ -163,10 +164,13 @@ async function handleArticlePost(pool: any, action: string, body: any) {
           for (const article of publishInfo.appmsgex) {
             const key = `${fakeid}:${article.aid}`;
             const data = { ...article, fakeid, _status: '' };
+            const cover = resolveArticleCover(article);
+            const digest = resolveArticleDigest(article);
+            const isDeleted = resolveArticleDeleted(article);
 
             const res = await client.query(
-              `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, data)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, cover, digest, is_deleted, data)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT (id) DO UPDATE SET
                  fakeid = EXCLUDED.fakeid,
                  link = EXCLUDED.link,
@@ -174,6 +178,9 @@ async function handleArticlePost(pool: any, action: string, body: any) {
                  update_time = EXCLUDED.update_time,
                  article_title = EXCLUDED.article_title,
                  article_status = EXCLUDED.article_status,
+                 cover = EXCLUDED.cover,
+                 digest = EXCLUDED.digest,
+                 is_deleted = EXCLUDED.is_deleted,
                  data = EXCLUDED.data
                RETURNING (xmax = 0) AS is_new`,
               [
@@ -184,6 +191,9 @@ async function handleArticlePost(pool: any, action: string, body: any) {
                 article.update_time,
                 article.title || null,
                 Number.isFinite(article.mediaapi_publish_status) ? article.mediaapi_publish_status : null,
+                cover,
+                digest,
+                isDeleted,
                 data,
               ]
             );
@@ -227,9 +237,12 @@ async function handleArticlePost(pool: any, action: string, body: any) {
       const updateTime = data.update_time || null;
       const articleTitle = data.title || null;
       const articleStatus = Number.isFinite(data.mediaapi_publish_status) ? data.mediaapi_publish_status : null;
+      const cover = resolveArticleCover(data);
+      const digest = resolveArticleDigest(data);
+      const isDeleted = resolveArticleDeleted(data);
       await pool.query(
-        `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, data)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, cover, digest, is_deleted, data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          ON CONFLICT (id) DO UPDATE SET
            fakeid = EXCLUDED.fakeid,
            link = EXCLUDED.link,
@@ -237,16 +250,23 @@ async function handleArticlePost(pool: any, action: string, body: any) {
            update_time = EXCLUDED.update_time,
            article_title = EXCLUDED.article_title,
            article_status = EXCLUDED.article_status,
+           cover = EXCLUDED.cover,
+           digest = EXCLUDED.digest,
+           is_deleted = EXCLUDED.is_deleted,
            data = EXCLUDED.data`,
-        [id, fakeid, link, createTime, updateTime, articleTitle, articleStatus, data]
+        [id, fakeid, link, createTime, updateTime, articleTitle, articleStatus, cover, digest, isDeleted, data]
       );
       return { success: true };
     }
     case 'deleted': {
       const { url, is_deleted } = body;
       await pool.query(
-        `UPDATE article SET data = jsonb_set(data, '{is_deleted}', $2::jsonb) WHERE link = $1`,
-        [url, JSON.stringify(is_deleted !== false)]
+        `UPDATE article
+         SET
+           is_deleted = $2,
+           data = jsonb_set(data, '{is_deleted}', $3::jsonb)
+         WHERE link = $1`,
+        [url, is_deleted !== false, JSON.stringify(is_deleted !== false)]
       );
       return { success: true };
     }

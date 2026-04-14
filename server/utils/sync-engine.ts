@@ -2,6 +2,7 @@ import { ARTICLE_LIST_PAGE_SIZE, USER_AGENT } from '~/config';
 import type { AppMsgEx, PublishInfo, PublishListItem } from '~/types/types';
 import { getPool } from '~/server/db/postgres';
 import { AccountCookie, cookieStore } from '~/server/utils/CookieStore';
+import { resolveArticleCover, resolveArticleDeleted, resolveArticleDigest } from '~/server/utils/article-record';
 import { compactEscapedJson } from '~/server/utils/async-log';
 import {
   generateAggregateExportsForAccount,
@@ -201,9 +202,12 @@ async function savePublishPageToDB(input: {
       for (const article of publishInfo.appmsgex || []) {
         const key = `${input.fakeid}:${article.aid}`;
         const data = { ...article, fakeid: input.fakeid, _status: '' };
+        const cover = resolveArticleCover(article);
+        const digest = resolveArticleDigest(article);
+        const isDeleted = resolveArticleDeleted(article);
         const res = await client.query(
-          `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, data)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `INSERT INTO article (id, fakeid, link, create_time, update_time, article_title, article_status, cover, digest, is_deleted, data)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            ON CONFLICT (id) DO UPDATE SET
              fakeid = EXCLUDED.fakeid,
              link = EXCLUDED.link,
@@ -211,6 +215,9 @@ async function savePublishPageToDB(input: {
              update_time = EXCLUDED.update_time,
              article_title = EXCLUDED.article_title,
              article_status = EXCLUDED.article_status,
+             cover = EXCLUDED.cover,
+             digest = EXCLUDED.digest,
+             is_deleted = EXCLUDED.is_deleted,
              data = EXCLUDED.data
            RETURNING (xmax = 0) AS is_new`,
           [
@@ -221,6 +228,9 @@ async function savePublishPageToDB(input: {
             article.update_time,
             article.title || null,
             Number.isFinite(article.mediaapi_publish_status) ? article.mediaapi_publish_status : null,
+            cover,
+            digest,
+            isDeleted,
             data,
           ]
         );

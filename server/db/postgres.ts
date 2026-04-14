@@ -76,6 +76,9 @@ async function createTables(pool: pg.Pool): Promise<void> {
         update_time BIGINT,
         article_title TEXT,
         article_status INTEGER,
+        cover TEXT,
+        digest TEXT,
+        is_deleted BOOLEAN DEFAULT FALSE,
         data JSONB NOT NULL
       )
     `);
@@ -87,7 +90,13 @@ async function createTables(pool: pg.Pool): Promise<void> {
     await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS update_time BIGINT`);
     await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS article_title TEXT`);
     await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS article_status INTEGER`);
+    await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS cover TEXT`);
+    await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS digest TEXT`);
+    await client.query(`ALTER TABLE article ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_article_update_time ON article (update_time)`);
+    await client.query(`COMMENT ON COLUMN article.cover IS '预览图'`);
+    await client.query(`COMMENT ON COLUMN article.digest IS '摘要'`);
+    await client.query(`COMMENT ON COLUMN article.is_deleted IS '是否删除'`);
     await client.query(`
       UPDATE article
       SET
@@ -98,8 +107,30 @@ async function createTables(pool: pg.Pool): Promise<void> {
             WHEN (data->>'mediaapi_publish_status') ~ '^-?\\d+$' THEN (data->>'mediaapi_publish_status')::INTEGER
             ELSE NULL
           END
+        ),
+        cover = COALESCE(
+          NULLIF(cover, ''),
+          NULLIF(data->>'cover', ''),
+          NULLIF(data->>'cover_img', ''),
+          NULLIF(data->>'pic_cdn_url_235_1', ''),
+          NULLIF(data->>'pic_cdn_url_16_9', ''),
+          NULLIF(data->>'pic_cdn_url_3_4', ''),
+          NULLIF(data->>'pic_cdn_url_1_1', '')
+        ),
+        digest = COALESCE(NULLIF(digest, ''), NULLIF(data->>'digest', '')),
+        is_deleted = COALESCE(
+          is_deleted,
+          CASE
+            WHEN LOWER(COALESCE(data->>'is_deleted', '')) IN ('true', '1') THEN TRUE
+            WHEN LOWER(COALESCE(data->>'is_deleted', '')) IN ('false', '0') THEN FALSE
+            ELSE FALSE
+          END
         )
-      WHERE article_title IS NULL OR article_title = '' OR article_status IS NULL
+      WHERE article_title IS NULL OR article_title = ''
+        OR article_status IS NULL
+        OR cover IS NULL OR cover = ''
+        OR digest IS NULL OR digest = ''
+        OR is_deleted IS NULL
     `);
 
     // info 表 (公众号元数据)

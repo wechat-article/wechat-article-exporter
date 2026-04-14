@@ -5,7 +5,7 @@ import path from 'node:path';
 const LOG_DIR = path.resolve(process.cwd(), process.env.LOG_DIR || 'log');
 const retentionDays = parseInt(process.env.LOG_RETENTION_DAYS ?? '7', 10);
 const MAX_RETENTION_DAYS = Number.isSafeInteger(retentionDays) && retentionDays >= 0 ? retentionDays : 14;
-const FLUSH_INTERVAL_MS = 500;
+const FLUSH_INTERVAL_MS = 1000;
 
 export function getAsyncLogDir(): string {
   return LOG_DIR;

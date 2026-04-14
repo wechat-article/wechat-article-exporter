@@ -121,6 +121,27 @@ function displayPageNumber(pageNumber: number) {
   return Math.max(1, Number(pageNumber || 0));
 }
 
+function createSyncStatusFingerprint(status: ManualSyncJobStatus | null | undefined) {
+  if (!status) return '';
+
+  return [
+    status.jobId,
+    status.updatedAt,
+    status.stage,
+    status.pageNumber,
+    status.begin,
+    status.totalCount,
+    status.currentPageFilteredCount,
+    status.currentArticleIndex,
+    status.currentArticleTotal,
+    status.retrying ? 1 : 0,
+    status.retryMessage || '',
+    status.currentArticleTitle || '',
+    status.currentArticleUrl || '',
+    status.error || '',
+  ].join('|');
+}
+
 function applySyncStatus(status: ManualSyncJobStatus) {
   currentSyncJobId.value = status.jobId;
   syncStatus.value = status;
@@ -223,6 +244,7 @@ async function cancelCurrentSync() {
 
 async function waitForManualSyncJob(fakeid: string, jobId: string) {
   const pollSequence = ++syncPollSequence;
+  let lastFingerprint = createSyncStatusFingerprint(syncStatus.value);
 
   while (true) {
     const status = await getManualSyncStatus(jobId);
@@ -230,8 +252,14 @@ async function waitForManualSyncJob(fakeid: string, jobId: string) {
       return status;
     }
 
-    applySyncStatus(status);
-    await updateRow(fakeid);
+    const nextFingerprint = createSyncStatusFingerprint(status);
+    if (nextFingerprint !== lastFingerprint) {
+      applySyncStatus(status);
+      await updateRow(fakeid, status);
+      lastFingerprint = nextFingerprint;
+    } else {
+      refreshSyncRow(fakeid);
+    }
 
     if (isTerminalSyncStage(status.stage)) {
       return status;
@@ -250,7 +278,7 @@ async function restoreActiveManualSyncJob() {
     }
 
     applySyncStatus(status);
-    await updateRow(status.fakeid);
+    await updateRow(status.fakeid, status);
 
     void waitForManualSyncJob(status.fakeid, status.jobId)
       .catch(error => {
@@ -284,9 +312,10 @@ async function loadAccountArticle(account: MpAccount) {
   try {
     const { jobId, status } = await startManualSyncRequest(account);
     applySyncStatus(status);
+    await updateRow(account.fakeid, status);
 
     const finalStatus = await waitForManualSyncJob(account.fakeid, jobId);
-    await updateRow(account.fakeid);
+    await updateRow(account.fakeid, finalStatus);
 
     if (finalStatus.stage === 'cancelled') {
       throw new Error('已取消同步');
@@ -519,10 +548,16 @@ function onGridReady(params: GridReadyEvent) {
   void refresh().then(() => restoreActiveManualSyncJob());
 }
 
-watch([syncingRowId, syncStatus], async () => {
+watch(syncingRowId, async (nextFakeid, prevFakeid) => {
   await nextTick();
+  if (prevFakeid) {
+    refreshSyncRow(prevFakeid);
+  }
+  if (nextFakeid) {
+    refreshSyncRow(nextFakeid);
+  }
   gridApi.value?.resetRowHeights();
-}, { deep: true });
+});
 
 function onColumnStateChange() {
   if (gridApi.value) {
@@ -550,12 +585,54 @@ async function refresh() {
   gridApi.value?.setGridOption('rowData', globalRowData);
 }
 
-async function updateRow(fakeid: string) {
+function refreshSyncRow(fakeid: string) {
   const rowNode = gridApi.value?.getRowNode(fakeid);
   if (rowNode) {
-    const info = await getInfoCache(fakeid);
-    rowNode.updateData(info);
+    gridApi.value?.refreshCells({
+      rowNodes: [rowNode],
+      columns: ['load_percent', 'action'],
+      force: true,
+    });
   }
+}
+
+function shouldUpdateRowData(currentData: MpAccount | undefined, nextData: MpAccount) {
+  if (!currentData) {
+    return true;
+  }
+
+  return currentData.count !== nextData.count
+    || currentData.articles !== nextData.articles
+    || currentData.total_count !== nextData.total_count
+    || currentData.completed !== nextData.completed
+    || currentData.update_time !== nextData.update_time
+    || currentData.last_update_time !== nextData.last_update_time;
+}
+
+async function updateRow(fakeid: string, status?: ManualSyncJobStatus) {
+  const rowNode = gridApi.value?.getRowNode(fakeid);
+  if (!rowNode) {
+    return;
+  }
+
+  const info = await getInfoCache(fakeid);
+  if (!info) {
+    refreshSyncRow(fakeid);
+    return;
+  }
+
+  const currentData = rowNode.data as MpAccount | undefined;
+  const nextData: MpAccount = {
+    ...(currentData || {} as MpAccount),
+    ...info,
+    total_count: info.total_count || status?.totalCount || currentData?.total_count || 0,
+  };
+
+  if (shouldUpdateRowData(currentData, nextData)) {
+    rowNode.updateData(nextData);
+  }
+
+  refreshSyncRow(fakeid);
 }
 
 // 当前是否有选中的行
