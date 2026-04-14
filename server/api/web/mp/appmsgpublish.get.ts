@@ -52,7 +52,7 @@ export default defineEventHandler(async event => {
   });
 
   // 打印微信原始响应数据（压缩转义）
-  console.log(`[manual-sync] 微信API原始响应 (fakeid=${id}, begin=${begin}):\n${compactEscapedJson(data)}`);
+  console.log(`微信API原始响应 (fakeid=${id}, begin=${begin}):\n${compactEscapedJson(data)}`);
 
   return data;
 });

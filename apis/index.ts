@@ -73,7 +73,7 @@ async function processArticleResponse(
 
   const msgCount = articles.filter(a => a.itemidx === 1).length;
   console.log(
-    `[manual-sync] 【${account.nickname}】本页解析: 文章数=${articles.length}, 消息数=${msgCount}, 总数=${publish_page.total_count}, completed=${isCompleted}`
+    `【${account.nickname}】本页解析: 文章数=${articles.length}, 消息数=${msgCount}, 总数=${publish_page.total_count}, completed=${isCompleted}`
   );
 
   return [articles, isCompleted, publish_page.total_count];
@@ -100,7 +100,7 @@ export async function getArticleList(
     const rawCount = publish_page.publish_list?.length ?? 0;
 
     console.log(
-      `[manual-sync] 微信API返回 publish_page 字段: total_count=${publish_page.total_count}, publish_list.length=${rawCount}`
+      `微信API返回 publish_page 字段: total_count=${publish_page.total_count}, publish_list.length=${rawCount}`
     );
 
     let isCompleted = publish_list.length === 0;
@@ -109,7 +109,7 @@ export async function getArticleList(
     if (isCompleted && begin < publish_page.total_count && !keyword) {
       for (let retry = 1; retry <= MAX_EMPTY_PAGE_RETRIES; retry++) {
         console.warn(
-          `[manual-sync] 【${account.nickname}】begin=${begin} 收到空列表但 total_count=${publish_page.total_count}，` +
+          `【${account.nickname}】begin=${begin} 收到空列表但 total_count=${publish_page.total_count}，` +
           `疑似微信临时异常，${EMPTY_PAGE_RETRY_DELAY / 1000}s 后重试 (${retry}/${MAX_EMPTY_PAGE_RETRIES})`
         );
         await new Promise(resolve => setTimeout(resolve, EMPTY_PAGE_RETRY_DELAY));
@@ -125,13 +125,13 @@ export async function getArticleList(
           const retryPage: PublishPage = JSON.parse(retryResp.publish_page);
           const retryList = retryPage.publish_list.filter(item => !!item.publish_info);
           if (retryList.length > 0) {
-            console.log(`[manual-sync] 【${account.nickname}】空页重试成功，获取到 ${retryList.length} 条数据`);
+            console.log(`【${account.nickname}】空页重试成功，获取到 ${retryList.length} 条数据`);
             // 使用重试得到的数据继续处理
             return processArticleResponse(account, retryPage, retryList, keyword, begin, syncToTimestamp);
           }
         }
       }
-      console.warn(`[manual-sync] 【${account.nickname}】连续 ${MAX_EMPTY_PAGE_RETRIES} 次空列表，视为已完成`);
+      console.warn(`【${account.nickname}】连续 ${MAX_EMPTY_PAGE_RETRIES} 次空列表，视为已完成`);
     }
 
     return processArticleResponse(account, publish_page, publish_list, keyword, begin, syncToTimestamp);
