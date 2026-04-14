@@ -101,6 +101,7 @@ export async function runAutoSync(): Promise<void> {
 
   for (const [index, account] of accounts.entries()) {
     const result = await syncAccountByRange({
+      authKey: session.authKey,
       token: session.token,
       cookie: session.cookie,
       fakeid: account.fakeid,

@@ -75,6 +75,7 @@ async function runManualSyncJob(status: ManualSyncJobStatus, input: StartManualS
     }
 
     const result = await syncAccountByRange({
+      authKey: session.authKey,
       token: session.token,
       cookie: session.cookie,
       fakeid: input.fakeid,

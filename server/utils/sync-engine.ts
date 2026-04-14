@@ -1,7 +1,7 @@
 import { ARTICLE_LIST_PAGE_SIZE, USER_AGENT } from '~/config';
 import type { AppMsgEx, PublishInfo, PublishListItem } from '~/types/types';
 import { getPool } from '~/server/db/postgres';
-import { AccountCookie } from '~/server/utils/CookieStore';
+import { AccountCookie, cookieStore } from '~/server/utils/CookieStore';
 import { compactEscapedJson } from '~/server/utils/async-log';
 import {
   generateAggregateExportsForAccount,
@@ -57,6 +57,7 @@ export interface SyncAccountResult {
 }
 
 export interface SyncAccountOptions {
+  authKey?: string;
   token: string;
   cookie: string;
   fakeid: string;
@@ -262,6 +263,7 @@ async function touchLastUpdateTime(fakeid: string) {
 }
 
 async function fetchArticlesPageOnce(
+  authKey: string | undefined,
   token: string,
   cookie: string,
   fakeid: string,
@@ -285,16 +287,24 @@ async function fetchArticlesPageOnce(
   });
 
   const url = `https://mp.weixin.qq.com/cgi-bin/appmsgpublish?${params.toString()}`;
+  const latestCookie = authKey ? await cookieStore.getCookie(authKey) : null;
   const response = await fetch(url, {
     method: 'GET',
     headers: {
-      Cookie: cookie,
+      Cookie: latestCookie || cookie,
       Referer: 'https://mp.weixin.qq.com/',
       Origin: 'https://mp.weixin.qq.com',
       'User-Agent': USER_AGENT,
       'Accept-Encoding': 'identity',
     },
   });
+
+  if (authKey) {
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length > 0) {
+      await cookieStore.updateCookie(authKey, setCookies);
+    }
+  }
 
   const data = await response.json();
   const tag = `[${source}]`;
@@ -330,6 +340,7 @@ async function fetchArticlesPageOnce(
 }
 
 async function fetchArticlesPageWithRetry(
+  authKey: string | undefined,
   token: string,
   cookie: string,
   fakeid: string,
@@ -343,10 +354,10 @@ async function fetchArticlesPageWithRetry(
 
   for (let attempt = 0; attempt < MAX_PAGE_RETRIES; attempt++) {
     try {
-      page = await fetchArticlesPageOnce(token, cookie, fakeid, begin, source);
+      page = await fetchArticlesPageOnce(authKey, token, cookie, fakeid, begin, source);
       break;
     } catch (error: any) {
-      console.error(`[${source}] ${fakeid} 第 ${begin} 页请求失败 (${attempt + 1}/${MAX_PAGE_RETRIES}):`, error);
+      console.error(`[${source}] ${fakeid} 第 ${pageNumber} 页请求失败 (${attempt + 1}/${MAX_PAGE_RETRIES}):`, error);
       if (error?.message === 'session expired' || attempt === MAX_PAGE_RETRIES - 1) {
         throw error;
       }
@@ -392,7 +403,7 @@ async function fetchArticlesPageWithRetry(
         message: retryMessage,
       });
       await delay(DEFAULT_SYNC_INTERVAL_MS);
-      const retryPage = await fetchArticlesPageOnce(token, cookie, fakeid, begin, source);
+      const retryPage = await fetchArticlesPageOnce(authKey, token, cookie, fakeid, begin, source);
       if (!retryPage.completed) {
         return retryPage;
       }
@@ -495,6 +506,7 @@ export async function syncAccountByRange(options: SyncAccountOptions): Promise<S
       pageNumber += 1;
       await options.onStageChange?.('syncing');
       const page = await fetchArticlesPageWithRetry(
+        options.authKey,
         options.token,
         options.cookie,
         options.fakeid,
