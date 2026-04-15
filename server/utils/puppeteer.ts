@@ -1,4 +1,4 @@
-import puppeteer, { type Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer';
 
 let browser: Browser | null = null;
 
@@ -6,6 +6,8 @@ export async function getBrowser(): Promise<Browser> {
   if (browser && browser.connected) {
     return browser;
   }
+
+  const puppeteer = await import('puppeteer').then(m => m.default);
 
   const launchArgs = [
     '--no-sandbox',

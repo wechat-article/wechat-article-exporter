@@ -50,6 +50,8 @@ WORKDIR /app
 
 # 复制构建输出
 COPY --from=build-env /app/.output ./
+# puppeteer 被 Rollup external 排除，运行时需要从 node_modules 加载（Chromium 已通过 apt 安装，跳过下载）
+RUN npm install --no-save --ignore-scripts puppeteer@24
 
 # 创建 KV 存储目录并设置权限（以 root 运行，确保 node 用户可写）
 RUN mkdir -p .data/kv && chown -R node:node /app
