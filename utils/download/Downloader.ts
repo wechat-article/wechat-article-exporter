@@ -569,15 +569,18 @@ export class Downloader extends BaseDownloader {
     let commentNum = 0;
 
     try {
-      const appmsg_bar_data = cgiData.user_info.appmsg_bar_data;
-      readNum = appmsg_bar_data.read_num; // 阅读量
-      oldLikeNum = appmsg_bar_data.old_like_count; //点赞
-      shareNum = appmsg_bar_data.share_count; //分享
-      likeNum = appmsg_bar_data.like_count; // 喜欢
-      commentNum = appmsg_bar_data.comment_count; // 留言
+      const barData = cgiData.user_info?.appmsg_bar_data
+        || cgiData.appmsg_bar_data
+        || cgiData.user_info;
+      if (barData) {
+        readNum = barData.read_num || 0;
+        oldLikeNum = barData.old_like_count || 0;
+        shareNum = barData.share_count || 0;
+        likeNum = barData.like_count || 0;
+        commentNum = barData.comment_count || 0;
+      }
     } catch (e) {
-      console.error('解析对象失败:', e);
-      return;
+      console.warn('解析元数据失败，使用默认值:', e);
     }
 
     const article = await getArticleByLink(url);

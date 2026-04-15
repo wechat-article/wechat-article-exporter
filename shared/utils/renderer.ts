@@ -212,7 +212,8 @@ function extractTitle(cgiData: any): string {
       if (cgiData.text_page_info.is_user_title === 1) {
         title = cgiData.title;
       } else {
-        title = '(无标题)';
+        const content = cgiData.text_page_info?.content_noencode || cgiData.title || '';
+        title = content.replace(/\n/g, ' ').slice(0, 20) || '(无标题)';
       }
       break;
     default:
@@ -328,6 +329,12 @@ function renderContent_10(cgiData: any): string {
  */
 function renderContent_0(cgiData: any): string {
   let contentHTML = cgiData.content_noencode || '';
+
+  const $check = cheerio.load(contentHTML, null, false);
+  if (!$check.text().replace(/[\s\u00A0]+/g, '') && cgiData.title) {
+    const titleText = cgiData.title.replace(/\n/g, '<br />');
+    return `<section class="item_show_type_0"><p class="text_content">${titleText}</p></section>`;
+  }
 
   // 使用 cheerio 处理 HTML 片段
   const $ = cheerio.load(contentHTML, null, false);
