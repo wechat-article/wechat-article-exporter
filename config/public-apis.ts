@@ -79,7 +79,7 @@ export const apis = [
   },
   {
     name: '添加公众号到数据库',
-    description: '保存公众号到数据库，兼容页面保存公众号时使用的字段结构。',
+    description: '保存公众号到数据库，并自动按最高优先级加入同步队列；对外接口添加的公众号只同步文章列表，不生成文档。',
     url: '/api/public/v1/account',
     method: 'POST',
     params: [
@@ -173,29 +173,30 @@ export const apis = [
       account: {
         fakeid: 'MzA3NzAyMzMyMA==',
         nickname: '铁路12306',
-        type: 'account',
-        alias: 'CRTT12306',
-        round_head_img:
+        roundHeadImg:
           'http://mmbiz.qpic.cn/mmbiz_png/1774PicJv1ocOBxUD1Kh8gqx6HmD105nGnCg4j84mw4gxtmgsbgaVbiaOq6fCgVpHjwjELnMTGV8IR6kq7XJNkdw/0?wx_fmt=png',
         service_type: 2,
-        signature: '欢迎您关注铁路12306，我们竭诚为您提供火车票、畅行会员等服务。',
         is_semiconductor: 0,
+        isInterface: true,
+        status: 'queued',
+        isDelete: false,
       },
       accounts: [
         {
           fakeid: 'MzA3NzAyMzMyMA==',
           nickname: '铁路12306',
-          type: 'account',
-          alias: 'CRTT12306',
-          round_head_img:
+          roundHeadImg:
             'http://mmbiz.qpic.cn/mmbiz_png/1774PicJv1ocOBxUD1Kh8gqx6HmD105nGnCg4j84mw4gxtmgsbgaVbiaOq6fCgVpHjwjELnMTGV8IR6kq7XJNkdw/0?wx_fmt=png',
           service_type: 2,
-          signature: '欢迎您关注铁路12306，我们竭诚为您提供火车票、畅行会员等服务。',
           is_semiconductor: 0,
+          isInterface: true,
+          status: 'queued',
+          isDelete: false,
         },
       ],
+      queued_fakeids: ['MzA3NzAyMzMyMA=='],
     },
-    remark: '此接口不需要 API 密钥；请求体兼容 raw body / account / mpAccount / mpAccounts 结构。',
+    remark: '此接口不需要 API 密钥；请求体兼容 raw body / account / mpAccount / mpAccounts 结构；对外调用默认按接口导入处理。',
   },
   {
     name: '根据文章链接搜索公众号',
@@ -436,6 +437,39 @@ export const apis = [
             'http://mmbiz.qpic.cn/mmbiz_png/1774PicJv1ocOBxUD1Kh8gqx6HmD105nGnCg4j84mw4gxtmgsbgaVbiaOq6fCgVpHjwjELnMTGV8IR6kq7XJNkdw/0?wx_fmt=png',
           service_type: 2,
           is_semiconductor: 0,
+          is_interface: false,
+        },
+      ],
+    },
+    remark: '此接口不需要 API 密钥。',
+  },
+  {
+    name: '查询公众号同步状态',
+    description: '传入一个或多个 fakeid，查询数据库中的同步状态。',
+    url: '/api/public/v1/db/account-status',
+    method: 'POST',
+    params: [
+      {
+        label: '公众号id数组',
+        name: 'fakeids',
+        location: 'body',
+        required: true,
+        default: '[]',
+        type: 'Array<String>',
+        remark: '至少传一个 fakeid；也兼容单个 fakeid 字符串字段',
+      },
+    ],
+    responseSample: {
+      base_resp: {
+        ret: 0,
+        err_msg: 'ok',
+      },
+      fakeids: ['MzA3NzAyMzMyMA=='],
+      list: [
+        {
+          fakeid: 'MzA3NzAyMzMyMA==',
+          status_code: 'syncing',
+          status: '同步中',
         },
       ],
     },

@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import TurndownService from 'turndown';
+import { shouldSkipMpArticleUrl } from '#shared/utils';
+import { RETRY_POLICY } from '~/config';
 import { getPool } from '~/server/db/postgres';
 import { notifyArticleAccessTooFrequent, waitRandomArticleFetchDelay } from '~/server/utils/article-fetch';
 import { isArticleAccessTooFrequentMessage, isPolicyViolationMessage, validateHTMLContent } from '~/shared/utils/html';
@@ -521,11 +523,6 @@ export function getAutoExportFormats(): AutoExportFormat[] {
 
 // ==================== 主逻辑 ====================
 
-// 最大重试次数
-const MAX_RETRY = 3;
-// 重试间隔（毫秒）
-const RETRY_DELAY = 5000;
-
 function validateFetchedHtml(html: string): {
   status: 'Success' | 'Deleted' | 'Exception' | 'Error';
   reason: string;
@@ -574,7 +571,7 @@ export interface AutoExportResult {
 // 保留旧名称兼容
 export type AutoDocxResult = AutoExportResult;
 
-export type ExportSource = 'auto-export' | 'schedule' | 'manual-sync';
+export type ExportSource = 'auto-export' | 'schedule' | 'manual-sync' | 'interface-sync';
 
 export interface ArticleExportProgress {
   accountName: string;
@@ -718,6 +715,11 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
         console.error(`${tag} 公众号：【${accountName}】文章无链接，跳过: ${title}，article keys: ${Object.keys(article).join(', ')}`);
         continue;
       }
+      if (shouldSkipMpArticleUrl(url)) {
+        result.skipped++;
+        console.log(`${tag} 公众号：【${accountName}】跳过不支持的链接: ${title} | ${url}`);
+        continue;
+      }
 
       const articleTime = article.update_time || article.create_time;
       const articleDate = articleTime
@@ -789,11 +791,11 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
       // 如果没有缓存，尝试在线抓取（带重试）
       if (!rawHtml) {
         console.log(`${tag} 公众号：【${accountName}】HTML 缓存不存在，尝试在线抓取: ${title} | ${url}`);
-        for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+        for (let attempt = 0; attempt <= RETRY_POLICY.articleExport.retries; attempt++) {
           assertNotCancelled(options.isCancelled);
           if (attempt > 0) {
-            const retryMessage = `正在重试抓取第 ${articleIndex + 1}/${articles.length} 篇《${title}》，第 ${attempt}/${MAX_RETRY} 次`;
-            console.warn(`${tag} 公众号：【${accountName}】${retryMessage}，${RETRY_DELAY / 1000} 秒后继续 | ${url}`);
+            const retryMessage = `正在重试抓取第 ${articleIndex + 1}/${articles.length} 篇《${title}》，第 ${attempt}/${RETRY_POLICY.articleExport.retries} 次`;
+            console.warn(`${tag} 公众号：【${accountName}】${retryMessage}，${RETRY_POLICY.articleExport.delayMs / 1000} 秒后继续 | ${url}`);
             await options.onRetry?.({
               stage: 'exporting',
               scope: 'article-fetch',
@@ -803,11 +805,11 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
               index: articleIndex + 1,
               total: articles.length,
               attempt,
-              maxAttempts: MAX_RETRY,
-              delayMs: RETRY_DELAY,
+              maxAttempts: RETRY_POLICY.articleExport.retries,
+              delayMs: RETRY_POLICY.articleExport.delayMs,
               message: retryMessage,
             });
-            await delay(RETRY_DELAY);
+            await delay(RETRY_POLICY.articleExport.delayMs);
           }
           try {
             const fetchedHtml = await fetchArticleHtml(url, `公众号：【${accountName}】《${title}》`);
@@ -863,10 +865,10 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
       if (!cgiData && rawHtml) {
         lastFailureReason = '解析 cgiData 失败';
         // cgiData 解析失败，尝试重新抓取
-        for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+        for (let attempt = 1; attempt <= RETRY_POLICY.articleExport.retries; attempt++) {
           assertNotCancelled(options.isCancelled);
-          const retryMessage = `正在重试解析第 ${articleIndex + 1}/${articles.length} 篇《${title}》，第 ${attempt}/${MAX_RETRY} 次`;
-          console.warn(`${tag} 公众号：【${accountName}】${retryMessage}，${RETRY_DELAY / 1000} 秒后继续 | ${url}`);
+          const retryMessage = `正在重试解析第 ${articleIndex + 1}/${articles.length} 篇《${title}》，第 ${attempt}/${RETRY_POLICY.articleExport.retries} 次`;
+          console.warn(`${tag} 公众号：【${accountName}】${retryMessage}，${RETRY_POLICY.articleExport.delayMs / 1000} 秒后继续 | ${url}`);
           await options.onRetry?.({
             stage: 'exporting',
             scope: 'cgi-parse',
@@ -876,11 +878,11 @@ async function generateDocxForAccountInternal(fakeid: string, options: GenerateD
             index: articleIndex + 1,
             total: articles.length,
             attempt,
-            maxAttempts: MAX_RETRY,
-            delayMs: RETRY_DELAY,
+            maxAttempts: RETRY_POLICY.articleExport.retries,
+            delayMs: RETRY_POLICY.articleExport.delayMs,
             message: retryMessage,
           });
-          await delay(RETRY_DELAY);
+          await delay(RETRY_POLICY.articleExport.delayMs);
           try {
             const retryHtml = await fetchArticleHtml(url, `公众号：【${accountName}】《${title}》重试`);
             if (!retryHtml) {

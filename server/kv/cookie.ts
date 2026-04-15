@@ -8,6 +8,11 @@ export interface CookieKVValue {
   cookies: CookieEntity[];
 }
 
+export interface SessionProfileValue {
+  nickname: string;
+  avatar: string;
+}
+
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 4; // 4 days
 
 export async function setMpCookie(key: CookieKVKey, data: CookieKVValue): Promise<boolean> {
@@ -28,6 +33,23 @@ export async function setMpCookie(key: CookieKVKey, data: CookieKVValue): Promis
     return true;
   } catch (err) {
     console.error('session insert failed:', err);
+    return false;
+  }
+}
+
+export async function updateSessionProfile(key: CookieKVKey, data: SessionProfileValue): Promise<boolean> {
+  const pool = getPool();
+  try {
+    await pool.query(
+      `UPDATE session
+       SET nickname = $2,
+           avatar = $3
+       WHERE auth_key = $1`,
+      [key, data.nickname, data.avatar]
+    );
+    return true;
+  } catch (err) {
+    console.error('session profile update failed:', err);
     return false;
   }
 }

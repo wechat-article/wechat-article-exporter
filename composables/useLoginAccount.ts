@@ -1,8 +1,7 @@
-import { StorageSerializers } from '@vueuse/core';
-import type { LoginAccount } from '~/types/types';
+import type { LoginAccount as LoginAccountState } from '~/types/types';
+
+const loginAccount = ref<LoginAccountState | null>(null);
 
 export default () => {
-  return useLocalStorage<LoginAccount>('login', null, {
-    serializer: StorageSerializers.object,
-  });
+  return loginAccount;
 };

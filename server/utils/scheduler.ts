@@ -1,7 +1,9 @@
-import { getPool } from '~/server/db/postgres';
 import { AccountCookie } from '~/server/utils/CookieStore';
+import { listSyncableAccounts } from '~/server/utils/account-info';
+import { enqueueAccountSync } from '~/server/utils/account-sync-queue';
 import { sendCookieExpiryWarning, sendSyncReport } from '~/server/utils/email';
-import { getActiveSession, syncAccountByRange, type SyncAccountResult } from '~/server/utils/sync-engine';
+import { getActiveSession, type SyncAccountResult } from '~/server/utils/sync-engine';
+import { getPool } from '~/server/db/postgres';
 
 const SECONDS_PER_DAY = 24 * 60 * 60;
 const COOKIE_WARNING_WINDOW_SEC = SECONDS_PER_DAY;
@@ -86,9 +88,7 @@ export async function runAutoSync(): Promise<void> {
   }
   console.log(`[schedule] 使用 session: ${session.authKey.substring(0, 8)}...`);
 
-  const pool = getPool();
-  const accountsRes = await pool.query(`SELECT fakeid, nickname, round_head_img FROM info`);
-  const accounts = accountsRes.rows;
+  const accounts = await listSyncableAccounts({ excludeInterface: true });
 
   if (accounts.length === 0) {
     console.log('[schedule] 没有需要同步的公众号');
@@ -97,30 +97,27 @@ export async function runAutoSync(): Promise<void> {
   console.log(`[schedule] 共 ${accounts.length} 个公众号待同步`);
 
   const syncToTimestamp = Math.round(Date.now() / 1000) - syncDays * SECONDS_PER_DAY;
-  const results: SyncAccountResult[] = [];
-
-  for (const [index, account] of accounts.entries()) {
-    const result = await syncAccountByRange({
-      authKey: session.authKey,
-      token: session.token,
-      cookie: session.cookie,
+  const handles = [];
+  for (const account of accounts) {
+    handles.push(await enqueueAccountSync({
+      source: 'schedule',
       fakeid: account.fakeid,
       nickname: account.nickname || account.fakeid,
-      roundHeadImg: account.round_head_img,
+      roundHeadImg: account.roundHeadImg,
       syncToTimestamp,
-      source: 'schedule',
       exportDocs: true,
-    });
+    }));
+  }
+
+  const results: SyncAccountResult[] = [];
+  for (const handle of handles) {
+    const result = await handle.promise;
     results.push(result);
 
     if (result.error === 'session expired') {
       console.error('[schedule] Session 已过期，中止同步');
       await sendCookieExpiryWarning('定时同步过程中 Session 已过期，请立即重新扫码登录。');
       break;
-    }
-
-    if (index < accounts.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
 

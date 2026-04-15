@@ -6,7 +6,6 @@ import type {
   GridOptions,
   GridReadyEvent,
   ICellRendererParams,
-  RowHeightParams,
   SelectionChangedEvent,
   ValueGetterParams,
 } from 'ag-grid-community';
@@ -22,8 +21,9 @@ import toastFactory from '~/composables/toast';
 import useLoginCheck from '~/composables/useLoginCheck';
 import { IMAGE_PROXY, websiteName } from '~/config';
 import { sharedGridOptions } from '~/config/shared-grid-options';
+import { getAccountSyncStatusLabel } from '~/shared/utils/account-sync-status';
 import { deleteAccountData } from '~/store/v2';
-import { getAllInfo, getInfoCache, importMpAccounts, type MpAccount } from '~/store/v2/info';
+import { getAllInfo, importMpAccounts, type MpAccount } from '~/store/v2/info';
 import type { AccountManifest } from '~/types/account';
 import { exportAccountJsonFile } from '~/utils/exporter';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
@@ -62,6 +62,10 @@ interface ManualSyncJobStatus {
   error?: string;
 }
 
+type AccountGridRow = MpAccount & {
+  manualSyncJob?: ManualSyncJobStatus | null;
+};
+
 const toast = toastFactory();
 const modal = useModal();
 const { checkLogin } = useLoginCheck();
@@ -69,6 +73,9 @@ const { checkLogin } = useLoginCheck();
 const { getSyncTimestamp, getSyncRangeLabel, getActualDateRange, isSyncAll } = useSyncDeadline();
 // syncToTimestamp 在每次同步时重新计算，确保使用最新的时间范围配置
 let syncToTimestamp = getSyncTimestamp();
+
+const ACCOUNT_PAGE_REFRESH_INTERVAL_MS = 30000;
+const MANUAL_SYNC_STATUS_POLL_INTERVAL_MS = 3000;
 
 // 账号事件总线，用于和 Credentials 面板保持列表同步
 const { accountEventBus } = useAccountEventBus();
@@ -81,6 +88,12 @@ accountEventBus.on(event => {
 const searchAccountDialogRef = ref<typeof GlobalSearchAccountDialog | null>(null);
 
 const addBtnLoading = ref(false);
+const manualSyncJobs = ref<Record<string, ManualSyncJobStatus>>({});
+const manualSyncWaiters = new Map<string, (status: ManualSyncJobStatus) => void>();
+let manualSyncStatusTimer: number | null = null;
+let isPollingManualSyncJobs = false;
+let isRefreshingAccounts = false;
+
 function addAccount() {
   if (!checkLogin()) return;
 
@@ -97,17 +110,8 @@ async function onSelectAccount(account: MpAccount) {
 }
 
 // 表示同步过程中是否执行了取消操作
-const isCanceled = ref(false);
 const isDeleting = ref(false);
-const isSyncing = ref(false);
-
-// 当前正在同步的公众号id
-const syncingRowId = ref<string | null>(null);
-
-const currentSyncJobId = ref<string | null>(null);
-const syncStatus = ref<ManualSyncJobStatus | null>(null);
-const SYNC_PROGRESS_ROW_HEIGHT = 64;
-let syncPollSequence = 0;
+let refreshTimer: number | null = null;
 
 function sleep(ms: number) {
   return new Promise(resolve => window.setTimeout(resolve, ms));
@@ -115,98 +119,6 @@ function sleep(ms: number) {
 
 function isTerminalSyncStage(stage: ManualSyncStage) {
   return stage === 'completed' || stage === 'failed' || stage === 'cancelled';
-}
-
-function displayPageNumber(pageNumber: number) {
-  return Math.max(1, Number(pageNumber || 0));
-}
-
-function createSyncStatusFingerprint(status: ManualSyncJobStatus | null | undefined) {
-  if (!status) return '';
-
-  return [
-    status.jobId,
-    status.updatedAt,
-    status.stage,
-    status.pageNumber,
-    status.begin,
-    status.totalCount,
-    status.currentPageFilteredCount,
-    status.currentArticleIndex,
-    status.currentArticleTotal,
-    status.retrying ? 1 : 0,
-    status.retryMessage || '',
-    status.currentArticleTitle || '',
-    status.currentArticleUrl || '',
-    status.error || '',
-  ].join('|');
-}
-
-function applySyncStatus(status: ManualSyncJobStatus) {
-  currentSyncJobId.value = status.jobId;
-  syncStatus.value = status;
-  syncingRowId.value = status.fakeid;
-  isSyncing.value = !isTerminalSyncStage(status.stage);
-}
-
-const syncStatusText = computed(() => {
-  const status = syncStatus.value;
-  if (!status) return '';
-
-  if (status.retrying && status.retryMessage) {
-    return `【${status.nickname}】${status.retryMessage}`;
-  }
-
-  if (status.stage === 'exporting' && status.currentArticleTitle) {
-    return `正在为【${status.nickname}】生成文档 ${status.currentArticleIndex}/${status.currentArticleTotal}：${status.currentArticleTitle}`;
-  }
-  if (status.stage === 'finalizing') {
-    return `正在为【${status.nickname}】生成汇总文档`;
-  }
-  if (status.stage === 'cancelling') {
-    return `正在取消【${status.nickname}】的同步任务`;
-  }
-  if (status.stage === 'syncing' || status.stage === 'queued') {
-    const pageText = `第 ${displayPageNumber(status.pageNumber)} 页`;
-    const articleText = status.currentPageFilteredCount > 0
-      ? `，本页命中 ${status.currentPageFilteredCount} 篇文章`
-      : '';
-    return `正在同步【${status.nickname}】${pageText}${articleText}`;
-  }
-  return '';
-});
-
-const syncStatusUrl = computed(() => {
-  const status = syncStatus.value;
-  if (!status?.currentArticleUrl) {
-    return '';
-  }
-
-  if (status.stage === 'exporting') {
-    return status.currentArticleUrl;
-  }
-
-  if (status.retrying && status.currentArticleTitle) {
-    return status.currentArticleUrl;
-  }
-
-  return '';
-});
-
-const syncStatusClass = computed(() => {
-  const stage = syncStatus.value?.stage;
-  if (syncStatus.value?.retrying) return 'text-orange-600';
-  if (stage === 'exporting' || stage === 'finalizing') return 'text-amber-600';
-  if (stage === 'cancelling') return 'text-orange-500';
-  return 'text-blue-500';
-});
-
-function clearSyncRuntimeState() {
-  isCanceled.value = false;
-  isSyncing.value = false;
-  syncingRowId.value = null;
-  currentSyncJobId.value = null;
-  syncStatus.value = null;
 }
 
 async function startManualSyncRequest(account: MpAccount) {
@@ -229,72 +141,176 @@ async function getManualSyncStatus(jobId?: string) {
     : undefined);
 }
 
-async function cancelCurrentSync() {
-  if (!currentSyncJobId.value) return;
-  isCanceled.value = true;
+async function getManualSyncStatuses(jobIds?: string[]) {
+  return await $fetch<ManualSyncJobStatus[]>('/api/web/worker/manual-sync-status', {
+    query: jobIds && jobIds.length > 0
+      ? { jobIds: jobIds.join(',') }
+      : { all: '1' },
+  });
+}
+
+function getTrackedManualSyncJob(fakeid: string): ManualSyncJobStatus | null {
+  const jobs = Object.values(manualSyncJobs.value)
+    .filter(job => job.fakeid === fakeid && !isTerminalSyncStage(job.stage))
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+
+  return jobs[0] || null;
+}
+
+function mergeGridRows(rows: MpAccount[]): AccountGridRow[] {
+  return rows.map(row => ({
+    ...row,
+    manualSyncJob: getTrackedManualSyncJob(row.fakeid),
+  }));
+}
+
+function applyGridRows(rows: MpAccount[]) {
+  globalRowData = mergeGridRows(rows);
+  gridApi.value?.setGridOption('rowData', globalRowData);
+}
+
+function patchGridRowsWithManualSyncJobs() {
+  globalRowData = globalRowData.map(row => ({
+    ...row,
+    manualSyncJob: getTrackedManualSyncJob(row.fakeid),
+  }));
+  gridApi.value?.setGridOption('rowData', globalRowData);
+}
+
+function trackManualSyncJob(status: ManualSyncJobStatus) {
+  manualSyncJobs.value = {
+    ...manualSyncJobs.value,
+    [status.jobId]: status,
+  };
+  patchGridRowsWithManualSyncJobs();
+}
+
+function removeTrackedManualSyncJob(jobId: string) {
+  if (!manualSyncJobs.value[jobId]) {
+    return;
+  }
+
+  const nextJobs = { ...manualSyncJobs.value };
+  delete nextJobs[jobId];
+  manualSyncJobs.value = nextJobs;
+  patchGridRowsWithManualSyncJobs();
+}
+
+function resolveManualSyncWaiter(status: ManualSyncJobStatus) {
+  const waiter = manualSyncWaiters.get(status.jobId);
+  if (!waiter) {
+    return;
+  }
+
+  manualSyncWaiters.delete(status.jobId);
+  waiter(status);
+}
+
+function activeTrackedManualSyncJobIds() {
+  return Object.values(manualSyncJobs.value)
+    .filter(job => !isTerminalSyncStage(job.stage))
+    .map(job => job.jobId);
+}
+
+function hasActiveManualSyncJobs() {
+  return activeTrackedManualSyncJobIds().length > 0;
+}
+
+function stopManualSyncStatusPolling() {
+  if (manualSyncStatusTimer) {
+    window.clearInterval(manualSyncStatusTimer);
+    manualSyncStatusTimer = null;
+  }
+}
+
+async function pollManualSyncStatuses() {
+  const jobIds = activeTrackedManualSyncJobIds();
+  if (jobIds.length === 0 || isPollingManualSyncJobs) {
+    if (jobIds.length === 0) {
+      stopManualSyncStatusPolling();
+    }
+    return;
+  }
+
+  isPollingManualSyncJobs = true;
   try {
-    await $fetch('/api/web/worker/manual-sync-cancel', {
-      method: 'POST',
-      body: { jobId: currentSyncJobId.value },
-    });
+    const statuses = await getManualSyncStatuses(jobIds);
+    if (statuses.length === 0) {
+      return;
+    }
+
+    let shouldRefreshAccounts = false;
+    for (const status of statuses) {
+      trackManualSyncJob(status);
+      if (isTerminalSyncStage(status.stage)) {
+        shouldRefreshAccounts = true;
+        resolveManualSyncWaiter(status);
+        removeTrackedManualSyncJob(status.jobId);
+      }
+    }
+
+    if (shouldRefreshAccounts) {
+      await refresh();
+    }
   } catch (error) {
-    console.warn('[sync] 取消同步请求失败:', error);
+    console.error('轮询手动同步状态失败:', error);
+  } finally {
+    isPollingManualSyncJobs = false;
+    if (!hasActiveManualSyncJobs()) {
+      stopManualSyncStatusPolling();
+    }
   }
 }
 
-async function waitForManualSyncJob(fakeid: string, jobId: string) {
-  const pollSequence = ++syncPollSequence;
-  let lastFingerprint = createSyncStatusFingerprint(syncStatus.value);
-
-  while (true) {
-    const status = await getManualSyncStatus(jobId);
-    if (pollSequence !== syncPollSequence) {
-      return status;
-    }
-
-    const nextFingerprint = createSyncStatusFingerprint(status);
-    if (nextFingerprint !== lastFingerprint) {
-      applySyncStatus(status);
-      await updateRow(fakeid, status);
-      lastFingerprint = nextFingerprint;
-    } else {
-      refreshSyncRow(fakeid);
-    }
-
-    if (isTerminalSyncStage(status.stage)) {
-      return status;
-    }
-
-    await sleep(1000);
+function ensureManualSyncStatusPolling() {
+  if (manualSyncStatusTimer) {
+    return;
   }
+
+  void pollManualSyncStatuses();
+  manualSyncStatusTimer = window.setInterval(() => {
+    void pollManualSyncStatuses();
+  }, MANUAL_SYNC_STATUS_POLL_INTERVAL_MS);
 }
 
-async function restoreActiveManualSyncJob() {
+async function hydrateManualSyncJobs() {
   try {
-    const status = await getManualSyncStatus();
-    if (!status || isTerminalSyncStage(status.stage)) {
-      clearSyncRuntimeState();
+    const statuses = await getManualSyncStatuses();
+    if (statuses.length === 0) {
       return;
     }
 
-    applySyncStatus(status);
-    await updateRow(status.fakeid, status);
-
-    void waitForManualSyncJob(status.fakeid, status.jobId)
-      .catch(error => {
-        console.warn('[sync] 恢复手动同步状态失败:', error);
-      })
-      .finally(() => {
-        clearSyncRuntimeState();
-      });
-  } catch (error: any) {
-    const statusCode = error?.statusCode || error?.data?.statusCode || error?.response?.status;
-    if (statusCode === 404) {
-      clearSyncRuntimeState();
-      return;
+    const nextJobs: Record<string, ManualSyncJobStatus> = {};
+    for (const status of statuses) {
+      nextJobs[status.jobId] = status;
     }
-    console.warn('[sync] 获取当前手动同步任务失败:', error);
+    manualSyncJobs.value = nextJobs;
+    patchGridRowsWithManualSyncJobs();
+    ensureManualSyncStatusPolling();
+  } catch (error) {
+    console.error('初始化手动同步状态失败:', error);
   }
+}
+
+async function waitForManualSyncJob(jobId: string) {
+  const trackedStatus = manualSyncJobs.value[jobId];
+  if (trackedStatus && isTerminalSyncStage(trackedStatus.stage)) {
+    return trackedStatus;
+  }
+
+  ensureManualSyncStatusPolling();
+  return await new Promise<ManualSyncJobStatus>((resolve) => {
+    manualSyncWaiters.set(jobId, resolve);
+  });
+}
+
+async function cancelManualSyncJob(job: ManualSyncJobStatus) {
+  const status = await $fetch<ManualSyncJobStatus>('/api/web/worker/manual-sync-cancel', {
+    method: 'POST',
+    body: { jobId: job.jobId },
+  });
+  trackManualSyncJob(status);
+  ensureManualSyncStatusPolling();
 }
 
 async function loadAccountArticle(account: MpAccount) {
@@ -305,17 +321,14 @@ async function loadAccountArticle(account: MpAccount) {
     `时间区间: ${getActualDateRange()}`
   );
 
-  isCanceled.value = false;
-  isSyncing.value = true;
-  syncingRowId.value = account.fakeid;
-
   try {
     const { jobId, status } = await startManualSyncRequest(account);
-    applySyncStatus(status);
-    await updateRow(account.fakeid, status);
+    trackManualSyncJob(status);
+    ensureManualSyncStatusPolling();
 
-    const finalStatus = await waitForManualSyncJob(account.fakeid, jobId);
-    await updateRow(account.fakeid, finalStatus);
+    const finalStatus = await waitForManualSyncJob(jobId);
+    await refresh();
+    removeTrackedManualSyncJob(jobId);
 
     if (finalStatus.stage === 'cancelled') {
       throw new Error('已取消同步');
@@ -337,9 +350,6 @@ async function loadAccountArticle(account: MpAccount) {
       modal.open(LoginModal);
     }
     throw error;
-  } finally {
-    syncPollSequence += 1;
-    clearSyncRuntimeState();
   }
 }
 
@@ -347,24 +357,57 @@ async function loadAccountArticle(account: MpAccount) {
 async function loadSelectedAccountArticle() {
   if (!checkLogin()) return;
 
-  isCanceled.value = false;
+  const rows = getSelectedRows();
+  const activeRows = rows.filter(account => !account.is_delete);
+  const skippedDisabled = rows.length - activeRows.length;
+
+  if (activeRows.length === 0) {
+    toast.warning('无法同步', '选中的公众号都已禁用');
+    return;
+  }
 
   try {
-    const rows = getSelectedRows();
+    syncToTimestamp = getSyncTimestamp();
+    const jobRefs = [];
+    for (const account of activeRows) {
+      const job = await startManualSyncRequest(account);
+      trackManualSyncJob(job.status);
+      jobRefs.push({ account, jobId: job.jobId });
+    }
+
+    ensureManualSyncStatusPolling();
+
     let totalGenerated = 0;
     let totalSkipped = 0;
     let totalFailed = 0;
-    for (const account of rows) {
-      const status = await loadAccountArticle(account);
+
+    const finalStatuses = await Promise.all(jobRefs.map(job => waitForManualSyncJob(job.jobId)));
+    for (const status of finalStatuses) {
       totalGenerated += status.generated;
       totalSkipped += status.skipped;
       totalFailed += status.failed;
+
+      if (status.stage === 'failed') {
+        if (status.error === 'session expired' || status.error?.includes('未登录')) {
+          modal.open(LoginModal);
+        }
+        throw new Error(status.error || '同步失败');
+      }
+
+      if (status.stage === 'cancelled') {
+        throw new Error('已取消同步');
+      }
     }
+
+    await refresh();
     const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
     toast.success(
       '同步完成',
-      `已成功同步 ${rows.length} 个公众号${rangeHint}，文档生成 ${totalGenerated} 篇，跳过 ${totalSkipped} 篇，失败 ${totalFailed} 篇`
+      `已成功同步 ${activeRows.length} 个公众号${rangeHint}，文档生成 ${totalGenerated} 篇，跳过 ${totalSkipped} 篇，失败 ${totalFailed} 篇`
     );
+    if (skippedDisabled > 0) {
+      toast.warning('已跳过禁用公众号', `本次跳过 ${skippedDisabled} 个已禁用公众号`);
+    }
   } catch (e: any) {
     if (e.message === '已取消同步') {
       toast.warning('同步已取消', '当前同步任务已停止');
@@ -374,7 +417,7 @@ async function loadSelectedAccountArticle() {
   }
 }
 
-let globalRowData: MpAccount[] = [];
+let globalRowData: AccountGridRow[] = [];
 
 const columnDefs = ref<ColDef[]>([
   {
@@ -425,7 +468,7 @@ const columnDefs = ref<ColDef[]>([
   },
   {
     colId: 'update_time',
-    headerName: '最后同步时间',
+    headerName: '最后数据更新时间',
     field: 'update_time',
     valueFormatter: p => (p.value ? formatTimeStamp(p.value) : ''),
     filter: 'agDateColumnFilter',
@@ -468,16 +511,46 @@ const columnDefs = ref<ColDef[]>([
     initialHide: true,
   },
   {
+    colId: 'status',
+    headerName: '同步状态',
+    field: 'status',
+    cellRenderer: (params: ICellRendererParams) => {
+      const label = getAccountSyncStatusLabel(params.value);
+      return label ? `<span class="inline-flex items-center justify-center whitespace-nowrap">${label}</span>` : '';
+    },
+    tooltipValueGetter: () => null,
+    filter: 'agSetColumnFilter',
+    minWidth: 140,
+    cellClass: 'flex justify-center items-center',
+  },
+  {
+    colId: 'is_interface',
+    headerName: '接口添加',
+    field: 'is_interface',
+    cellDataType: 'boolean',
+    filter: 'agSetColumnFilter',
+    filterParams: createBooleanColumnFilterParams('接口添加', '页面添加'),
+    cellClass: 'flex justify-center items-center',
+    headerClass: 'justify-center',
+    minWidth: 140,
+  },
+  {
+    colId: 'is_delete',
+    headerName: '是否禁用',
+    field: 'is_delete',
+    cellDataType: 'boolean',
+    filter: 'agSetColumnFilter',
+    filterParams: createBooleanColumnFilterParams('已禁用', '未禁用'),
+    cellClass: 'flex justify-center items-center',
+    headerClass: 'justify-center',
+    minWidth: 140,
+  },
+  {
     colId: 'load_percent',
     headerName: '同步进度',
     valueGetter: params => (params.data.total_count === 0 ? 0 : params.data.count / params.data.total_count),
     cellDataType: 'number',
     cellRenderer: GridLoadProgress,
-    autoHeight: true,
-    cellRendererParams: {
-      syncingRowId,
-      syncStatus,
-    },
     filter: 'agNumberColumnFilter',
     minWidth: 260,
   },
@@ -503,7 +576,6 @@ const columnDefs = ref<ColDef[]>([
       onSync: (params: ICellRendererParams) => {
         if (!checkLogin()) return;
 
-        isCanceled.value = false;
         loadAccountArticle(params.data)
           .then((status) => {
             const rangeHint = isSyncAll() ? '' : `（同步范围：${getSyncRangeLabel()}）`;
@@ -518,15 +590,19 @@ const columnDefs = ref<ColDef[]>([
             }
           });
       },
-      onStop: () => {
-        void cancelCurrentSync();
+      onCancelSync: (params: ICellRendererParams) => {
+        const job = (params.data as AccountGridRow).manualSyncJob;
+        if (!job) return;
+
+        cancelManualSyncJob(job).catch((error: any) => {
+          toast.error('取消同步失败', error?.data?.message || error?.message || '取消同步失败');
+        });
       },
       isDeleting: isDeleting,
-      isSyncing: isSyncing,
-      syncingRowId: syncingRowId,
     },
     cellClass: 'flex justify-center items-center',
-    maxWidth: 100,
+    minWidth: 140,
+    maxWidth: 160,
     pinned: 'right',
   },
 ]);
@@ -535,7 +611,6 @@ const columnDefs = ref<ColDef[]>([
 const gridOptions: GridOptions = defu(
   {
     getRowId: (params: GetRowIdParams) => String(params.data.fakeid),
-    getRowHeight: (params: RowHeightParams) => (params.data?.fakeid === syncingRowId.value ? SYNC_PROGRESS_ROW_HEIGHT : undefined),
   },
   sharedGridOptions
 );
@@ -545,18 +620,23 @@ function onGridReady(params: GridReadyEvent) {
   gridApi.value = params.api;
 
   restoreColumnState();
-  void refresh().then(() => restoreActiveManualSyncJob());
+  void refresh();
+  void hydrateManualSyncJobs();
+  if (!refreshTimer) {
+    refreshTimer = window.setInterval(() => {
+      if (!hasActiveManualSyncJobs()) {
+        void refresh();
+      }
+    }, ACCOUNT_PAGE_REFRESH_INTERVAL_MS);
+  }
 }
 
-watch(syncingRowId, async (nextFakeid, prevFakeid) => {
-  await nextTick();
-  if (prevFakeid) {
-    refreshSyncRow(prevFakeid);
+onUnmounted(() => {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+    refreshTimer = null;
   }
-  if (nextFakeid) {
-    refreshSyncRow(nextFakeid);
-  }
-  gridApi.value?.resetRowHeights();
+  stopManualSyncStatusPolling();
 });
 
 function onColumnStateChange() {
@@ -581,58 +661,17 @@ function restoreColumnState() {
 }
 
 async function refresh() {
-  globalRowData = await getAllInfo();
-  gridApi.value?.setGridOption('rowData', globalRowData);
-}
-
-function refreshSyncRow(fakeid: string) {
-  const rowNode = gridApi.value?.getRowNode(fakeid);
-  if (rowNode) {
-    gridApi.value?.refreshCells({
-      rowNodes: [rowNode],
-      columns: ['load_percent', 'action'],
-      force: true,
-    });
-  }
-}
-
-function shouldUpdateRowData(currentData: MpAccount | undefined, nextData: MpAccount) {
-  if (!currentData) {
-    return true;
-  }
-
-  return currentData.count !== nextData.count
-    || currentData.articles !== nextData.articles
-    || currentData.total_count !== nextData.total_count
-    || currentData.completed !== nextData.completed
-    || currentData.update_time !== nextData.update_time
-    || currentData.last_update_time !== nextData.last_update_time;
-}
-
-async function updateRow(fakeid: string, status?: ManualSyncJobStatus) {
-  const rowNode = gridApi.value?.getRowNode(fakeid);
-  if (!rowNode) {
+  if (isRefreshingAccounts) {
     return;
   }
 
-  const info = await getInfoCache(fakeid);
-  if (!info) {
-    refreshSyncRow(fakeid);
-    return;
+  isRefreshingAccounts = true;
+  try {
+    const accounts = await getAllInfo();
+    applyGridRows(accounts);
+  } finally {
+    isRefreshingAccounts = false;
   }
-
-  const currentData = rowNode.data as MpAccount | undefined;
-  const nextData: MpAccount = {
-    ...(currentData || {} as MpAccount),
-    ...info,
-    total_count: info.total_count || status?.totalCount || currentData?.total_count || 0,
-  };
-
-  if (shouldUpdateRowData(currentData, nextData)) {
-    rowNode.updateData(nextData);
-  }
-
-  refreshSyncRow(fakeid);
 }
 
 // 当前是否有选中的行
@@ -644,7 +683,8 @@ function getSelectedRows() {
   const rows: MpAccount[] = [];
   gridApi.value?.forEachNodeAfterFilterAndSort(node => {
     if (node.isSelected()) {
-      rows.push(node.data);
+      const { manualSyncJob: _manualSyncJob, ...account } = node.data as AccountGridRow;
+      rows.push(account);
     }
   });
   return rows;
@@ -767,7 +807,6 @@ function exportAccount() {
           color="black"
           icon="i-heroicons:arrow-path-rounded-square-20-solid"
           class="disabled:opacity-35"
-          :loading="isSyncing"
           :disabled="isDeleting || !hasSelectedRows"
           @click="loadSelectedAccountArticle"
           >同步</UButton
@@ -776,21 +815,6 @@ function exportAccount() {
           <span class="self-end text-sm text-blue-500 font-medium">同步范围: {{ getActualDateRange() }}</span>
         </div>
       </header>
-
-      <div v-if="syncStatusText" class="px-3 py-2 border-b border-gray-200 bg-slate-50">
-        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
-          <span :class="syncStatusClass">{{ syncStatusText }}</span>
-          <a
-            v-if="syncStatusUrl"
-            :href="syncStatusUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="font-mono text-xs text-sky-600 hover:text-sky-700 underline break-all"
-          >
-            {{ syncStatusUrl }}
-          </a>
-        </div>
-      </div>
 
       <!-- 数据表格 -->
       <ag-grid-vue

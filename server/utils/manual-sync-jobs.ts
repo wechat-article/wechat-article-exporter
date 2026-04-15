@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { getActiveSession, syncAccountByRange, type SyncRetryProgress } from '~/server/utils/sync-engine';
+import { enqueueAccountSync } from '~/server/utils/account-sync-queue';
+import type { SyncRetryProgress } from '~/server/utils/sync-engine';
 import type { ArticleExportProgress, ArticleExportRetryProgress } from '~/server/utils/docx-generator';
 
 export type ManualSyncStage = 'queued' | 'syncing' | 'exporting' | 'finalizing' | 'completed' | 'failed' | 'cancelled' | 'cancelling';
@@ -40,17 +41,9 @@ interface StartManualSyncInput {
 }
 
 const jobs = new Map<string, ManualSyncJobStatus>();
-let activeJobId: string | null = null;
 
 function isTerminalStage(stage: ManualSyncStage) {
   return stage === 'completed' || stage === 'failed' || stage === 'cancelled';
-}
-
-function getActiveJob() {
-  if (!activeJobId) {
-    return null;
-  }
-  return jobs.get(activeJobId) || null;
 }
 
 function touch(status: ManualSyncJobStatus, patch: Partial<ManualSyncJobStatus>) {
@@ -61,36 +54,70 @@ function normalizePageNumber(pageNumber: number | null | undefined): number {
   return Math.max(1, Number(pageNumber || 0));
 }
 
-async function runManualSyncJob(status: ManualSyncJobStatus, input: StartManualSyncInput) {
-  try {
-    const session = await getActiveSession();
-    if (!session) {
-      touch(status, {
-        stage: 'failed',
-        error: '未登录或登录已过期，请重新扫码登录',
-        retrying: false,
-        retryMessage: null,
-      });
-      return;
-    }
+export async function startManualSyncJob(input: StartManualSyncInput): Promise<ManualSyncJobStatus> {
+  const now = Date.now();
+  const jobId = randomUUID();
+  const status: ManualSyncJobStatus = {
+    jobId,
+    fakeid: input.fakeid,
+    nickname: input.nickname,
+    stage: 'queued',
+    syncToTimestamp: input.syncToTimestamp,
+    startedAt: now,
+    updatedAt: now,
+    cancelRequested: false,
+    pageNumber: 1,
+    begin: 0,
+    totalCount: 0,
+    currentPageArticleCount: 0,
+    currentPageFilteredCount: 0,
+    currentArticleTitle: null,
+    currentArticleUrl: null,
+    currentArticleIndex: 0,
+    currentArticleTotal: 0,
+    retrying: false,
+    retryMessage: null,
+    articleCount: 0,
+    generated: 0,
+    skipped: 0,
+    failed: 0,
+    failedUrls: [],
+  };
 
-    const result = await syncAccountByRange({
-      authKey: session.authKey,
-      token: session.token,
-      cookie: session.cookie,
+  jobs.set(jobId, status);
+
+  let handle;
+  try {
+    handle = await enqueueAccountSync({
+      source: 'manual',
       fakeid: input.fakeid,
       nickname: input.nickname,
       roundHeadImg: input.roundHeadImg,
       syncToTimestamp: input.syncToTimestamp,
-      source: 'manual-sync',
       exportDocs: true,
       isCancelled: () => status.cancelRequested,
       onStageChange: async (stage) => {
-        if (status.cancelRequested && !isTerminalStage(status.stage)) {
-          touch(status, { stage: 'cancelling', retrying: false, retryMessage: null });
+        if (stage === 'queued') {
+          touch(status, { stage: 'queued', retrying: false, retryMessage: null });
           return;
         }
-        touch(status, { stage, retrying: false, retryMessage: null });
+
+        if (stage === 'syncing' || stage === 'exporting' || stage === 'finalizing') {
+          touch(status, {
+            stage: status.cancelRequested ? 'cancelling' : stage,
+            retrying: false,
+            retryMessage: null,
+          });
+          return;
+        }
+
+        if (stage === 'cancelled') {
+          touch(status, {
+            stage: 'cancelled',
+            retrying: false,
+            retryMessage: null,
+          });
+        }
       },
       onPageFetched: async (progress) => {
         touch(status, {
@@ -146,7 +173,12 @@ async function runManualSyncJob(status: ManualSyncJobStatus, input: StartManualS
         });
       },
     });
+  } catch (error) {
+    jobs.delete(jobId);
+    throw error;
+  }
 
+  void handle.promise.then((result) => {
     if (result.error === 'cancelled') {
       touch(status, {
         stage: 'cancelled',
@@ -198,51 +230,8 @@ async function runManualSyncJob(status: ManualSyncJobStatus, input: StartManualS
       retrying: false,
       retryMessage: null,
     });
-  } finally {
-    if (activeJobId === status.jobId) {
-      activeJobId = null;
-    }
-  }
-}
+  });
 
-export async function startManualSyncJob(input: StartManualSyncInput): Promise<ManualSyncJobStatus> {
-  const activeJob = getActiveJob();
-  if (activeJob && !isTerminalStage(activeJob.stage)) {
-    throw new Error(`已有同步任务正在执行: ${activeJob.nickname}`);
-  }
-
-  const now = Date.now();
-  const jobId = randomUUID();
-  const status: ManualSyncJobStatus = {
-    jobId,
-    fakeid: input.fakeid,
-    nickname: input.nickname,
-    stage: 'queued',
-    syncToTimestamp: input.syncToTimestamp,
-    startedAt: now,
-    updatedAt: now,
-    cancelRequested: false,
-    pageNumber: 1,
-    begin: 0,
-    totalCount: 0,
-    currentPageArticleCount: 0,
-    currentPageFilteredCount: 0,
-    currentArticleTitle: null,
-    currentArticleUrl: null,
-    currentArticleIndex: 0,
-    currentArticleTotal: 0,
-    retrying: false,
-    retryMessage: null,
-    articleCount: 0,
-    generated: 0,
-    skipped: 0,
-    failed: 0,
-    failedUrls: [],
-  };
-
-  jobs.set(jobId, status);
-  activeJobId = jobId;
-  void runManualSyncJob(status, input);
   return status;
 }
 
@@ -250,7 +239,18 @@ export function getManualSyncJobStatus(jobId?: string): ManualSyncJobStatus | nu
   if (jobId) {
     return jobs.get(jobId) || null;
   }
-  return getActiveJob();
+
+  return Array.from(jobs.values())
+    .filter(status => !isTerminalStage(status.stage))
+    .sort((left, right) => right.updatedAt - left.updatedAt)[0] || null;
+}
+
+export function listManualSyncJobStatuses(jobIds?: string[]): ManualSyncJobStatus[] {
+  const candidates = jobIds && jobIds.length > 0
+    ? jobIds.map(jobId => jobs.get(jobId)).filter((status): status is ManualSyncJobStatus => Boolean(status))
+    : Array.from(jobs.values()).filter(status => !isTerminalStage(status.stage));
+
+  return candidates.sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
 export function cancelManualSyncJob(jobId: string): ManualSyncJobStatus | null {

@@ -1,4 +1,4 @@
-import { ARTICLE_LIST_PAGE_SIZE, USER_AGENT } from '~/config';
+import { ARTICLE_LIST_PAGE_SIZE, RETRY_POLICY, USER_AGENT } from '~/config';
 import type { AppMsgEx, PublishInfo, PublishListItem } from '~/types/types';
 import { getPool } from '~/server/db/postgres';
 import { AccountCookie, cookieStore } from '~/server/utils/CookieStore';
@@ -14,9 +14,7 @@ import {
 } from '~/server/utils/docx-generator';
 import { getPreferencesFromDB } from '~/server/utils/preferences';
 
-const DEFAULT_SYNC_INTERVAL_MS = 5000;
-const MAX_PAGE_RETRIES = 3;
-const MAX_EMPTY_PAGE_RETRIES = 2;
+const DEFAULT_SYNC_INTERVAL_MS = 4000;
 
 export interface ActiveSession {
   authKey: string;
@@ -332,7 +330,7 @@ async function fetchArticlesPageOnce(
   const publishList = rawPublishList.filter((item: PublishListItem) => !!item.publish_info);
   const completed = rawPublishList.length === 0;
 
-  const articles = publishList.flatMap((item: PublishListItem) => parsePublishInfo(item).appmsgex || []);
+  const articles: AppMsgEx[] = publishList.flatMap((item: PublishListItem) => parsePublishInfo(item).appmsgex || []);
   const rawCount = rawPublishList.length;
   const msgCount = articles.filter(article => article.itemidx === 1).length;
 
@@ -361,19 +359,20 @@ async function fetchArticlesPageWithRetry(
   onRetry?: (progress: SyncRetryProgress) => void | Promise<void>,
 ): Promise<FetchPageResult> {
   let page: FetchPageResult | null = null;
+  const totalAttempts = RETRY_POLICY.syncPageFetch.retries + 1;
 
-  for (let attempt = 0; attempt < MAX_PAGE_RETRIES; attempt++) {
+  for (let attempt = 0; attempt < totalAttempts; attempt++) {
     try {
       page = await fetchArticlesPageOnce(authKey, token, cookie, fakeid, begin, source);
       break;
     } catch (error: any) {
-      console.error(`[${source}] ${fakeid} 第 ${pageNumber} 页请求失败 (${attempt + 1}/${MAX_PAGE_RETRIES}):`, error);
-      if (error?.message === 'session expired' || attempt === MAX_PAGE_RETRIES - 1) {
+      console.error(`[${source}] ${fakeid} 第 ${pageNumber} 页请求失败 (${attempt + 1}/${totalAttempts}):`, error);
+      if (error?.message === 'session expired' || attempt === totalAttempts - 1) {
         throw error;
       }
       const retryAttempt = attempt + 1;
-      const retryTotal = Math.max(1, MAX_PAGE_RETRIES - 1);
-      const delayMs = Math.pow(2, attempt + 1) * 1000;
+      const retryTotal = RETRY_POLICY.syncPageFetch.retries;
+      const delayMs = RETRY_POLICY.syncPageFetch.delayMs;
       const retryMessage = `正在重试同步列表第 ${pageNumber} 页，第 ${retryAttempt}/${retryTotal} 次`;
       console.warn(
         `[${source}] 【${nickname}】${retryMessage}，${delayMs / 1000} 秒后继续 (begin=${begin})，原因: ${error?.message || error}`,
@@ -397,10 +396,10 @@ async function fetchArticlesPageWithRetry(
   }
 
   if (page.completed && begin < page.totalCount) {
-    for (let retry = 1; retry <= MAX_EMPTY_PAGE_RETRIES; retry++) {
-      const retryMessage = `同步列表第 ${pageNumber} 页返回空数据，正在第 ${retry}/${MAX_EMPTY_PAGE_RETRIES} 次重试`;
+    for (let retry = 1; retry <= RETRY_POLICY.wechatEmptyPage.retries; retry++) {
+      const retryMessage = `同步列表第 ${pageNumber} 页返回空数据，正在第 ${retry}/${RETRY_POLICY.wechatEmptyPage.retries} 次重试`;
       console.warn(
-        `[${source}] 【${nickname}】${retryMessage}，${DEFAULT_SYNC_INTERVAL_MS / 1000}s 后继续 (begin=${begin}, total_count=${page.totalCount})`,
+        `[${source}] 【${nickname}】${retryMessage}，${RETRY_POLICY.wechatEmptyPage.delayMs / 1000}s 后继续 (begin=${begin}, total_count=${page.totalCount})`,
       );
       await onRetry?.({
         stage: 'syncing',
@@ -408,11 +407,11 @@ async function fetchArticlesPageWithRetry(
         pageNumber,
         begin,
         attempt: retry,
-        maxAttempts: MAX_EMPTY_PAGE_RETRIES,
-        delayMs: DEFAULT_SYNC_INTERVAL_MS,
+        maxAttempts: RETRY_POLICY.wechatEmptyPage.retries,
+        delayMs: RETRY_POLICY.wechatEmptyPage.delayMs,
         message: retryMessage,
       });
-      await delay(DEFAULT_SYNC_INTERVAL_MS);
+      await delay(RETRY_POLICY.wechatEmptyPage.delayMs);
       const retryPage = await fetchArticlesPageOnce(authKey, token, cookie, fakeid, begin, source);
       if (!retryPage.completed) {
         return retryPage;

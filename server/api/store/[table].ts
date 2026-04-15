@@ -1,5 +1,6 @@
 import { getPool } from '~/server/db/postgres';
 import { resolveArticleCover, resolveArticleDeleted, resolveArticleDigest } from '~/server/utils/article-record';
+import { normalizeAccountSyncStatus } from '~/shared/utils/account-sync-status';
 
 /**
  * 统一的数据库存储 API 端点
@@ -311,6 +312,13 @@ async function upsertInfo(client: any, mpAccount: any) {
   const isSemiconductor = hasIsSemiconductor && Number.isFinite(Number(mpAccount.is_semiconductor))
     ? Number(mpAccount.is_semiconductor)
     : null;
+  const hasIsInterface = mpAccount.is_interface !== undefined && mpAccount.is_interface !== null;
+  const isInterface = hasIsInterface ? Boolean(mpAccount.is_interface) : null;
+  const hasIsDelete = mpAccount.is_delete !== undefined && mpAccount.is_delete !== null;
+  const isDelete = hasIsDelete ? Boolean(mpAccount.is_delete) : null;
+  const status = mpAccount.status === null || mpAccount.status === undefined || mpAccount.status === ''
+    ? null
+    : normalizeAccountSyncStatus(mpAccount.status);
   if (existing.rows.length > 0) {
     const row = existing.rows[0];
     const newCompleted = mpAccount.completed ? true : row.completed;
@@ -324,7 +332,10 @@ async function upsertInfo(client: any, mpAccount: any) {
          total_count = $7,
          update_time = $8,
          service_type = COALESCE($9, service_type),
-         is_semiconductor = COALESCE($10, is_semiconductor, 0)
+         is_semiconductor = COALESCE($10, is_semiconductor, 0),
+         is_interface = COALESCE($11, is_interface, FALSE),
+         status = COALESCE($12, status),
+         is_delete = COALESCE($13, is_delete, FALSE)
        WHERE fakeid = $1`,
       [
         mpAccount.fakeid,
@@ -337,13 +348,31 @@ async function upsertInfo(client: any, mpAccount: any) {
         Math.round(Date.now() / 1000),
         serviceType,
         isSemiconductor,
+        isInterface,
+        status,
+        isDelete,
       ]
     );
   } else {
     const now = Math.round(Date.now() / 1000);
     await client.query(
-      `INSERT INTO info (fakeid, completed, count, articles, nickname, round_head_img, service_type, is_semiconductor, total_count, create_time, update_time)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), $9, $10, $11)`,
+      `INSERT INTO info (
+         fakeid,
+         completed,
+         count,
+         articles,
+         nickname,
+         round_head_img,
+         service_type,
+         is_semiconductor,
+         total_count,
+         is_interface,
+         status,
+         is_delete,
+         create_time,
+         update_time
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), $9, COALESCE($10, FALSE), $11, COALESCE($12, FALSE), $13, $14)`,
       [
         mpAccount.fakeid,
         mpAccount.completed,
@@ -354,6 +383,9 @@ async function upsertInfo(client: any, mpAccount: any) {
         serviceType,
         isSemiconductor,
         mpAccount.total_count,
+        isInterface,
+        status,
+        isDelete,
         now,
         now,
       ]
@@ -395,6 +427,9 @@ function toInfoObject(row: any) {
     service_type: row.service_type ?? undefined,
     is_semiconductor: Number(row.is_semiconductor || 0),
     total_count: row.total_count,
+    is_interface: row.is_interface === true,
+    status: normalizeAccountSyncStatus(row.status),
+    is_delete: row.is_delete === true,
     create_time: row.create_time ? Number(row.create_time) : undefined,
     update_time: row.update_time ? Number(row.update_time) : undefined,
     last_update_time: row.last_update_time ? Number(row.last_update_time) : undefined,
@@ -433,10 +468,14 @@ async function handleInfoPost(pool: any, action: string, body: any) {
           mpAccount.count = 0;
           mpAccount.articles = 0;
           mpAccount.total_count = 0;
+          mpAccount.is_interface = mpAccount.is_interface ?? false;
+          mpAccount.status = null;
+          mpAccount.is_delete = mpAccount.is_delete ?? false;
           mpAccount.create_time = undefined;
           mpAccount.update_time = undefined;
           mpAccount.last_update_time = undefined;
           await upsertInfo(client, mpAccount);
+          await client.query(`UPDATE info SET status = NULL WHERE fakeid = $1`, [mpAccount.fakeid]);
         }
         await client.query('COMMIT');
         return { success: true };

@@ -1,5 +1,5 @@
 import { request } from '#shared/utils/request';
-import { ACCOUNT_LIST_PAGE_SIZE, ARTICLE_LIST_PAGE_SIZE } from '~/config';
+import { ACCOUNT_LIST_PAGE_SIZE, ARTICLE_LIST_PAGE_SIZE, RETRY_POLICY } from '~/config';
 import { updateArticleCache } from '~/store/v2/article';
 import { type MpAccount, updateLastUpdateTime } from '~/store/v2/info';
 import type { CommentResponse } from '~/types/comment';
@@ -25,9 +25,6 @@ const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials
  * @param keyword
  * @return [文章列表, 是否加载完毕, 文章总数]
  */
-const MAX_EMPTY_PAGE_RETRIES = 2; // 空页重试次数（微信偶尔返回空列表）
-const EMPTY_PAGE_RETRY_DELAY = 3000; // 空页重试间隔(ms)
-
 async function processArticleResponse(
   account: MpAccount,
   publish_page: PublishPage,
@@ -107,12 +104,12 @@ export async function getArticleList(
 
     // 空页处理：微信偶尔返回空列表，需要区分"真的完成"和"临时抽风"
     if (isCompleted && begin < publish_page.total_count && !keyword) {
-      for (let retry = 1; retry <= MAX_EMPTY_PAGE_RETRIES; retry++) {
+      for (let retry = 1; retry <= RETRY_POLICY.wechatEmptyPage.retries; retry++) {
         console.warn(
           `【${account.nickname}】begin=${begin} 收到空列表但 total_count=${publish_page.total_count}，` +
-          `疑似微信临时异常，${EMPTY_PAGE_RETRY_DELAY / 1000}s 后重试 (${retry}/${MAX_EMPTY_PAGE_RETRIES})`
+          `疑似微信临时异常，${RETRY_POLICY.wechatEmptyPage.delayMs / 1000}s 后重试 (${retry}/${RETRY_POLICY.wechatEmptyPage.retries})`
         );
-        await new Promise(resolve => setTimeout(resolve, EMPTY_PAGE_RETRY_DELAY));
+        await new Promise(resolve => setTimeout(resolve, RETRY_POLICY.wechatEmptyPage.delayMs));
         const retryResp = await request<AppMsgPublishResponse>('/api/web/mp/appmsgpublish', {
           query: {
             id: account.fakeid,
@@ -131,7 +128,7 @@ export async function getArticleList(
           }
         }
       }
-      console.warn(`【${account.nickname}】连续 ${MAX_EMPTY_PAGE_RETRIES} 次空列表，视为已完成`);
+      console.warn(`【${account.nickname}】连续 ${RETRY_POLICY.wechatEmptyPage.retries} 次空列表，视为已完成`);
     }
 
     return processArticleResponse(account, publish_page, publish_list, keyword, begin, syncToTimestamp);

@@ -1,5 +1,5 @@
 import TurndownService from 'turndown';
-import { urlIsValidMpArticle } from '#shared/utils';
+import { shouldSkipMpArticleUrl, urlIsValidMpArticle } from '#shared/utils';
 import {
   isArticleAccessTooFrequentMessage,
   isPolicyViolationMessage,
@@ -7,7 +7,7 @@ import {
   parseCgiDataNew,
   validateHTMLContent,
 } from '#shared/utils/html';
-import { USER_AGENT } from '~/config';
+import { RETRY_POLICY, USER_AGENT } from '~/config';
 import { getPool } from '~/server/db/postgres';
 import {
   isNonRetryableArticleFetchError,
@@ -20,15 +20,14 @@ export type ArticleContentFormat = 'html' | 'markdown' | 'text' | 'json';
 
 export const SUPPORTED_ARTICLE_CONTENT_FORMATS: ArticleContentFormat[] = ['html', 'markdown', 'text', 'json'];
 
-const MAX_FETCH_RETRIES = 3;
-const FETCH_RETRY_DELAY_MS = 5000;
+const UNSUPPORTED_MP_ARTICLE_URL_MESSAGE = '该类 mp/appmsg/show 链接不支持抓取';
 
 export function isSupportedArticleContentFormat(format: string): format is ArticleContentFormat {
   return SUPPORTED_ARTICLE_CONTENT_FORMATS.includes(format as ArticleContentFormat);
 }
 
 export function validateArticleUrl(url: string): boolean {
-  return urlIsValidMpArticle(url);
+  return urlIsValidMpArticle(url) && !shouldSkipMpArticleUrl(url);
 }
 
 function delay(ms: number): Promise<void> {
@@ -95,10 +94,10 @@ async function fetchRemoteArticleHtml(url: string): Promise<string> {
 async function fetchValidatedRemoteArticleHtml(url: string): Promise<string> {
   let lastErrorMessage = '获取文章内容失败，请重试';
 
-  for (let attempt = 0; attempt <= MAX_FETCH_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= RETRY_POLICY.articleContent.retries; attempt++) {
     if (attempt > 0) {
-      console.warn(`[article-content] 正在重试抓取文章，第 ${attempt}/${MAX_FETCH_RETRIES} 次 | ${url}`);
-      await delay(FETCH_RETRY_DELAY_MS);
+      console.warn(`[article-content] 正在重试抓取文章，第 ${attempt}/${RETRY_POLICY.articleContent.retries} 次 | ${url}`);
+      await delay(RETRY_POLICY.articleContent.delayMs);
     }
 
     try {
@@ -124,7 +123,7 @@ async function fetchValidatedRemoteArticleHtml(url: string): Promise<string> {
       if (isNonRetryableArticleFetchError(error)) {
         throw error;
       }
-      if (attempt === MAX_FETCH_RETRIES) {
+      if (attempt === RETRY_POLICY.articleContent.retries) {
         break;
       }
     }
@@ -170,6 +169,10 @@ export async function resolveArticleContent(url: string, format: ArticleContentF
   content: string | Record<string, any> | null;
   contentType: string;
 }> {
+  if (shouldSkipMpArticleUrl(url)) {
+    throw new NonRetryableArticleFetchError(UNSUPPORTED_MP_ARTICLE_URL_MESSAGE);
+  }
+
   const { html, source } = await getRawArticleHtml(url);
 
   switch (format) {

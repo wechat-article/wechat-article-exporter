@@ -3,6 +3,7 @@ import {
   resolveArticleContent,
   validateArticleUrl,
 } from '~/server/utils/article-content';
+import { getPool } from '~/server/db/postgres';
 
 function failure(message: string) {
   return {
@@ -35,6 +36,20 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    const pool = getPool();
+    const disabledAccountRes = await pool.query(
+      `SELECT 1
+       FROM article AS article
+       INNER JOIN info AS info ON info.fakeid = article.fakeid
+       WHERE article.link = $1
+         AND COALESCE(info.is_delete, FALSE) = TRUE
+       LIMIT 1`,
+      [url],
+    );
+    if (disabledAccountRes.rows.length > 0) {
+      return failure('该公众号已被禁用');
+    }
+
     const result = await resolveArticleContent(url, format);
     if (format === 'json') {
       return result.content;

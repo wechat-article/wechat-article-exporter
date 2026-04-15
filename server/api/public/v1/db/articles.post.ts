@@ -74,11 +74,13 @@ export default defineEventHandler(async (event) => {
     const pool = getPool();
     const totalRes = await pool.query(
       `SELECT COUNT(*) AS total
-       FROM article
-       WHERE fakeid = ANY($1::text[])
-         AND link IS NOT NULL
-         AND ($2::bigint IS NULL OR update_time >= $2)
-         AND ($3::bigint IS NULL OR update_time <= $3)`,
+       FROM article AS article
+       INNER JOIN info AS info ON info.fakeid = article.fakeid
+       WHERE article.fakeid = ANY($1::text[])
+         AND article.link IS NOT NULL
+         AND COALESCE(info.is_delete, FALSE) = FALSE
+         AND ($2::bigint IS NULL OR article.update_time >= $2)
+         AND ($3::bigint IS NULL OR article.update_time <= $3)`,
       [fakeids, startTime, endTime]
     );
     const total = Number(totalRes.rows[0]?.total || 0);
@@ -86,34 +88,36 @@ export default defineEventHandler(async (event) => {
 
     const listRes = await pool.query(
       `SELECT
-         fakeid,
-         link,
-         COALESCE(update_time, create_time) AS update_time,
-         COALESCE(NULLIF(article_title, ''), data->>'title') AS article_title,
+         article.fakeid,
+         article.link,
+         COALESCE(article.update_time, article.create_time) AS update_time,
+         COALESCE(NULLIF(article.article_title, ''), article.data->>'title') AS article_title,
          COALESCE(
-           NULLIF(cover, ''),
-           NULLIF(data->>'cover', ''),
-           NULLIF(data->>'cover_img', ''),
-           NULLIF(data->>'pic_cdn_url_235_1', ''),
-           NULLIF(data->>'pic_cdn_url_16_9', ''),
-           NULLIF(data->>'pic_cdn_url_3_4', ''),
-           NULLIF(data->>'pic_cdn_url_1_1', '')
+           NULLIF(article.cover, ''),
+           NULLIF(article.data->>'cover', ''),
+           NULLIF(article.data->>'cover_img', ''),
+           NULLIF(article.data->>'pic_cdn_url_235_1', ''),
+           NULLIF(article.data->>'pic_cdn_url_16_9', ''),
+           NULLIF(article.data->>'pic_cdn_url_3_4', ''),
+           NULLIF(article.data->>'pic_cdn_url_1_1', '')
          ) AS cover,
-         COALESCE(NULLIF(digest, ''), NULLIF(data->>'digest', '')) AS digest,
+         COALESCE(NULLIF(article.digest, ''), NULLIF(article.data->>'digest', '')) AS digest,
          COALESCE(
-           is_deleted,
+           article.is_deleted,
            CASE
-             WHEN LOWER(COALESCE(data->>'is_deleted', '')) IN ('true', '1') THEN TRUE
-             WHEN LOWER(COALESCE(data->>'is_deleted', '')) IN ('false', '0') THEN FALSE
+             WHEN LOWER(COALESCE(article.data->>'is_deleted', '')) IN ('true', '1') THEN TRUE
+             WHEN LOWER(COALESCE(article.data->>'is_deleted', '')) IN ('false', '0') THEN FALSE
              ELSE FALSE
            END
          ) AS is_deleted
-       FROM article
-       WHERE fakeid = ANY($1::text[])
-         AND link IS NOT NULL
-         AND ($2::bigint IS NULL OR update_time >= $2)
-         AND ($3::bigint IS NULL OR update_time <= $3)
-       ORDER BY COALESCE(update_time, create_time) DESC, id DESC
+       FROM article AS article
+       INNER JOIN info ON info.fakeid = article.fakeid
+       WHERE article.fakeid = ANY($1::text[])
+         AND article.link IS NOT NULL
+         AND COALESCE(info.is_delete, FALSE) = FALSE
+         AND ($2::bigint IS NULL OR article.update_time >= $2)
+         AND ($3::bigint IS NULL OR article.update_time <= $3)
+       ORDER BY COALESCE(article.update_time, article.create_time) DESC, article.id DESC
        LIMIT $4 OFFSET $5`,
       [fakeids, startTime, endTime, size, offset]
     );

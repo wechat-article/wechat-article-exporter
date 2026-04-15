@@ -9,6 +9,8 @@ const POLICY_VIOLATION_MESSAGES = [
   '此内容被多人投诉，相关的内容无法进行查看',
   '此内容被投诉且经审核涉嫌侵权，无法查看。',
   '参数错误',
+  '根据作者隐私设置，无法查看该内容',
+  '该内容已被发布者删除'
 ];
 
 const ARTICLE_ACCESS_TOO_FREQUENT_KEYWORDS = ['访问过于频繁', '扫描二维码进行访问'];

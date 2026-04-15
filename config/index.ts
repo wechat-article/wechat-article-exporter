@@ -54,6 +54,38 @@ export const IMAGE_PROXY = '';
 export const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36 WAE/1.0';
 
+function readEnvInt(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  const parsedValue = Number.parseInt(rawValue || '', 10);
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
+/**
+ * 项目内统一的重试策略
+ */
+export const RETRY_POLICY = {
+  wechatEmptyPage: {
+    retries: readEnvInt('WECHAT_EMPTY_PAGE_RETRIES', 2),
+    delayMs: readEnvInt('WECHAT_EMPTY_PAGE_RETRY_DELAY_MS', 4000),
+  },
+  syncPageFetch: {
+    retries: readEnvInt('SYNC_PAGE_FETCH_RETRIES', 1),
+    delayMs: readEnvInt('SYNC_PAGE_FETCH_RETRY_DELAY_MS', 4000),
+  },
+  articleContent: {
+    retries: readEnvInt('ARTICLE_CONTENT_RETRIES', 2),
+    delayMs: readEnvInt('ARTICLE_CONTENT_RETRY_DELAY_MS', 3000),
+  },
+  articleExport: {
+    retries: readEnvInt('ARTICLE_EXPORT_RETRIES', 3),
+    delayMs: readEnvInt('ARTICLE_EXPORT_RETRY_DELAY_MS', 3000),
+  },
+} as const;
+
 /**
  * 微信公众号上线时间 2012-08-23
  */

@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { request } from '#shared/utils/request';
 import { getCookieFromResponse, getCookiesFromRequest } from '~/server/utils/CookieStore';
+import { updateSessionProfile } from '~/server/kv/cookie';
 import { cookieStore } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
 
@@ -50,6 +51,11 @@ export default defineEventHandler(async event => {
       err: '获取公众号昵称失败，请稍后重试',
     };
   }
+
+  await updateSessionProfile(authKey, {
+    nickname: nick_name,
+    avatar: head_img || '',
+  });
 
   const accountCookie = await cookieStore.getAccountCookie(authKey);
   const expiresAt = accountCookie?.expiresAt || dayjs().add(4, 'days').valueOf();

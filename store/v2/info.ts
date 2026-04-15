@@ -8,6 +8,9 @@ export interface MpAccount {
   service_type?: number;
   is_semiconductor?: number;
   total_count: number;
+  is_interface?: boolean;
+  status?: 'queued' | 'syncing' | 'success' | 'failed' | null;
+  is_delete?: boolean;
   create_time?: number;
   update_time?: number;
   last_update_time?: number;
