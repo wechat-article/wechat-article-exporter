@@ -965,9 +965,7 @@ ${commentHTML}
       dirnameTpl = dirnameTpl.replace(/\$\{account}/g, filterInvalidFilenameChars(account.nickname));
     }
 
-    const title = article.title.length > 20 ? article.title.slice(0, 20) : article.title;
-    const datePrefix = articleUpdateTime.format('YYYY-MM-DD');
-    dirnameTpl = dirnameTpl.replace(/\$\{title}/g, `[${datePrefix}]${filterInvalidFilenameChars(title)}`);
+    dirnameTpl = dirnameTpl.replace(/\$\{title}/g, filterInvalidFilenameChars(article.title));
     dirnameTpl = dirnameTpl.replace(/\$\{aid}/g, article.aid);
     dirnameTpl = dirnameTpl.replace(/\$\{author}/g, article.author_name);
     dirnameTpl = dirnameTpl.replace(/\$\{YYYY}/g, articleUpdateTime.format('YYYY'));
