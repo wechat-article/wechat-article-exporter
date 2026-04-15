@@ -573,11 +573,11 @@ export class Downloader extends BaseDownloader {
         || cgiData.appmsg_bar_data
         || cgiData.user_info;
       if (barData) {
-        readNum = barData.read_num || 0;
-        oldLikeNum = barData.old_like_count || 0;
-        shareNum = barData.share_count || 0;
-        likeNum = barData.like_count || 0;
-        commentNum = barData.comment_count || 0;
+        readNum = barData.read_num || 0; // 阅读量
+        oldLikeNum = barData.old_like_count || 0; // 点赞
+        shareNum = barData.share_count || 0; // 分享
+        likeNum = barData.like_count || 0; // 喜欢
+        commentNum = barData.comment_count || 0; // 留言
       }
     } catch (e) {
       console.warn('解析元数据失败，使用默认值:', e);
