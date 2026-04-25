@@ -1,0 +1,33 @@
+services:
+  # Main Nuxt/Nitro application
+  web:
+    image: wechat-article-exporter-web:local
+    build:
+      context: .
+      dockerfile: Dockerfile.runtime
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+      - SCRAPLING_SERVICE_URL=http://scrapling:8100
+    volumes:
+      - ./data/kv:/app/.data/kv
+      - ./data/articles:/tmp/wechat-articles
+    depends_on:
+      - scrapling
+    restart: unless-stopped
+
+  # Scrapling Python service for article parsing
+  scrapling:
+    build:
+      context: ./scrapling-service
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data/articles:/tmp/wechat-articles
+    restart: unless-stopped

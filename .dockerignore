@@ -4,7 +4,7 @@ dist
 
 .nuxt
 .nuxt-*
-.output
+# .output  # temporarily allowed for local runtime build
 .gen
 .yarn/cache  # Yarn 缓存
 yarn-error.log
