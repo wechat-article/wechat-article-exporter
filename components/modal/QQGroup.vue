@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import qqGroupImg from '~/assets/qq-group.png';
+import qqGroupImg from '~/assets/qq-group-2.png';
 
 const modal = useModal();
 
@@ -21,7 +21,7 @@ function onClose() {
       <!-- 二维码图片展示区 -->
       <div class="flex flex-col justify-center items-center mx-auto">
         <img :src="qqGroupImg" alt="" class="size-72" />
-        <p class="text-2xl">群号: <span class="font-mono">991482155</span></p>
+        <p class="text-2xl">群号: <span class="font-mono">775909845</span></p>
       </div>
     </UCard>
   </UModal>
