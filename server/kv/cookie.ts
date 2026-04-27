@@ -1,11 +1,8 @@
-import { type CookieEntity } from '~/server/utils/CookieStore';
+import { type StoredSessionRecord } from '../services/api/session-core';
 
 export type CookieKVKey = string;
 
-export interface CookieKVValue {
-  token: string;
-  cookies: CookieEntity[];
-}
+export type CookieKVValue = StoredSessionRecord;
 
 export async function setMpCookie(key: CookieKVKey, data: CookieKVValue): Promise<boolean> {
   const kv = useStorage('kv');
@@ -24,4 +21,9 @@ export async function setMpCookie(key: CookieKVKey, data: CookieKVValue): Promis
 export async function getMpCookie(key: CookieKVKey): Promise<CookieKVValue | null> {
   const kv = useStorage('kv');
   return await kv.get<CookieKVValue>(`cookie:${key}`);
+}
+
+export async function deleteMpCookie(key: CookieKVKey): Promise<void> {
+  const kv = useStorage('kv');
+  await kv.remove(`cookie:${key}`);
 }

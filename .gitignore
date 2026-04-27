@@ -29,3 +29,5 @@ samples/**/output
 
 # wrangler
 .wrangler
+.omx/
+.omc/

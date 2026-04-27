@@ -1,5 +1,5 @@
-import { getTokenFromStore } from '~/server/utils/CookieStore';
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { getTokenFromEvent } from '~/server/services/api/auth-session';
+import { fetchSearchBizResponse } from '~/server/services/api/mp-service';
 
 interface SearchBizQuery {
   begin?: number;
@@ -8,7 +8,7 @@ interface SearchBizQuery {
 }
 
 export default defineEventHandler(async event => {
-  const token = await getTokenFromStore(event);
+  const token = await getTokenFromEvent(event);
 
   if (!token) {
     return {
@@ -33,23 +33,11 @@ export default defineEventHandler(async event => {
   const begin: number = query.begin || 0;
   const size: number = query.size || 5;
 
-  const params: Record<string, string | number> = {
-    action: 'search_biz',
-    begin: begin,
-    count: size,
-    query: keyword,
-    token: token,
-    lang: 'zh_CN',
-    f: 'json',
-    ajax: '1',
-  };
-
-  return proxyMpRequest({
-    event: event,
-    method: 'GET',
-    endpoint: 'https://mp.weixin.qq.com/cgi-bin/searchbiz',
-    query: params,
-    parseJson: true,
+  return fetchSearchBizResponse(event, {
+    token,
+    keyword,
+    begin,
+    size,
   }).catch(e => {
     return {
       base_resp: {

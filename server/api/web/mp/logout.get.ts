@@ -2,12 +2,11 @@
  * 退出登录接口
  */
 
-import { parseCookies } from 'h3';
-import { cookieStore, getTokenFromStore } from '~/server/utils/CookieStore';
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { getTokenFromEvent, revokeSessionFromEvent } from '~/server/services/api/auth-session';
+import { proxyMpRequest } from '~/server/services/api/mp-gateway';
 
 export default defineEventHandler(async event => {
-  const token = await getTokenFromStore(event);
+  const token = await getTokenFromEvent(event);
   if (!token) {
     return { statusCode: 401, statusText: '未登录或登录已过期，请重新扫码登录' };
   }
@@ -23,11 +22,7 @@ export default defineEventHandler(async event => {
     },
   });
 
-  // 登出后清理内存中的 cookie 缓存
-  const authKey = getRequestHeader(event, 'X-Auth-Key') || parseCookies(event)['auth-key'];
-  if (authKey) {
-    cookieStore.removeCookie(authKey);
-  }
+  await revokeSessionFromEvent(event);
 
   return {
     statusCode: response.status,

@@ -1,0 +1,7 @@
+name = "wechat-article-exporter"
+compatibility_date = "2025-10-30"
+pages_build_output_dir = "dist"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "22d46ff673c946f1a5f3b790818b5618"
