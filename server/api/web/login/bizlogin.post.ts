@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
-import { request } from '#shared/utils/request';
-import { getCookieFromResponse, getCookiesFromRequest } from '~/server/utils/CookieStore';
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { getCookiesFromRequest, getCookieValueFromResponse } from '~/server/services/api/auth-session';
+import { proxyMpRequest } from '~/server/services/api/mp-gateway';
+import { fetchMpHomeInfoByAuthKey } from '~/server/services/api/mp-service';
 
 export default defineEventHandler(async event => {
   const cookie = getCookiesFromRequest(event);
@@ -28,22 +28,38 @@ export default defineEventHandler(async event => {
     },
     body: payload,
     cookie: cookie,
-    action: 'login', // 有这个标志就会把微信原始响应中的所有 set-cookie 存储在 CookieStore 中，并返回给客户端一个唯一的cookie: auth-key=xxx
+    action: 'login', // 该流程会写入登录态并返回 auth-key cookie
   });
 
-  // 从响应中取出唯一的 set-cookie (即上一步 `action=login` 标志所设置的 auth-key=xxx)
-  const authKey = getCookieFromResponse('auth-key', response);
+  // 从登录响应里提取 auth-key cookie
+  const authKey = getCookieValueFromResponse('auth-key', response);
   if (!authKey) {
+    let detail = '登录失败，请稍后重试';
+    try {
+      const loginResponse = await response.clone().json();
+      const upstreamMessage = loginResponse?.base_resp?.err_msg;
+      if (typeof upstreamMessage === 'string' && upstreamMessage.trim()) {
+        detail = upstreamMessage;
+      }
+    } catch {
+      try {
+        const rawText = await response.clone().text();
+        if (rawText.trim()) {
+          detail = rawText.trim();
+        }
+      } catch {
+        // Keep the default fallback message.
+      }
+    }
+
     return {
-      err: '登录失败，请稍后重试',
+      err: detail,
     };
   }
 
-  const { nick_name, head_img } = await request(`/api/web/mp/info`, {
-    headers: {
-      Cookie: `auth-key=${authKey}`,
-    },
-  });
+  const info = await fetchMpHomeInfoByAuthKey(event, authKey);
+  const nick_name = info?.nick_name || '';
+  const head_img = info?.head_img || '';
   if (!nick_name) {
     return {
       err: '获取公众号昵称失败，请稍后重试',

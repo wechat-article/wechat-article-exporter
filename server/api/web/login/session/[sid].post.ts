@@ -1,4 +1,4 @@
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { proxyMpRequest } from '~/server/services/api/mp-gateway';
 
 export default defineEventHandler(async event => {
   const { sid } = event.context.params!;

@@ -1,5 +1,5 @@
-import { getCookiesFromRequest } from '~/server/utils/CookieStore';
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { getCookiesFromRequest } from '~/server/services/api/auth-session';
+import { proxyMpRequest } from '~/server/services/api/mp-gateway';
 
 export default defineEventHandler(async event => {
   const cookie = getCookiesFromRequest(event);

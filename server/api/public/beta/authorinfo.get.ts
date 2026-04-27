@@ -1,8 +1,4 @@
-/**
- * 搜索公众号主体信息
- */
-
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { fetchAuthorInfoResponse } from '~/server/services/api/mp-service';
 
 interface AuthorInfoQuery {
   fakeid: string;
@@ -11,20 +7,8 @@ interface AuthorInfoQuery {
 export default defineEventHandler(async event => {
   const { fakeid } = getQuery<AuthorInfoQuery>(event);
 
-  const params: Record<string, string | number> = {
-    wxtoken: '777',
-    biz: fakeid,
-    __biz: fakeid,
-    x5: 0,
-    f: 'json',
-  };
-
-  return proxyMpRequest({
-    event: event,
-    method: 'GET',
-    endpoint: 'https://mp.weixin.qq.com/mp/authorinfo',
-    query: params,
-    parseJson: true,
+  return fetchAuthorInfoResponse(event, {
+    fakeid,
   }).catch(e => {
     return {
       base_resp: {

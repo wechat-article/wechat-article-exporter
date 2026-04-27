@@ -2,8 +2,8 @@
  * 获取文章列表接口
  */
 
-import { getTokenFromStore } from '~/server/utils/CookieStore';
-import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { getTokenFromEvent } from '~/server/services/api/auth-session';
+import { fetchAppMsgPublishResponse } from '~/server/services/api/mp-service';
 
 interface AppMsgPublishQuery {
   begin?: number;
@@ -13,7 +13,7 @@ interface AppMsgPublishQuery {
 }
 
 export default defineEventHandler(async event => {
-  const token = await getTokenFromStore(event);
+  const token = await getTokenFromEvent(event);
   if (!token) {
     return { base_resp: { ret: -1, err_msg: '未登录或登录已过期，请重新扫码登录' } };
   }
@@ -26,28 +26,12 @@ export default defineEventHandler(async event => {
 
   const isSearching = !!keyword;
 
-  const params: Record<string, string | number> = {
-    sub: isSearching ? 'search' : 'list',
-    search_field: isSearching ? '7' : 'null',
-    begin: begin,
-    count: size,
-    query: keyword,
+  return fetchAppMsgPublishResponse(event, {
+    token,
     fakeid: id,
-    type: '101_1',
-    free_publish_type: 1,
-    sub_action: 'list_ex',
-    token: token,
-    lang: 'zh_CN',
-    f: 'json',
-    ajax: 1,
-  };
-
-  return proxyMpRequest({
-    event: event,
-    method: 'GET',
-    endpoint: 'https://mp.weixin.qq.com/cgi-bin/appmsgpublish',
-    query: params,
-    parseJson: true,
+    keyword,
+    begin,
+    size,
   }).catch(e => {
     console.error(e);
     return {

@@ -1,16 +1,25 @@
-import { getMpCookie } from '~/server/kv/cookie';
-import { getAuthKeyFromRequest } from '~/server/utils/proxy-request';
+import {
+  getSessionByAuthKey,
+  issueApiTokenForAuthKey,
+  resolveAuthKeyFromEvent,
+} from '~/server/services/api/auth-session';
 
 export default defineEventHandler(async event => {
-  const authKey = getAuthKeyFromRequest(event);
+  const authKey = await resolveAuthKeyFromEvent(event);
+  const session = await getSessionByAuthKey(authKey);
 
-  // 这里进行服务器验证，确定请求中的 auth-key 是否还有效
-  const cookie = await getMpCookie(authKey);
+  if (authKey && session) {
+    const apiToken = await issueApiTokenForAuthKey(authKey);
+    if (!apiToken) {
+      return {
+        code: -1,
+        msg: 'API token issue failed',
+      };
+    }
 
-  if (authKey && cookie) {
     return {
       code: 0,
-      data: authKey,
+      data: apiToken,
     };
   } else {
     return {

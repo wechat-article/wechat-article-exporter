@@ -35,6 +35,7 @@ export default defineNuxtConfig({
     client: 'hidden',
   },
   nitro: {
+    preset: process.env.NITRO_PRESET,
     minify: process.env.NODE_ENV === 'production',
     rollupConfig: {
       external: ['puppeteer'],
@@ -43,6 +44,7 @@ export default defineNuxtConfig({
       kv: {
         driver: process.env.NITRO_KV_DRIVER || 'memory',
         base: process.env.NITRO_KV_BASE,
+        binding: 'KV',
       },
     },
   },

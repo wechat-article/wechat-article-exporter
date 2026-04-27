@@ -1,14 +1,16 @@
-import { cookieStore } from '~/server/utils/CookieStore';
-
-interface DebugQuery {
-  key: string;
-}
+import { getSessionCacheSnapshot } from '~/server/services/api/auth-session';
 
 export default defineEventHandler(async event => {
-  const { key } = getQuery<DebugQuery>(event);
-  if (key && key === process.env.DEBUG_KEY) {
-    return cookieStore.toJSON();
-  } else {
-    return 'not set debug key';
+  if (process.env.NODE_ENV !== 'development') {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' });
   }
+
+  const debugKey = getRequestHeader(event, 'x-debug-key');
+  if (!debugKey || debugKey !== process.env.DEBUG_KEY) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+  }
+
+  return {
+    activeSessions: Object.keys(getSessionCacheSnapshot()).length,
+  };
 });

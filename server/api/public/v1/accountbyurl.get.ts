@@ -1,4 +1,4 @@
-import { request } from '#shared/utils/request';
+import { searchAccountByArticleUrl } from '~/server/services/api/mp-service';
 
 interface UrlQuery {
   url: string;
@@ -7,10 +7,9 @@ interface UrlQuery {
 export default defineEventHandler(async event => {
   const { url } = getQuery<UrlQuery>(event);
 
-  return await request('/api/web/mp/searchbyurl?url=' + encodeURIComponent(url), {
-    headers: {
-      'X-Auth-Key': getHeader(event, 'X-Auth-Key')!,
-      Cookie: getHeader(event, 'Cookie')!,
-    },
+  return searchAccountByArticleUrl(event, {
+    url,
+    authErrorMessage: '认证信息无效',
+    searchErrorMessage: '搜索公众号接口失败，请稍后重试',
   });
 });
