@@ -300,6 +300,12 @@ export default (options: Partial<UseExporterOptions> = {}) => {
 
     if (needsContentFormats.has(type) && contentNotDownloadedCount > 0) {
       toast.warning('提示', `有 ${contentNotDownloadedCount} 篇文章尚未抓取内容，请先抓取内容后再导出`);
+      console.info('[export:blocked:content-missing]', {
+        type,
+        count: contentNotDownloadedCount,
+        sampleUrls: contentNotDownloadedUrls.slice(0, 10),
+        truncated: contentNotDownloadedUrls.length > 10,
+      });
       if (contentNotDownloadedUrls.length > 0 && typeof options.onContentMissing === 'function') {
         options.onContentMissing(contentNotDownloadedUrls);
       }
