@@ -448,16 +448,6 @@ function buildTaskDetailItems(urls: string[]): TaskDetailItem[] {
 
 function openTaskDetailModal(title: string, description: string, urls: string[]) {
   const items = buildTaskDetailItems(urls);
-  console.info('[article:task-detail-modal:open]', {
-    title,
-    total: items.length,
-    sample: items.slice(0, 10).map(item => ({
-      title: item.title,
-      publishTime: item.publishTime,
-    })),
-    hasMore: items.length > 10,
-  });
-
   modal.open(ArticleTaskDetailModal, {
     title,
     description,

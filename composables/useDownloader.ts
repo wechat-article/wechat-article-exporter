@@ -38,16 +38,6 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
 
   let downloader: Downloader | null = null;
 
-  function logDownloadSummary(type: DownloadTaskType, status: DownloaderStatus) {
-    console.info(`[download:finish:${type}]`, {
-      completed: status.completed.length,
-      failed: status.failed.length,
-      deleted: status.deleted.length,
-      sampleFailedUrls: status.failed.slice(0, 10),
-      hasMoreFailed: status.failed.length > 10,
-    });
-  }
-
   // 抓取文章内容(html)
   async function downloadArticleHTML(urls: string[]) {
     if (urls.length === 0) {
@@ -90,7 +80,6 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【文章内容】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}, 检测到已被删除:${status.deleted.length}`
         );
-        logDownloadSummary('html', status);
         if (typeof options.onFinish === 'function') {
           options.onFinish('html', status);
         }
@@ -153,7 +142,6 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【阅读量】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}, 检测到已被删除:${status.deleted.length}`
         );
-        logDownloadSummary('metadata', status);
         if (typeof options.onFinish === 'function') {
           options.onFinish('metadata', status);
         }
@@ -201,7 +189,6 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【留言内容】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}`
         );
-        logDownloadSummary('comment', status);
         if (typeof options.onFinish === 'function') {
           options.onFinish('comment', status);
         }
@@ -252,7 +239,6 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【fakeid】修复完成',
           `本次耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}`
         );
-        logDownloadSummary('fakeid', status);
         if (typeof options.onFinish === 'function') {
           options.onFinish('fakeid', status);
         }
