@@ -20,6 +20,7 @@ import GridAlbum from '~/components/grid/Album.vue';
 import GridArticleActions from '~/components/grid/ArticleActions.vue';
 import GridCoverTooltip from '~/components/grid/CoverTooltip.vue';
 import GridStatusBar from '~/components/grid/StatusBar.vue';
+import ArticleTaskDetailModal from '~/components/modal/ArticleTaskDetail.vue';
 import AccountSelectorForArticle from '~/components/selector/AccountSelectorForArticle.vue';
 import { isDev, websiteName } from '~/config';
 import { sharedGridOptions } from '~/config/shared-grid-options';
@@ -31,7 +32,7 @@ import { type MpAccount } from '~/store/v2/info';
 import { getMetadataCache, type Metadata } from '~/store/v2/metadata';
 import type { Preferences } from '~/types/preferences';
 import type { AppMsgExWithFakeID } from '~/types/types';
-import type { ArticleMetadata } from '~/utils/download/types';
+import type { ArticleMetadata, DownloaderStatus } from '~/utils/download/types';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
 
 useHead({
@@ -348,6 +349,7 @@ function onFilterChanged(event: FilterChangedEvent) {
 }
 
 const preferences = usePreferences();
+const modal = useModal();
 const hideDeleted = computed(() => (preferences.value as unknown as Preferences).hideDeleted);
 
 const previewArticleRef = ref<typeof PreviewArticle | null>(null);
@@ -408,9 +410,70 @@ function onSelectionChanged(event: SelectionChangedEvent) {
 const selectedArticleUrls = computed(() => {
   return selectedArticles.value.map(article => article.link);
 });
-const contentNotDownloadedCount = computed(() => {
-  return selectedArticles.value.filter(article => !article.contentDownload).length;
+const contentNotDownloadedUrls = computed(() => {
+  return selectedArticles.value.filter(article => !article.contentDownload).map(article => article.link);
 });
+
+type TaskDetailItem = {
+  title: string;
+  publishTime: string;
+  url: string;
+};
+
+function findArticleByUrl(url: string): Article | undefined {
+  return selectedArticles.value.find(article => article.link === url) || globalRowData.find(article => article.link === url);
+}
+
+function formatArticlePublishTime(article?: Article): string {
+  if (!article) {
+    return '--';
+  }
+  const ts = article.update_time || article.create_time;
+  if (!ts) {
+    return '--';
+  }
+  return formatTimeStamp(ts);
+}
+
+function buildTaskDetailItems(urls: string[]): TaskDetailItem[] {
+  return urls.map(url => {
+    const article = findArticleByUrl(url);
+    return {
+      title: article?.title || url,
+      publishTime: formatArticlePublishTime(article),
+      url,
+    };
+  });
+}
+
+function openTaskDetailModal(title: string, description: string, urls: string[]) {
+  const items = buildTaskDetailItems(urls);
+  modal.open(ArticleTaskDetailModal, {
+    title,
+    description,
+    items,
+    collapsedCount: 10,
+  });
+}
+
+function handleDownloadFinish(type: 'html' | 'metadata' | 'comment' | 'fakeid', status: DownloaderStatus) {
+  if (status.failed.length === 0) {
+    return;
+  }
+
+  const titleMap = {
+    html: '文章内容抓取失败明细',
+    metadata: '阅读量抓取失败明细',
+    comment: '留言抓取失败明细',
+    fakeid: 'fakeid 修复失败明细',
+  } as const;
+
+  openTaskDetailModal(
+    titleMap[type],
+    `共 ${status.failed.length} 篇抓取失败。默认展示前 10 条，可展开查看全部。`,
+    status.failed
+  );
+}
 
 const {
   loading: downloadBtnLoading,
@@ -489,6 +552,9 @@ const {
       console.warn(`${url} not found in table data when update commentDownload`);
     }
   },
+  onFinish(type, status) {
+    handleDownloadFinish(type, status);
+  },
 });
 
 const {
@@ -497,7 +563,11 @@ const {
   completed_count: exportCompletedCount,
   total_count: exportTotalCount,
   exportFile,
-} = useExporter();
+} = useExporter({
+  onContentMissing(urls: string[]) {
+    openTaskDetailModal('存在未抓取内容的文章', `共 ${urls.length} 篇未抓取内容。默认展示前 10 条，可展开查看全部。`, urls);
+  },
+});
 
 async function debug() {
   const cache = await getDebugCache('https://mp.weixin.qq.com/s/0IEaqpJIBGykHFKqj-7xqw');
@@ -570,11 +640,11 @@ function copyWechatLink() {
             ]"
             @export-article-excel="exportFile('excel', selectedArticleUrls)"
             @export-article-json="exportFile('json', selectedArticleUrls)"
-            @export-article-html="exportFile('html', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-text="exportFile('text', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-markdown="exportFile('markdown', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-word="exportFile('word', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-pdf="exportFile('pdf', selectedArticleUrls, contentNotDownloadedCount)"
+            @export-article-html="exportFile('html', selectedArticleUrls, contentNotDownloadedUrls)"
+            @export-article-text="exportFile('text', selectedArticleUrls, contentNotDownloadedUrls)"
+            @export-article-markdown="exportFile('markdown', selectedArticleUrls, contentNotDownloadedUrls)"
+            @export-article-word="exportFile('word', selectedArticleUrls, contentNotDownloadedUrls)"
+            @export-article-pdf="exportFile('pdf', selectedArticleUrls, contentNotDownloadedUrls)"
           >
             <UButton
               :loading="exportBtnLoading"
