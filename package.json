@@ -2,6 +2,9 @@
   "name": "wechat-article-exporter",
   "version": "2.3.17",
   "type": "module",
+  "bin": {
+    "wechat-exporter": "./cli/wechat-exporter.mjs"
+  },
   "scripts": {
     "debug": "nuxt dev --inspect",
     "dev": "nuxt dev",
