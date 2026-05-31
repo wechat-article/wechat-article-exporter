@@ -1,5 +1,6 @@
 import { H3Event, parseCookies } from 'h3';
 import { CookieKVValue, getMpCookie, setMpCookie } from '~/server/kv/cookie';
+import { getCookieExpirationState } from './cookie-expiration';
 
 // 表示一条 set-cookie 记录的解析结果
 export type CookieEntity = Record<string, string | number>;
@@ -45,8 +46,7 @@ export class AccountCookie {
 
   // 根据 cookie 中的 expires 来确定是否已过期
   public get isExpired(): boolean {
-    // todo
-    return false;
+    return getCookieExpirationState(this._cookie) === 'expired';
   }
 
   public static parse(cookies: string[]): CookieEntity[] {
@@ -120,6 +120,11 @@ class CookieStore {
     let cachedAccountCookie = this.store.get(authKey);
 
     if (cachedAccountCookie) {
+      if (cachedAccountCookie.isExpired) {
+        this.store.delete(authKey);
+        return null;
+      }
+
       // LRU: 访问时将条目移到末尾（最近使用）
       this.store.delete(authKey);
       this.store.set(authKey, cachedAccountCookie);
@@ -133,6 +138,10 @@ class CookieStore {
     }
 
     cachedAccountCookie = AccountCookie.create(cookieValue.token, cookieValue.cookies);
+    if (cachedAccountCookie.isExpired) {
+      return null;
+    }
+
     this.evictIfNeeded();
     this.store.set(authKey, cachedAccountCookie);
 
