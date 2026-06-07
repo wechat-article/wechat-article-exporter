@@ -119,6 +119,11 @@ export function validateHTMLContent(html: string): ['Success' | 'Deleted' | 'Exc
   } else if ($msgBlock.length === 1) {
     const msg = $msgBlock.text().trim().replace(/\n+/g, '').replace(/ +/g, ' ');
     return ['Exception', msg];
+  } else if ($('#app').length === 1) {
+    // 隐私文章（SPA 页面，内容通过 Vue 动态加载，无内嵌 HTML 结构）
+    // 特征: <div id="app"></div> 作为挂载点，body 类含 appmsg_skin_default，
+    // 使用 vite + vue 构建的 JS 包 private.*.js 动态渲染内容
+    return ['Exception', '隐私保护，仅内部分享可见'];
   } else {
     return ['Error', null];
   }
