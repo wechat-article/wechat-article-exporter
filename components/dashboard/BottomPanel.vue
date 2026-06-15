@@ -80,11 +80,11 @@ const logoutBtnLoading = ref(false);
 async function logout() {
   logoutBtnLoading.value = true;
   const { statusCode, statusText } = await request<LogoutResponse>('/api/web/mp/logout');
-  if (statusCode === 200) {
-    loginAccount.value = null;
-  } else {
+  // 接口调用失败时，提示消息，但是不阻止前端退出
+  if (statusCode !== 200) {
     alert(statusText);
   }
+  loginAccount.value = null;
   logoutBtnLoading.value = false;
 }
 
