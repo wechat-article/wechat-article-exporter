@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import * as cheerio from 'cheerio';
 import { isDev } from '~/config';
 
@@ -97,21 +98,23 @@ function extractInfo(rawHTML: string) {
   const scriptCodeMatchResult = rawHTML.match(/(?<code>var cgiData = .+)seajs\.use/s);
   if (scriptCodeMatchResult && scriptCodeMatchResult.groups && scriptCodeMatchResult.groups.code) {
     const scriptCode = scriptCodeMatchResult.groups.code;
-    const window: Record<string, any> = {
+    const sandbox = Object.create(null);
+    sandbox.window = {
       cgiData: {
         auth_3rd_list: [],
       },
     };
+    vm.createContext(sandbox);
     try {
-      eval(scriptCode);
+      vm.runInContext(scriptCode, sandbox, { timeout: 1000 });
     } catch (e) {
-      console.error('eval execute js code fatal:', e);
+      console.error('vm execute js code fatal:', e);
     }
-    if (window.ip_wording) {
-      result.ip_wording = window.ip_wording;
+    if (sandbox.window.ip_wording) {
+      result.ip_wording = sandbox.window.ip_wording;
     }
-    if (window.cgiData.auth_3rd_list) {
-      result.auth_3rd_list = window.cgiData.auth_3rd_list;
+    if (sandbox.window.cgiData.auth_3rd_list) {
+      result.auth_3rd_list = sandbox.window.cgiData.auth_3rd_list;
     }
   }
 
