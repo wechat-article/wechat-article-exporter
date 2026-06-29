@@ -491,13 +491,91 @@ const {
   },
 });
 
-const {
-  loading: exportBtnLoading,
-  phase: exportPhase,
-  completed_count: exportCompletedCount,
-  total_count: exportTotalCount,
-  exportFile,
-} = useExporter();
+import { request } from '#shared/utils/request';
+
+const serverDownloadStatus = ref({ status: 'idle', progress: 0, total: 0, error: '' });
+let pollTimer: any = null;
+
+async function checkServerDownloadStatus() {
+  if (!selectedAccount.value) return;
+  try {
+    const res = await request<{
+      download: { status: string; progress: number; total: number; error?: string };
+    }>(`/api/web/task/status?fakeid=${selectedAccount.value.fakeid}`);
+    if (res) {
+      serverDownloadStatus.value = res.download;
+      if (res.download.status === 'running') {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(checkServerDownloadStatus, 1500);
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+watch(selectedAccount, () => {
+  stopPolling();
+  serverDownloadStatus.value = { status: 'idle', progress: 0, total: 0, error: '' };
+  checkServerDownloadStatus();
+});
+
+onUnmounted(() => {
+  stopPolling();
+});
+
+async function triggerServerDownload() {
+  if (!selectedAccount.value) return;
+  
+  try {
+    serverDownloadStatus.value.status = 'running';
+    
+    let proxyUrl = '';
+    try {
+      const prefs = JSON.parse(localStorage.getItem('preferences') || '{}');
+      if (prefs.privateProxyList && prefs.privateProxyList.length > 0) {
+        proxyUrl = prefs.privateProxyList[0];
+      }
+    } catch (err) {}
+
+    let articlesToSend = undefined;
+    if (selectedArticles.value && selectedArticles.value.length > 0) {
+      articlesToSend = selectedArticles.value.map(a => ({
+        aid: a.aid,
+        title: a.title,
+        link: a.link,
+        create_time: a.create_time,
+      }));
+    }
+
+    await request('/api/web/task/download', {
+      method: 'POST',
+      body: {
+        fakeid: selectedAccount.value.fakeid,
+        nickname: selectedAccount.value.nickname,
+        proxyUrl: proxyUrl,
+        articles: articlesToSend,
+      }
+    });
+    
+    checkServerDownloadStatus();
+  } catch (e: any) {
+    alert('触发服务器下载失败: ' + e.message);
+  }
+}
 
 async function debug() {
   const cache = await getDebugCache('https://mp.weixin.qq.com/s/0IEaqpJIBGykHFKqj-7xqw');
@@ -537,54 +615,24 @@ function copyWechatLink() {
           </div>
         </div>
         <div class="flex items-center space-x-2">
-          <UButton v-if="downloadBtnLoading" color="black" @click="stopDownload">停止</UButton>
-          <ButtonGroup
-            :items="[
-              { label: '文章内容', event: 'download-article-html' },
-              { label: '阅读量 (需要Credential)', event: 'download-article-metadata' },
-              { label: '留言内容 (需要Credential)', event: 'download-article-comment' },
-            ]"
-            @download-article-html="download('html', selectedArticleUrls)"
-            @download-article-metadata="download('metadata', selectedArticleUrls)"
-            @download-article-comment="download('comment', selectedArticleUrls)"
+          <!-- 云下载 (.md) -->
+          <UButton
+            :loading="serverDownloadStatus.status === 'running'"
+            :disabled="!selectedAccount"
+            color="teal"
+            icon="i-heroicons-arrow-down-tray-20-solid"
+            @click="triggerServerDownload"
           >
-            <UButton
-              :loading="downloadBtnLoading"
-              :disabled="!selectedAccount"
-              color="white"
-              class="font-mono"
-              :label="downloadBtnLoading ? `抓取中 ${downloadCompletedCount}/${downloadTotalCount}` : '抓取'"
-              trailing-icon="i-heroicons-chevron-down-20-solid"
-            />
-          </ButtonGroup>
-
-          <ButtonGroup
-            :items="[
-              { label: 'Excel', event: 'export-article-excel' },
-              { label: 'JSON', event: 'export-article-json' },
-              { label: 'HTML', event: 'export-article-html' },
-              { label: 'Txt', event: 'export-article-text' },
-              { label: 'Markdown', event: 'export-article-markdown' },
-              { label: 'Word (内测中)', event: 'export-article-word' },
-              { label: 'PDF (内测中)', event: 'export-article-pdf' },
-            ]"
-            @export-article-excel="exportFile('excel', selectedArticleUrls)"
-            @export-article-json="exportFile('json', selectedArticleUrls)"
-            @export-article-html="exportFile('html', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-text="exportFile('text', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-markdown="exportFile('markdown', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-word="exportFile('word', selectedArticleUrls, contentNotDownloadedCount)"
-            @export-article-pdf="exportFile('pdf', selectedArticleUrls, contentNotDownloadedCount)"
-          >
-            <UButton
-              :loading="exportBtnLoading"
-              :disabled="!selectedAccount"
-              color="white"
-              class="font-mono"
-              :label="exportBtnLoading ? `${exportPhase} ${exportCompletedCount}/${exportTotalCount}` : '导出'"
-              trailing-icon="i-heroicons-chevron-down-20-solid"
-            />
-          </ButtonGroup>
+            <span v-if="serverDownloadStatus.status === 'running'">
+              云下载中 ({{ serverDownloadStatus.progress }}/{{ serverDownloadStatus.total }})
+            </span>
+            <span v-else-if="selectedArticles.length > 0">
+              云下载选中的 {{ selectedArticles.length }} 篇 (.md)
+            </span>
+            <span v-else>
+              云下载全部文章 (.md)
+            </span>
+          </UButton>
 
           <UButton
             :disabled="!selectedAccount"
