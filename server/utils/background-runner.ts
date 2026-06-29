@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cheerio from 'cheerio';
+import TurndownService from 'turndown';
+import { normalizeHtml } from '#shared/utils/html';
 import { cookieStore } from './CookieStore';
 
 interface TaskStatus {
@@ -24,7 +26,6 @@ function getMetaDir(nickname: string): string {
 }
 
 export async function startSyncTask(fakeid: string, nickname: string, authKey: string) {
-  // If already running, do nothing
   const current = syncTasks.get(fakeid);
   if (current && current.status === 'running') {
     return;
@@ -36,7 +37,6 @@ export async function startSyncTask(fakeid: string, nickname: string, authKey: s
     total: 0,
   });
 
-  // Run in background
   (async () => {
     try {
       const accountCookie = await cookieStore.getAccountCookie(authKey);
@@ -112,11 +112,9 @@ export async function startSyncTask(fakeid: string, nickname: string, authKey: s
           break;
         }
 
-        // 避免微信风控，延迟 3 秒
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
 
-      // 写入服务器的 .meta/<公众号名> 文件夹中
       const metaDir = getMetaDir(nickname);
       fs.writeFileSync(path.join(metaDir, 'articles.json'), JSON.stringify(allArticles, null, 2), 'utf8');
       fs.writeFileSync(path.join(metaDir, 'info.json'), JSON.stringify({
@@ -144,7 +142,12 @@ export async function startSyncTask(fakeid: string, nickname: string, authKey: s
   })();
 }
 
-export async function startDownloadTask(fakeid: string, nickname: string, proxyUrl?: string) {
+export async function startDownloadTask(
+  fakeid: string,
+  nickname: string,
+  proxyUrl?: string,
+  customArticles?: any[]
+) {
   const current = downloadTasks.get(fakeid);
   if (current && current.status === 'running') {
     return;
@@ -158,13 +161,27 @@ export async function startDownloadTask(fakeid: string, nickname: string, proxyU
 
   (async () => {
     try {
-      const metaDir = path.join(BASE_WORKSPACE, '.meta', nickname);
-      const articlesPath = path.join(metaDir, 'articles.json');
-      if (!fs.existsSync(articlesPath)) {
-        throw new Error('未找到该公众号的同步数据，请先同步文章列表');
+      let articles = customArticles;
+      const metaDir = getMetaDir(nickname);
+      const downloadedPath = path.join(metaDir, 'downloaded.json');
+      
+      // 读取已下载的 url 列表以追加写入
+      let downloadedUrls: string[] = [];
+      if (fs.existsSync(downloadedPath)) {
+        try {
+          downloadedUrls = JSON.parse(fs.readFileSync(downloadedPath, 'utf8'));
+        } catch (e) {}
+      }
+      const downloadedSet = new Set(downloadedUrls);
+
+      if (!articles) {
+        const articlesPath = path.join(metaDir, 'articles.json');
+        if (!fs.existsSync(articlesPath)) {
+          throw new Error('未找到该公众号的同步数据，请先同步文章列表');
+        }
+        articles = JSON.parse(fs.readFileSync(articlesPath, 'utf8'));
       }
 
-      const articles = JSON.parse(fs.readFileSync(articlesPath, 'utf8'));
       const total = articles.length;
       downloadTasks.set(fakeid, {
         status: 'running',
@@ -179,34 +196,40 @@ export async function startDownloadTask(fakeid: string, nickname: string, proxyU
       }
 
       let downloadedCount = 0;
+      const turndownService = new TurndownService({
+        headingStyle: 'atx',
+        hr: '---',
+        bulletListMarker: '-',
+        codeBlockStyle: 'fenced',
+      });
 
       for (const article of articles) {
         try {
           const url = article.link;
-          let htmlText = '';
+          let rawHtml = '';
 
           // 1. Fetch HTML
           if (proxyUrl) {
             const fetchUrl = `${proxyUrl.replace(/\/$/, '')}?url=${encodeURIComponent(url)}`;
             const resp = await fetch(fetchUrl);
-            htmlText = await resp.text();
+            rawHtml = await resp.text();
           } else {
             const resp = await fetch(url);
-            htmlText = await resp.text();
+            rawHtml = await resp.text();
           }
 
-          // 2. Parse HTML with cheerio
-          const $ = cheerio.load(htmlText);
+          // 2. Normalize HTML (移除脚本、广告等)
+          const cleanHtml = normalizeHtml(rawHtml, 'html');
 
-          // 3. Process images
+          // 3. Cheerio 解析 HTML 并下载图片，更新为本地资源相对路径
+          const $ = cheerio.load(cleanHtml);
           const imgs = $('img').toArray();
           for (const img of imgs) {
             const $img = $(img);
-            const imgSrc = $img.attr('data-src') || $img.attr('src');
+            const imgSrc = $img.attr('src');
             if (!imgSrc || !imgSrc.startsWith('http')) continue;
 
             try {
-              // 统一使用 UUID 存为 JPG/PNG
               const urlObj = new URL(imgSrc);
               const tpParam = urlObj.searchParams.get('wx_fmt') || 'jpg';
               const imgName = `${crypto.randomUUID()}.${tpParam}`;
@@ -216,22 +239,28 @@ export async function startDownloadTask(fakeid: string, nickname: string, proxyU
               if (imgResp.ok) {
                 const buffer = await imgResp.arrayBuffer();
                 fs.writeFileSync(imgPath, Buffer.from(buffer));
-
                 $img.attr('src', `./assets/${imgName}`);
-                $img.removeAttr('data-src');
               }
             } catch (err) {
               console.error(`Failed to download image: ${imgSrc}`, err);
             }
           }
 
-          // 4. Save HTML
+          // 4. 将 HTML 转换为 Markdown
+          const updatedHtml = $.html();
+          const markdown = turndownService.turndown(updatedHtml);
+
+          // 5. 保存为 .md 文件，命名格式：<文章名>-<发布时间>.md
           const dateStr = new Date(article.create_time * 1000).toISOString().split('T')[0];
           const safeTitle = article.title.replace(/[\\/:*?"<>|]/g, '_');
-          const fileName = `[${dateStr}] ${safeTitle}.html`;
+          const fileName = `${safeTitle}-${dateStr}.md`;
           const filePath = path.join(downloadDir, fileName);
 
-          fs.writeFileSync(filePath, $.html(), 'utf8');
+          fs.writeFileSync(filePath, markdown, 'utf8');
+
+          // 记录已成功下载的 url
+          downloadedSet.add(url);
+          fs.writeFileSync(downloadedPath, JSON.stringify(Array.from(downloadedSet)), 'utf8');
 
         } catch (err) {
           console.error(`Failed to download article ${article.title}:`, err);
@@ -244,7 +273,7 @@ export async function startDownloadTask(fakeid: string, nickname: string, proxyU
           total: total,
         });
 
-        // 避免频繁抓取被微信限制，延迟 1.5 秒
+        // 避免频繁抓取触发风控，延迟 1.5 秒
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 

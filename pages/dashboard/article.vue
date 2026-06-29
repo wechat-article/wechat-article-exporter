@@ -492,9 +492,53 @@ const {
 });
 
 import { request } from '#shared/utils/request';
+import { db } from '~/store/v2/db';
 
 const serverDownloadStatus = ref({ status: 'idle', progress: 0, total: 0, error: '' });
 let pollTimer: any = null;
+
+async function syncDownloadedStatus() {
+  if (!selectedAccount.value) return;
+  try {
+    const urls = await request<string[]>(`/api/web/task/downloaded?nickname=${encodeURIComponent(selectedAccount.value.nickname)}`);
+    if (urls && Array.isArray(urls) && urls.length > 0) {
+      await db.transaction('rw', ['html'], async () => {
+        for (const url of urls) {
+          const cache = await db.html.get(url);
+          if (!cache) {
+            await db.html.put({
+              url: url,
+              fakeid: selectedAccount.value.fakeid,
+              title: '',
+              file: new Blob(['server-downloaded'], { type: 'text/html' }),
+              commentID: '',
+            });
+          }
+        }
+      });
+      
+      let updated = false;
+      for (const url of urls) {
+        const article = globalRowData.find(a => a.link === url);
+        if (article && !article.contentDownload) {
+          article.contentDownload = true;
+          article._status = '正常';
+          const rowNode = gridApi.value?.getRowNode(`${article.fakeid}:${article.aid}`);
+          if (rowNode) {
+            rowNode.updateData(article);
+          }
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        gridApi.value?.refreshCells();
+      }
+    }
+  } catch (err) {
+    console.error('同步服务器下载状态失败:', err);
+  }
+}
 
 async function checkServerDownloadStatus() {
   if (!selectedAccount.value) return;
@@ -504,6 +548,9 @@ async function checkServerDownloadStatus() {
     }>(`/api/web/task/status?fakeid=${selectedAccount.value.fakeid}`);
     if (res) {
       serverDownloadStatus.value = res.download;
+      
+      await syncDownloadedStatus();
+      
       if (res.download.status === 'running') {
         startPolling();
       } else {
