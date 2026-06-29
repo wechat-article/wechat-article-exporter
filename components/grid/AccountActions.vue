@@ -2,6 +2,7 @@
 import type { ICellRendererParams } from 'ag-grid-community';
 import { Loader } from 'lucide-vue-next';
 import { request } from '#shared/utils/request';
+import { db } from '~/store/v2/db';
 
 interface Props {
   params: ICellRendererParams & {
@@ -29,11 +30,30 @@ async function checkServerStatus() {
       sync: { status: string; progress: number; total: number; error?: string };
       download: { status: string; progress: number; total: number; error?: string };
     }>(`/api/web/task/status?fakeid=${fakeid.value}`);
+    
     if (res) {
       serverSyncStatus.value = res.sync;
       serverDownloadStatus.value = res.download;
       
-      // 如果有任何任务在运行，启动轮询
+      // 如果服务器已经同步完成，但是本地浏览器数据库的群发数不匹配或未完成，则自动下载导入
+      if (res.sync.status === 'completed') {
+        const localInfo = await db.info.get(fakeid.value);
+        // articles.json 包含的文章总数对应的群发次数
+        const serverTotalMsg = res.sync.total;
+        
+        if (!localInfo || localInfo.count !== serverTotalMsg || !localInfo.completed) {
+          try {
+            const articles = await request<any[]>(`/api/web/task/articles?nickname=${encodeURIComponent(nickname.value)}`);
+            if (articles && Array.isArray(articles)) {
+              await importArticlesToLocal(articles);
+            }
+          } catch (err) {
+            console.error('自动导入同步数据失败:', err);
+          }
+        }
+      }
+      
+      // 如果有任何任务在运行，启动/继续轮询
       if (res.sync.status === 'running' || res.download.status === 'running') {
         startPolling();
       } else {
@@ -43,6 +63,50 @@ async function checkServerStatus() {
   } catch (e) {
     console.error('Failed to get server task status', e);
   }
+}
+
+async function importArticlesToLocal(articles: any[]) {
+  await db.transaction('rw', ['article', 'info'], async () => {
+    const keys = await db.article.toCollection().keys();
+    let msgCount = 0;
+    let articleCount = 0;
+
+    for (const article of articles) {
+      const key = `${fakeid.value}:${article.aid}`;
+      await db.article.put({ ...article, fakeid: fakeid.value, _status: '' }, key);
+      if (!keys.includes(key)) {
+        articleCount++;
+      }
+      if (article.itemidx === 1) {
+        msgCount++;
+      }
+    }
+
+    let infoCache = await db.info.get(fakeid.value);
+    if (!infoCache) {
+      infoCache = {
+        fakeid: fakeid.value,
+        completed: true,
+        count: msgCount,
+        articles: articleCount,
+        nickname: nickname.value,
+        total_count: articles.filter(a => a.itemidx === 1).length,
+        create_time: Math.round(Date.now() / 1000),
+        update_time: Math.round(Date.now() / 1000),
+      };
+    } else {
+      infoCache.completed = true;
+      infoCache.count = msgCount;
+      infoCache.articles = articleCount;
+      infoCache.total_count = articles.filter(a => a.itemidx === 1).length;
+      infoCache.update_time = Math.round(Date.now() / 1000);
+    }
+    
+    await db.info.put(infoCache);
+    
+    // 更新当前行的 AgGrid 数据以更新 UI 上的已同步消息数和总消息数
+    props.params.node.setData(infoCache);
+  });
 }
 
 function startPolling() {
