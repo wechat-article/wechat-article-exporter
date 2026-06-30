@@ -29,3 +29,7 @@ samples/**/output
 
 # wrangler
 .wrangler
+
+# Dataset and meta folders
+dataset/
+.meta/
