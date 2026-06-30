@@ -189,12 +189,6 @@ export async function startDownloadTask(
         total: total,
       });
 
-      const downloadDir = path.join(BASE_WORKSPACE, `.${nickname}`);
-      const assetsDir = path.join(downloadDir, 'assets');
-      if (!fs.existsSync(assetsDir)) {
-        fs.mkdirSync(assetsDir, { recursive: true });
-      }
-
       let downloadedCount = 0;
       const turndownService = new TurndownService({
         headingStyle: 'atx',
@@ -207,6 +201,14 @@ export async function startDownloadTask(
         try {
           const url = article.link;
           let rawHtml = '';
+
+          const date = new Date(article.create_time * 1000);
+          const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          const downloadDir = path.join(BASE_WORKSPACE, 'dataset', nickname, yearMonth);
+          const assetsDir = path.join(downloadDir, 'assets');
+          if (!fs.existsSync(assetsDir)) {
+            fs.mkdirSync(assetsDir, { recursive: true });
+          }
 
           // 1. Fetch HTML
           if (proxyUrl) {
