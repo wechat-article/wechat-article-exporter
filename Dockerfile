@@ -40,6 +40,7 @@ FROM node:22-slim
 ARG VERSION=unknown
 ARG DEBIAN_MIRROR=http://deb.debian.org/debian
 ARG DEBIAN_SECURITY_MIRROR=http://deb.debian.org/debian-security
+ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org
 ARG INSTALL_PDF_RUNTIME=false
 
 # 添加 LABEL 元数据
@@ -75,7 +76,7 @@ WORKDIR /app
 COPY --from=build-env /app/.output ./
 # puppeteer 被 Rollup external 排除；仅在启用 PDF runtime 时安装，避免默认镜像拉取浏览器依赖
 RUN if [ "${INSTALL_PDF_RUNTIME}" = "true" ]; then \
-    npm install --no-save --ignore-scripts puppeteer@24; \
+    npm install --no-save --ignore-scripts --registry=${NPM_CONFIG_REGISTRY} puppeteer@24; \
   else \
     echo "Skipping optional puppeteer runtime install"; \
   fi

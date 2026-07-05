@@ -23,11 +23,15 @@ services:
       context: .
       args:
         VERSION: local
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org}
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-http://deb.debian.org/debian}
+        DEBIAN_SECURITY_MIRROR: ${DEBIAN_SECURITY_MIRROR:-http://deb.debian.org/debian-security}
+        INSTALL_PDF_RUNTIME: ${INSTALL_PDF_RUNTIME:-false}
         NUXT_PUBLIC_EXPORT_DIRECT_ZIP: "true"
         # 私有化默认留空；需要公网文档/下载时再填
         NUXT_PUBLIC_DOCS_WEBSITE_URL: ""
         NUXT_PUBLIC_WXDOWN_RELEASES_URL: ""
-    image: wechat-article-exporter:local
+    image: ${WECHAT_ARTICLE_EXPORTER_IMAGE:-wechat-article-exporter:local}
     container_name: wechat-article-exporter
     ports:
       - "127.0.0.1:3088:3000"
