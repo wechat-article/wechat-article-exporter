@@ -25,7 +25,7 @@ import { type ExcelExportEntity, export2ExcelFile, export2JsonFile } from '~/uti
 import type { DownloadOptions } from './types';
 
 // 导出类型
-type ExportType = 'excel' | 'json' | 'html' | 'txt' | 'markdown' | 'word';
+type ExportType = 'excel' | 'json' | 'html' | 'txt' | 'markdown' | 'word' | 'pdf';
 
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
 
@@ -48,7 +48,7 @@ export class Exporter extends BaseDownloader {
 
     this.storageWriter.reset();
 
-    if (['html', 'txt', 'markdown', 'word'].includes(type)) {
+    if (['html', 'txt', 'markdown', 'word', 'pdf'].includes(type)) {
       await this.storageWriter.prepare({
         directZip: this.options.directZip,
       });
@@ -87,6 +87,11 @@ export class Exporter extends BaseDownloader {
         await this.exportWordFiles();
       } else if (this.exportType === 'markdown') {
         await this.exportMarkdownFiles();
+      } else if (this.exportType === 'pdf') {
+        await this.extractResources();
+        this.emit('export:download', this.resources.size);
+        await this.processExportQueue();
+        await this.exportPdfFiles();
       }
 
       await this.storageWriter.flushZipDownload();
@@ -383,6 +388,77 @@ export class Exporter extends BaseDownloader {
       });
     });
     await sleep(100);
+  }
+
+  private async exportPdfFiles() {
+    const total = this.urls.length;
+    this.emit('export:write', total);
+
+    await this.processFileExportQueue(
+      this.urls,
+      async url => {
+        const cached = await getHtmlCache(url);
+        if (!cached) {
+          console.warn(`文章(url: ${url} )的 html 还未下载，不能导出`);
+          return;
+        }
+
+        const filename = await this.exportDirName(url);
+        console.log(`开始导出 PDF: ${cached.title}，文件名: ${filename}`);
+
+        const html = await cached.file.text();
+        const resourceMap = await getResourceMapCache(url);
+        const urlmap = new Map<string, string>();
+        if (resourceMap) {
+          for (const resourceUrl of resourceMap.resources) {
+            const resource = await getResourceCache(resourceUrl);
+            if (resource) {
+              urlmap.set(resourceUrl, await this.blobToDataUrl(resource.file));
+            }
+          }
+        }
+
+        let finalHtml = await this.normalizeHtml(cached, html, urlmap);
+        const doc = new DOMParser().parseFromString(finalHtml, 'text/html');
+        const jsContentText = doc.querySelector('#js_content')?.textContent?.replace(/[\s\u00A0]+/g, '') || '';
+        if (!jsContentText) {
+          const renderedHTML = await this.getRenderedHTML(url, true);
+          if (renderedHTML) {
+            finalHtml = renderedHTML;
+          }
+        }
+
+        const pdfStyleTag = `<style>
+  html, body { background: white !important; background-color: white !important; }
+  p { margin-block: 0.3em !important; }
+</style>`;
+        finalHtml = finalHtml.replace('</head>', `${pdfStyleTag}\n</head>`);
+
+        const response = await fetch('/api/web/pdf/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          body: finalHtml,
+        });
+
+        if (!response.ok) {
+          throw new Error(`PDF 生成失败: ${response.status} ${response.statusText}`);
+        }
+
+        const pdfBlob = await response.blob();
+        await this.writeFile(`${filename}.pdf`, pdfBlob);
+      },
+      { concurrency: 2, progressEvent: 'export:write:progress' }
+    );
+    await sleep(100);
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 
   /**

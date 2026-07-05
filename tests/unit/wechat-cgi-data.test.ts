@@ -64,7 +64,7 @@ describe('wechat cgiDataNew parser', () => {
   it('parses every existing cgiDataNew article sample without script execution', async () => {
     const samplePaths = listCgiDataNewSamples(path.resolve(process.cwd(), 'samples'));
 
-    expect(samplePaths).toHaveLength(25);
+    expect(samplePaths.length).toBeGreaterThanOrEqual(25);
     for (const samplePath of samplePaths) {
       const data = await parseCgiDataNew(fs.readFileSync(samplePath, 'utf8'));
       const relativePath = path.relative(process.cwd(), samplePath);

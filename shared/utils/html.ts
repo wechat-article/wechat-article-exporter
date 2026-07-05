@@ -135,7 +135,7 @@ export function extractCgiDataNewScript(html: string) {
 
   const scriptEl = $('script[type="text/javascript"][h5only]').filter((i, el) => {
     const content = $(el).html() || '';
-    return content.includes('window.cgiDataNew = ');
+    return content.includes('window.cgiDataNew = {');
   });
 
   if (scriptEl.length !== 1) {

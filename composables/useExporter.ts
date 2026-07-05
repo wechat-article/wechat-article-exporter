@@ -19,7 +19,7 @@ export default () => {
   const { track } = useProductMetrics();
   const runtimeConfig = useRuntimeConfig();
 
-  /** 仅影响需目录或 ZIP 的导出（html/txt/markdown/word） */
+  /** 仅影响需目录或 ZIP 的导出（html/txt/markdown/word/pdf） */
   function getFsExporterOptions(): DownloadOptions {
     const v = runtimeConfig.public.exportDirectZip as string | boolean | undefined;
     if (v === true || v === 'true') {
@@ -39,7 +39,7 @@ export default () => {
   async function runExportJob(config: {
     urls: string[];
     exporterOptions: DownloadOptions;
-    startType: 'excel' | 'json' | 'html' | 'txt' | 'markdown' | 'word';
+    startType: 'excel' | 'json' | 'html' | 'txt' | 'markdown' | 'word' | 'pdf';
     attachZipHint: boolean;
     wireEvents: (m: Exporter) => void;
   }) {
@@ -130,6 +130,34 @@ export default () => {
     });
   }
 
+  function wirePdfEvents(manager: Exporter) {
+    manager.on('export:begin', () => {
+      phase.value = '资源解析中';
+      completed_count.value = 0;
+      total_count.value = 0;
+    });
+    manager.on('export:download', (total: number) => {
+      phase.value = '资源下载中';
+      completed_count.value = 0;
+      total_count.value = total;
+    });
+    manager.on('export:download:progress', (_url: string, _success: boolean, status: ExporterStatus) => {
+      completed_count.value = status.completed.length;
+    });
+    manager.on('export:write', (total: number) => {
+      phase.value = 'PDF 生成中';
+      completed_count.value = 0;
+      total_count.value = total;
+    });
+    manager.on('export:write:progress', (index: number) => {
+      completed_count.value = index;
+    });
+    manager.on('export:finish', (seconds: number) => {
+      console.debug('耗时:', formatElapsedTime(seconds));
+      toast.success('PDF 导出完成', `本次导出耗时 ${formatElapsedTime(seconds)}`);
+    });
+  }
+
   async function export2excel(urls: string[]) {
     await runExportJob({
       urls,
@@ -190,10 +218,20 @@ export default () => {
     });
   }
 
-  const needsContentFormats = new Set(['html', 'text', 'markdown', 'word']);
+  async function export2pdf(urls: string[]) {
+    await runExportJob({
+      urls,
+      exporterOptions: getFsExporterOptions(),
+      startType: 'pdf',
+      attachZipHint: true,
+      wireEvents: wirePdfEvents,
+    });
+  }
+
+  const needsContentFormats = new Set(['html', 'text', 'markdown', 'word', 'pdf']);
 
   function exportFile(
-    type: 'excel' | 'json' | 'html' | 'text' | 'markdown' | 'word',
+    type: 'excel' | 'json' | 'html' | 'text' | 'markdown' | 'word' | 'pdf',
     urls: string[],
     contentNotDownloadedCount?: number
   ) {
@@ -215,6 +253,8 @@ export default () => {
         return export2markdown(urls);
       case 'word':
         return export2word(urls);
+      case 'pdf':
+        return export2pdf(urls);
     }
   }
 

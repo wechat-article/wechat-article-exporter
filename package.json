@@ -1,6 +1,6 @@
 {
   "name": "wechat-article-exporter",
-  "version": "2.3.15",
+  "version": "2.3.19",
   "type": "module",
   "scripts": {
     "debug": "nuxt dev --inspect",
@@ -40,6 +40,7 @@
     "mime": "^4.0.4",
     "nuxt": "^3.12.3",
     "p-queue": "^8.0.1",
+    "puppeteer": "^24.40.0",
     "turndown": "^7.2.0",
     "uuid": "^11.0.3",
     "v-calendar": "^3.1.2",

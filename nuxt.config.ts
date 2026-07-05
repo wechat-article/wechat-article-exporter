@@ -78,6 +78,9 @@ export default defineNuxtConfig({
   },
   nitro: {
     minify: process.env.NODE_ENV === 'production',
+    rollupConfig: {
+      external: ['puppeteer'],
+    },
     storage: {
       kv: {
         driver: process.env.NITRO_KV_DRIVER || 'memory',

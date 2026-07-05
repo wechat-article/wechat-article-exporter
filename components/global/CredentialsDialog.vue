@@ -438,7 +438,7 @@ async function fetchCredentials() {
   credentials.value = _credentials.sort((a, b) => b.timestamp - a.timestamp);
 }
 
-const wsURL = ref('ws://127.0.0.1:65001');
+const wsURL = ref('wss://127.0.0.1:65001');
 const wsMonitoring = ref(false);
 let _ws: WebSocket | null = null;
 

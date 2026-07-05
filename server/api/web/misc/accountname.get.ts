@@ -27,14 +27,22 @@ export default defineEventHandler(async event => {
     });
   }
 
-  const rawHtml = await fetch(urlResult.url, {
+  // 使用 manual 后手动判断状态码；目标 URL 仍先经过 allowlist 归一化以防 SSRF。
+  const res = await fetch(urlResult.url, {
     headers: {
       Referer: 'https://mp.weixin.qq.com/',
       Origin: 'https://mp.weixin.qq.com',
       'User-Agent': USER_AGENT,
     },
-    redirect: 'error', // 禁止跟随重定向，防止 SSRF 绕过
-  }).then(res => res.text());
+    redirect: 'manual',
+  });
+  if (res.status >= 300 && res.status < 400) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: `目标 URL 发生重定向 (status=${res.status})，已拒绝以防止 SSRF`,
+    });
+  }
+  const rawHtml = await res.text();
 
   const $ = cheerio.load(rawHtml);
   return $('.wx_follow_nickname:first').text().trim();
