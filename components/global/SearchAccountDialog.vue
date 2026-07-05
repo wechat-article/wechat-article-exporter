@@ -1,9 +1,7 @@
 <template>
-  <USlideover v-model="isOpen" side="left" :ui="{ overlay: { background: 'bg-zinc-400/75' } }">
-    <div
-      class="rounded-lg divide-y divide-gray-100 dark:divide-gray-800 shadow bg-white dark:bg-gray-900 flex flex-col flex-1 overflow-y-scroll"
-    >
-      <div class="sticky top-0 bg-white py-4 px-2 shadow">
+  <USlideover v-model="isOpen" side="left" :ui="{ overlay: { background: 'bg-neutral-950/45 backdrop-blur-sm' } }">
+    <div class="cc-account-drawer divide-y divide-cc-border shadow-xl flex flex-col flex-1 overflow-y-scroll">
+      <div class="sticky top-0 z-10 bg-white/95 py-4 px-3 shadow-sm backdrop-blur">
         <SearchAccountForm v-model="accountQuery" @search="searchAccount" />
       </div>
       <div class="flex-1">
@@ -11,31 +9,31 @@
           <li
             v-for="account in accountList"
             :key="account.fakeid"
-            class="flex items-center px-2 py-4 hover:bg-slate-50 hover:cursor-pointer"
+            class="cc-account-row flex items-center px-3 py-4 hover:cursor-pointer"
             @click="selectAccount(account)"
           >
-            <img class="size-20 mr-2" :src="account.round_head_img" alt="" />
+            <img class="size-16 mr-3 rounded-md border border-cc-border object-cover" :src="account.round_head_img" alt="" />
             <div class="flex-1">
               <div class="flex justify-between">
                 <p class="font-semibold">{{ account.nickname }}</p>
-                <p class="text-sky-500 font-medium">
+                <p class="text-cc-accent font-medium">
                   {{ ACCOUNT_TYPE[account.service_type] }}
                 </p>
               </div>
-              <p class="text-gray-500 text-sm">微信号: {{ account.alias || '未设置' }}</p>
-              <p class="text-sm mt-2">{{ account.signature }}</p>
+              <p class="text-cc-muted text-sm">微信号: {{ account.alias || '未设置' }}</p>
+              <p class="text-sm mt-2 text-cc-text">{{ account.signature }}</p>
             </div>
           </li>
         </ul>
 
         <p v-if="loading" class="flex justify-center items-center my-2 py-2">
-          <Loader :size="28" class="animate-spin text-slate-500" />
+          <Loader :size="28" class="animate-spin text-cc-muted" />
         </p>
-        <p v-else-if="noMoreData" class="text-center mt-2 py-2 text-slate-400">已全部加载完毕</p>
+        <p v-else-if="noMoreData" class="text-center mt-2 py-2 text-cc-muted">已全部加载完毕</p>
         <button
           v-else-if="accountList.length > 0"
           @click="loadData"
-          class="block mx-auto my-2 h-10 px-6 font-semibold rounded-md border border-slate-200 text-slate-900 dark:text-slate-300 hover:border-slate-400"
+          class="block mx-auto my-3 h-10 rounded-md border border-cc-border bg-white px-6 font-semibold text-cc-text transition hover:border-cc-border-strong"
           type="button"
         >
           加载更多

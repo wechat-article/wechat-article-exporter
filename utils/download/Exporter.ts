@@ -1,33 +1,38 @@
 import dayjs from 'dayjs';
 import mime from 'mime';
-import TurndownService from 'turndown';
 import { filterInvalidFilenameChars, sleep } from '#shared/utils/helpers';
 import { parseCgiDataNew } from '#shared/utils/html';
+import { parseJSObject } from '#shared/utils/js-literal';
 import { renderHTMLFromCgiDataNew, renderTextFromCgiDataNew } from '#shared/utils/renderer';
 import usePreferences from '~/composables/usePreferences';
 import { getArticleByLink } from '~/store/v2/article';
 import { getHtmlCache, type HtmlAsset } from '~/store/v2/html';
 import { getAccountNameByFakeid, getAllInfo, type MpAccount } from '~/store/v2/info';
 import { getMetadataCache } from '~/store/v2/metadata';
-import { getResourceCache, updateResourceCache } from '~/store/v2/resource';
+import { getResourceCache } from '~/store/v2/resource';
 import { getResourceMapCache, updateResourceMapCache } from '~/store/v2/resource-map';
 import type { Preferences } from '~/types/preferences';
 import { getArticleComments, renderComments } from '~/utils/comment';
 import { BaseDownloader } from '~/utils/download/BaseDownloader';
+import { runConcurrentUrlTasks } from '~/utils/download/exporter/concurrentQueue';
+import { writeMarkdownExportFile, writeTextExportFile, writeWordExportFile } from '~/utils/download/exporter/formatRenderers';
+import { buildNormalizedHtmlDocument, rewriteBackgroundResourceUrls } from '~/utils/download/exporter/htmlNormalizer';
+import { runResourceFetchTask } from '~/utils/download/exporter/resourceFetcher';
+import { collectArticleResourceUrls, createExportResourceRefs } from '~/utils/download/exporter/resourceIndexer';
+import { createJsonSummaryEnrichmentAttachment } from '~/utils/download/exporter/summaryEnrichmentStore';
+import { ExportStorageWriter } from '~/utils/download/exporter/storage';
 import { type ExcelExportEntity, export2ExcelFile, export2JsonFile } from '~/utils/exporter';
 import type { DownloadOptions } from './types';
 
 // 导出类型
-type ExportType = 'excel' | 'json' | 'html' | 'txt' | 'markdown' | 'word' | 'pdf';
+type ExportType = 'excel' | 'json' | 'html' | 'txt' | 'markdown' | 'word';
 
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
 
 export class Exporter extends BaseDownloader {
   private exportType: ExportType = 'html';
   private allAccountInfo: MpAccount[] = [];
-
-  // 导出的根目录
-  private exportRootDirectoryHandle: FileSystemDirectoryHandle | null = null;
+  private readonly storageWriter = new ExportStorageWriter();
   private readonly resources: Set<{ url: string; fakeid: string }>;
 
   constructor(urls: string[], options: DownloadOptions = {}) {
@@ -41,20 +46,23 @@ export class Exporter extends BaseDownloader {
       throw new Error('导出任务正在运行中，无需重复启动');
     }
 
-    if (['html', 'txt', 'markdown', 'word', 'pdf'].includes(type)) {
-      // 这些类型需要实时写入文件系统，提前初始化导出目录句柄
-      try {
-        await this.acquireExportDirectoryHandle();
-      } catch (err) {
-        console.error(err);
-        return;
-      }
+    this.storageWriter.reset();
+
+    if (['html', 'txt', 'markdown', 'word'].includes(type)) {
+      await this.storageWriter.prepare({
+        directZip: this.options.directZip,
+      });
     }
 
     this.exportType = type;
     this.isRunning = true;
     const start = Date.now();
     this.emit('export:begin');
+
+    const fallback = this.storageWriter.getFallbackEvent();
+    if (fallback) {
+      this.emit('export:fallback', fallback.mode, fallback.reason);
+    }
 
     this.allAccountInfo = await getAllInfo();
 
@@ -79,10 +87,11 @@ export class Exporter extends BaseDownloader {
         await this.exportWordFiles();
       } else if (this.exportType === 'markdown') {
         await this.exportMarkdownFiles();
-      } else if (this.exportType === 'pdf') {
-        await this.exportPdfFiles();
       }
+
+      await this.storageWriter.flushZipDownload();
     } finally {
+      this.storageWriter.reset();
       this.isRunning = false;
       const elapse = Math.round((Date.now() - start) / 1000);
       this.emit('export:finish', elapse);
@@ -108,39 +117,10 @@ export class Exporter extends BaseDownloader {
 
       const html = await cached.file.text();
       const document = parser.parseFromString(html, 'text/html');
-
-      // 该 html 内部的资源，包括图片、背景图片、样式
-      const resources: string[] = [];
-
-      // 提取图片地址
-      const imgs = document.querySelectorAll<HTMLImageElement>('img');
-      for (const img of imgs) {
-        const imgUrl = img.getAttribute('src') || img.getAttribute('data-src');
-        if (imgUrl) {
-          resources.push(imgUrl);
-          this.resources.add({ url: imgUrl, fakeid: article.fakeid });
-        }
+      const resources = collectArticleResourceUrls(html, document);
+      for (const resource of createExportResourceRefs(resources, article.fakeid)) {
+        this.resources.add(resource);
       }
-
-      // 提取样式地址
-      const links = document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]');
-      for (const link of links) {
-        const url = link.href;
-        if (url) {
-          resources.push(url);
-          this.resources.add({ url: url, fakeid: article.fakeid });
-        }
-      }
-
-      // 提取背景图片地址
-      html.replaceAll(
-        /((?:background|background-image): url\((?:&quot;)?)((?:https?|\/\/)[^)]+?)((?:&quot;)?\))/gs,
-        (_, p1, url, p3) => {
-          resources.push(url);
-          this.resources.add({ url: url, fakeid: article.fakeid });
-          return `${p1}${url}${p3}`;
-        }
-      );
 
       await updateResourceMapCache({
         fakeid: article.fakeid,
@@ -192,68 +172,29 @@ export class Exporter extends BaseDownloader {
     options: { concurrency?: number; progressEvent?: string } = {}
   ): Promise<void> {
     const { concurrency = 5, progressEvent = 'export:progress' } = options;
-    const activePromises: Set<Promise<void>> = new Set();
-    const queue = [...urls];
-    let completedCount = 0;
-
-    while (queue.length > 0 || activePromises.size > 0) {
-      while (activePromises.size < concurrency && queue.length > 0) {
-        const url = queue.pop()!;
-        const promise = task(url)
-          .then(() => {
-            completedCount++;
-            this.emit(progressEvent, completedCount);
-          })
-          .catch(e => {
-            console.error(`导出文件失败(url: ${url}):`, e);
-            completedCount++;
-            this.emit(progressEvent, completedCount);
-          });
-        activePromises.add(promise);
-        promise.finally(() => {
-          activePromises.delete(promise);
-        });
-      }
-
-      if (activePromises.size > 0) {
-        await Promise.race(activePromises);
-      }
-    }
+    await runConcurrentUrlTasks(urls, task, {
+      concurrency,
+      onProgress: n => this.emit(progressEvent, n),
+      onTaskError: (url, e) => console.error(`导出文件失败(url: ${url}):`, e),
+    });
   }
 
   // 下载资源任务
   private async downloadResourceTask(url: string, fakeid: string): Promise<void> {
-    this.pending.add(url);
-
-    // 检查缓存是否可用，避免重复下载相同资源
-    const cached = await getResourceCache(url);
-    if (cached) {
-      this.pending.delete(url);
-      this.completed.add(url);
-      return;
-    }
-
-    for (let attempt = 0; attempt < this.options.maxRetries; attempt++) {
-      const proxy = this.proxyManager.getBestProxy();
-
-      try {
-        const blob = await this.download(fakeid, url, proxy);
-        await updateResourceCache({
-          fakeid: fakeid,
-          url: url,
-          file: blob,
-        });
-        this.pending.delete(url);
-        this.completed.add(url);
-        this.proxyManager.recordSuccess(proxy);
-        return;
-      } catch (error) {
-        await this.handleDownloadFailure(proxy, url, attempt, error);
-      }
-    }
-
-    this.pending.delete(url);
-    this.failed.add(url);
+    await runResourceFetchTask({
+      url,
+      fakeid,
+      maxRetries: this.options.maxRetries,
+      state: {
+        pending: this.pending,
+        completed: this.completed,
+        failed: this.failed,
+      },
+      proxyManager: this.proxyManager,
+      download: (resourceFakeid, resourceUrl, proxy) => this.download(resourceFakeid, resourceUrl, proxy),
+      handleDownloadFailure: (proxy, resourceUrl, attempt, error) =>
+        this.handleDownloadFailure(proxy, resourceUrl, attempt, error),
+    });
   }
 
   // 导出 excel 文件
@@ -318,6 +259,16 @@ export class Exporter extends BaseDownloader {
       if (preferences.value.exportConfig.exportJsonIncludeComments) {
         // 包含评论
         exportedArticle.comments = await getArticleComments(url);
+      }
+      if (preferences.value.exportConfig.exportJsonIncludeSummaryEnrichment) {
+        const attachment = createJsonSummaryEnrichmentAttachment({
+          url,
+          enabled: true,
+          reason: 'json export summary enrichment setting enabled',
+        });
+        if (attachment.attached) {
+          exportedArticle.summary_enrichment = attachment.payload;
+        }
       }
       data.push(exportedArticle);
 
@@ -387,10 +338,11 @@ export class Exporter extends BaseDownloader {
       console.log(`开始导出: ${filename}(${url})`);
 
       const content = await this.getRenderedText(url);
-      if (!content) return;
-
-      const blob = new Blob([content], { type: 'text/plain' });
-      await this.writeFile(filename + '.txt', blob);
+      await writeTextExportFile({
+        filename,
+        content,
+        writeFile: (path, file) => this.writeFile(path, file),
+      });
     });
     await sleep(100);
   }
@@ -400,18 +352,16 @@ export class Exporter extends BaseDownloader {
     const total = this.urls.length;
     this.emit('export:total', total);
 
-    const turndownService = new TurndownService();
-
     await this.processFileExportQueue(this.urls, async url => {
       const filename = await this.exportDirName(url);
       console.log(`开始导出: ${filename}(${url})`);
 
       const content = await this.getRenderedHTML(url);
-      if (!content) return;
-      const markdown = turndownService.turndown(content);
-
-      const blob = new Blob([markdown], { type: 'text/markdown' });
-      await this.writeFile(filename + '.md', blob);
+      await writeMarkdownExportFile({
+        filename,
+        html: content,
+        writeFile: (path, file) => this.writeFile(path, file),
+      });
     });
     await sleep(100);
   }
@@ -426,16 +376,14 @@ export class Exporter extends BaseDownloader {
       console.log(`开始导出: ${filename}(${url})`);
 
       const content = await this.getRenderedHTML(url);
-      if (!content) return;
-      const blob = window.htmlDocx.asBlob(content) as Blob;
-
-      await this.writeFile(filename + '.docx', blob);
+      await writeWordExportFile({
+        filename,
+        html: content,
+        writeFile: (path, file) => this.writeFile(path, file),
+      });
     });
     await sleep(100);
   }
-
-  // 导出 pdf 文件
-  private async exportPdfFiles() {}
 
   /**
    * 获取渲染后的完整 HTML 文档
@@ -488,18 +436,7 @@ export class Exporter extends BaseDownloader {
   ): Promise<string> {
     // 替换背景图片为本地路径
     // 背景图片无法用选择器选中并修改，因此只能用正则进行匹配替换
-    html = html.replaceAll(
-      /((?:background|background-image): url\((?:&quot;)?)((?:https?|\/\/)[^)]+?)((?:&quot;)?\))/gs,
-      (_, p1, url, p3) => {
-        if (urlmap.has(url)) {
-          const path = urlmap.get(url)!;
-          return `${p1}./${path}${p3}`;
-        } else {
-          console.warn('背景图片丢失: ', url);
-          return `${p1}${url}${p3}`;
-        }
-      }
-    );
+    html = rewriteBackgroundResourceUrls(html, urlmap, url => console.warn('背景图片丢失: ', url));
 
     const parser = new DOMParser();
     const document = parser.parseFromString(html, 'text/html');
@@ -559,8 +496,7 @@ export class Exporter extends BaseDownloader {
     const ipWordingMatchResult = html.match(/window\.ip_wording = (?<data>{\s+countryName: '[^']+',[^}]+})/s);
     if (ipWrp && ipWording && ipWordingMatchResult && ipWordingMatchResult.groups && ipWordingMatchResult.groups.data) {
       const json = ipWordingMatchResult.groups.data;
-      // eslint-disable-next-line no-eval
-      eval('window.ip_wording = ' + json);
+      (window as any).ip_wording = parseJSObject(json);
       const ipWordingDisplay = getIpWoridng((window as any).ip_wording);
       if (ipWordingDisplay !== '') {
         ipWording.innerHTML = ipWordingDisplay;
@@ -655,8 +591,8 @@ export class Exporter extends BaseDownloader {
       const qmtplTextMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?};)/s);
       if (qmtplTextMatchResult && qmtplTextMatchResult.groups && qmtplTextMatchResult.groups.code) {
         const code = qmtplTextMatchResult.groups.code;
-        // eslint-disable-next-line no-eval
-        eval(code);
+        const qmtplExpr = code.replace(/^window\.__QMTPL_SSR_DATA__\s*=\s*/, '').replace(/;?$/, '');
+        (window as any).__QMTPL_SSR_DATA__ = parseJSObject(qmtplExpr);
         const data = (window as any).__QMTPL_SSR_DATA__;
         if (data && typeof data.title === 'string' && !$js_text_desc.innerHTML.trim()) {
           let text = data.title as string;
@@ -680,7 +616,7 @@ export class Exporter extends BaseDownloader {
           if (match && match.groups && match.groups.value) {
             const code = `window.${key} = ${match.groups.value}`;
             // eslint-disable-next-line no-eval
-            eval(code);
+            (window as any)[key] = match.groups.value.slice(1, -1);
             // @ts-ignore
             return (window as any)[key] as string;
           }
@@ -749,7 +685,8 @@ export class Exporter extends BaseDownloader {
       const qmtplMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?)<\/script>/s);
       if (qmtplMatchResult && qmtplMatchResult.groups && qmtplMatchResult.groups.code) {
         const code = qmtplMatchResult.groups.code;
-        eval(code);
+        const qmtplExpr2 = code.replace(/^window\.__QMTPL_SSR_DATA__\s*=\s*/, '').replace(/;?$/, '');
+        (window as any).__QMTPL_SSR_DATA__ = parseJSObject(qmtplExpr2);
         const data = (window as any).__QMTPL_SSR_DATA__;
         let desc = data.desc.replace(/\r/g, '').replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;');
         desc = decode_html(desc, false);
@@ -760,7 +697,8 @@ export class Exporter extends BaseDownloader {
       const pictureMatchResult = html.match(/(?<code>window\.picture_page_info_list\s*=.+\.slice\(0,\s*20\);)/s);
       if (pictureMatchResult && pictureMatchResult.groups && pictureMatchResult.groups.code) {
         const code = pictureMatchResult.groups.code;
-        eval(code);
+        const arrExpr = code.replace(/^window\.picture_page_info_list\s*=\s*/, '').replace(/\.slice\(0,\s*20\);?$/, '');
+        (window as any).picture_page_info_list = parseJSObject<any[]>(arrExpr).slice(0, 20);
         const picture_page_info_list = (window as any).picture_page_info_list;
         const containerEl = $jsArticleContent.querySelector('#js_share_content_page_hd')!;
         let innerHTML =
@@ -797,72 +735,19 @@ export class Exporter extends BaseDownloader {
       }
     }
 
-    return `<!DOCTYPE html>
-<html lang="zh_CN">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0,viewport-fit=cover">
-    <title>${cachedHtml.title}</title>
-    ${localLinks}
-    <style>
-        #page-content,
-        #js_article_bottom_bar,
-        .__page_content__ {
-            max-width: 667px;
-            margin: 0 auto;
-        }
-        img {
-            max-width: 100%;
-        }
-        .sns_opr_btn::before {
-            width: 16px;
-            height: 16px;
-            margin-right: 3px;
-        }
-    </style>
-</head>
-<body class="${bodyCls}">
-${pageContentHTML}
-${jsArticleBottomBarHTML}
-
-<!-- 评论数据 -->
-${commentHTML}
-</body>
-</html>`;
-  }
-
-  // 获取文件存储目录
-  private async acquireExportDirectoryHandle(): Promise<void> {
-    if (!this.exportRootDirectoryHandle) {
-      // @ts-ignore
-      this.exportRootDirectoryHandle = await window.showDirectoryPicker({
-        mode: 'readwrite',
-        startIn: 'downloads',
-      });
-    }
+    return buildNormalizedHtmlDocument({
+      title: cachedHtml.title,
+      localLinks,
+      bodyClass: bodyCls,
+      pageContentHTML,
+      jsArticleBottomBarHTML,
+      commentHTML,
+    });
   }
 
   // 写入文件
   public async writeFile(path: string, file: Blob): Promise<void> {
-    const segment = path.split('/');
-    const filename = segment[segment.length - 1];
-    let directory = this.exportRootDirectoryHandle!;
-    if (segment.length > 1) {
-      // 创建目录
-      for (const name of segment.slice(0, -1)) {
-        directory = await directory.getDirectoryHandle(name, { create: true }).catch(e => {
-          console.warn(`路径(${path})(${name})中包含非法字符，不能作为文件系统的路径名`);
-          throw e;
-        });
-      }
-    }
-    const fileHandle = await directory.getFileHandle(filename, { create: true });
-    // @ts-ignore
-    const writable = await fileHandle.createWritable();
-    await writable.write(file);
-    await writable.close();
+    await this.storageWriter.writeFile(path, file);
   }
 
   // 确定导出文件的目录名

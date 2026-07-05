@@ -19,6 +19,13 @@ export interface DownloadOptions {
   maxRetries?: number;
   cooldownPeriod?: number;
   maxFailures?: number;
+
+  /**
+   * true：跳过 showDirectoryPicker，直接 ZIP 下载（适合 Docker/127.0.0.1）
+   * false：始终弹出文件夹选择
+   * undefined：由 Exporter 根据主机名等自行判断
+   */
+  directZip?: boolean;
 }
 
 // 下载结果

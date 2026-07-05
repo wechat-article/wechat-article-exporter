@@ -1,38 +1,413 @@
+/* 应用级语义色：参考 BOS/LUTE 的浅纸面、胭脂红、细网格和低圆角表单语言。 */
 :root {
-    /*--ag-selected-row-background-color: transparent;*/
+    --cc-bg-app: #fdf8f6;
+    --cc-bg-sidebar: rgba(253, 248, 246, 0.82);
+    --cc-bg-sidebar-soft: rgba(252, 245, 242, 0.94);
+    --cc-bg-elevated: rgba(255, 255, 255, 0.66);
+    --cc-bg-panel: rgba(255, 255, 255, 0.74);
+    --cc-border: rgba(53, 20, 26, 0.12);
+    --cc-border-strong: rgba(53, 20, 26, 0.24);
+    --cc-text: #35141a;
+    --cc-text-muted: #59585e;
+    --cc-text-subtle: #9b9795;
+    --cc-accent: #d75c70;
+    --cc-accent-hover: #c44a5e;
+    --cc-accent-warm: #d8be78;
+    --cc-success: #6e966e;
+    --cc-danger: #c44a5e;
+    --cc-ring: rgba(215, 92, 112, 0.14);
+    --cc-shadow-soft: 0 32px 94px rgba(215, 92, 112, 0.13);
+    --cc-shadow-line: 0 1px 0 rgba(255, 255, 255, 0.74) inset;
+}
 
-    .ag-header-cell-label {
-        justify-content: center;
-    }
+.dark {
+    --cc-bg-app: #101214;
+    --cc-bg-sidebar: #08090a;
+    --cc-bg-sidebar-soft: #121416;
+    --cc-bg-elevated: #171a1d;
+    --cc-bg-panel: #1d2024;
+    --cc-border: #30363d;
+    --cc-border-strong: #59636f;
+    --cc-text: #f3f5f7;
+    --cc-text-muted: #a7b0ba;
+    --cc-text-subtle: #7d8791;
+    --cc-accent: #6fb7b6;
+    --cc-accent-hover: #8bd0cf;
+    --cc-accent-warm: #d29a68;
+    --cc-success: #5dbb7f;
+    --cc-danger: #ef7882;
+    --cc-ring: rgba(111, 183, 182, 0.36);
+}
 
-    .deleted-row {
-        background-color: #fef9c3;
-    }
-
-    /* 侧边栏工具面板标签 */
-    .ag-side-bar .ag-side-button-label {
-        letter-spacing: 0.2em;
-        font-size: 15px;
-        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif;
-        /*font-weight: bold;*/
-    }
+html,
+body,
+#__nuxt {
+    height: 100%;
 }
 
 body {
-    overscroll-behavior: none; /* 阻止滚动到页面边缘的效果 */
+    overscroll-behavior: none;
+    background-color: var(--cc-bg-app);
+    color: var(--cc-text);
+    font-family: "Avenir Next", "Helvetica Neue", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", system-ui, sans-serif;
+    letter-spacing: 0;
 }
+
 ::selection {
-    background-color: yellow;
-    color: black;
+    background-color: color-mix(in srgb, var(--cc-accent) 28%, transparent);
+    color: var(--cc-text);
 }
+
 .highlight {
-    color: red;
+    color: var(--cc-danger);
+}
+
+.cc-app-shell {
+    background:
+        radial-gradient(ellipse at 18% 14%, rgba(215, 92, 112, 0.13), transparent 34%),
+        radial-gradient(ellipse at 76% 82%, rgba(216, 190, 120, 0.16), transparent 44%),
+        radial-gradient(circle at 18% 34%, rgba(215, 92, 112, 0.08) 0 1px, transparent 2px),
+        radial-gradient(circle at 78% 62%, rgba(110, 150, 110, 0.08) 0 1px, transparent 2px),
+        repeating-linear-gradient(90deg, rgba(53, 20, 26, 0.035) 0 1px, transparent 1px 42px),
+        repeating-linear-gradient(0deg, rgba(53, 20, 26, 0.026) 0 1px, transparent 1px 42px),
+        linear-gradient(145deg, var(--cc-bg-app) 0%, #fcf5f2 70%, #f9ecee 100%);
+    background-size: auto, auto, 132px 132px, 156px 156px, auto, auto, 100% 100%;
+}
+
+.cc-dashboard-layout {
+    background: transparent;
+}
+
+.cc-dashboard-main {
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.cc-topbar {
+    min-height: 60px;
+    border-bottom: 1px solid var(--cc-border);
+    background: rgba(253, 248, 246, 0.82);
+    box-shadow: var(--cc-shadow-line);
+    backdrop-filter: saturate(140%) blur(16px);
+}
+
+#title {
+    min-width: 0;
+}
+
+#title h1 {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--cc-text);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+#title h1::before {
+    content: "";
+    display: inline-block;
+    width: 22px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--cc-accent-hover), var(--cc-accent-warm));
+}
+
+.cc-sidebar {
+    color: var(--cc-text);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 44%),
+        linear-gradient(180deg, var(--cc-bg-sidebar), var(--cc-bg-sidebar-soft));
+    border-right: 1px solid var(--cc-border);
+    box-shadow: 18px 0 44px rgba(53, 20, 26, 0.06);
+}
+
+.cc-brand {
+    color: var(--cc-text);
+}
+
+.cc-brand:hover {
+    color: var(--cc-accent-hover);
+}
+
+.cc-brand-mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--cc-text);
+    border-radius: 0;
+    background: var(--cc-accent);
+    box-shadow: 6px 6px 0 var(--cc-accent-warm);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.cc-brand-kicker {
+    color: var(--cc-accent-hover);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.cc-nav-link {
+    position: relative;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    color: var(--cc-text-muted);
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease;
+}
+
+.cc-nav-link:hover {
+    border-color: rgba(215, 92, 112, 0.2);
+    background: rgba(255, 255, 255, 0.54);
+    color: var(--cc-text);
+}
+
+.cc-nav-link.router-link-active {
+    border-color: rgba(215, 92, 112, 0.25);
+    background: rgba(215, 92, 112, 0.1);
+    color: var(--cc-accent-hover);
+}
+
+.cc-nav-link.router-link-active::before {
+    content: "";
+    position: absolute;
+    left: -9px;
+    width: 3px;
+    height: 18px;
+    border-radius: 0;
+    background: var(--cc-accent-hover);
+}
+
+.cc-page-frame {
+    min-height: 0;
+    background: rgba(255, 255, 255, 0.48);
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.54);
+}
+
+.cc-page-toolbar {
+    min-height: 62px;
+    border-bottom: 1px solid var(--cc-border);
+    background: rgba(255, 255, 255, 0.56);
+    box-shadow: var(--cc-shadow-line);
+}
+
+.cc-page-toolbar :where(button) {
+    border-radius: 999px !important;
+    letter-spacing: 0;
+}
+
+.cc-page-toolbar :where(input, textarea, select) {
+    border-radius: 0 !important;
+}
+
+.cc-settings-page {
+    padding: 20px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.14)),
+        var(--cc-bg-app);
+}
+
+.cc-settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 16px;
+}
+
+.cc-settings-card {
+    margin: 0;
+    border: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.62);
+    box-shadow: var(--cc-shadow-soft);
+}
+
+.cc-settings-card :where(h3) {
+    font-size: 15px;
+    letter-spacing: 0;
+}
+
+.cc-proxy-card {
+    border: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.62);
+    box-shadow: var(--cc-shadow-soft);
+}
+
+.cc-meter-row {
+    background: linear-gradient(90deg, rgba(215, 92, 112, 0.1), rgba(216, 190, 120, 0.1));
+}
+
+.cc-album-surface {
+    background:
+        repeating-linear-gradient(90deg, rgba(53, 20, 26, 0.035) 0 1px, transparent 1px 42px),
+        repeating-linear-gradient(0deg, rgba(53, 20, 26, 0.026) 0 1px, transparent 1px 42px),
+        #fcf5f2;
+    background-size: auto;
+}
+
+.cc-album-card {
+    border: 1px solid var(--cc-border);
+    border-radius: 0;
+    box-shadow: var(--cc-shadow-soft);
+}
+
+.cc-album-banner {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%),
+        linear-gradient(180deg, #35141a, #c44a5e);
+}
+
+.cc-account-drawer {
+    border-right: 1px solid var(--cc-border);
+    background: var(--cc-bg-panel);
+}
+
+.cc-account-row {
+    transition:
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.cc-account-row:hover {
+    background: rgba(215, 92, 112, 0.08);
+    box-shadow: inset 3px 0 0 var(--cc-accent);
+}
+
+.cc-sidebar :where(footer) {
+    border-top-color: var(--cc-border) !important;
+    color: var(--cc-text-muted) !important;
+}
+
+.cc-sidebar :where(footer button) {
+    border-color: rgba(215, 92, 112, 0.22) !important;
+    background: rgba(215, 92, 112, 0.08) !important;
+    color: var(--cc-accent-hover) !important;
+}
+
+.cc-sidebar :where(footer button:hover) {
+    background: var(--cc-accent-hover) !important;
+    color: #fff !important;
+}
+
+.cc-field {
+    display: grid;
+    gap: 8px;
+}
+
+.cc-field-label {
+    color: var(--cc-accent-hover);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cc-field-help {
+    color: var(--cc-text-muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.cc-control-panel {
+    border: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: rgba(253, 248, 246, 0.54);
+    box-shadow: var(--cc-shadow-line);
+}
+
+.cc-option-stack {
+    display: grid;
+    gap: 10px;
+}
+
+.cc-option-row {
+    border: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.44);
+    padding: 12px 14px;
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease;
+}
+
+.cc-option-row:hover {
+    border-color: rgba(215, 92, 112, 0.24);
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.cc-form-preview {
+    border-left: 2px solid var(--cc-accent);
+    background: rgba(215, 92, 112, 0.07);
+    color: var(--cc-text-muted);
+}
+
+.cc-app-shell :where(input, textarea, select) {
+    border-color: var(--cc-border) !important;
+    border-radius: 0 !important;
+    background-color: rgba(253, 248, 246, 0.72) !important;
+    color: var(--cc-text) !important;
+}
+
+.cc-app-shell :where(input, textarea, select):focus {
+    border-color: var(--cc-accent) !important;
+    box-shadow: 0 0 0 4px var(--cc-ring) !important;
+}
+
+.cc-app-shell :where(input::placeholder, textarea::placeholder) {
+    color: var(--cc-text-subtle) !important;
+}
+
+.cc-app-shell :where(button) {
+    letter-spacing: 0;
+}
+
+.ag-root-wrapper {
+    border: 0 !important;
+}
+
+.ag-header {
+    border-bottom: 1px solid var(--cc-border) !important;
+}
+
+.ag-row-hover {
+    background-color: rgba(215, 92, 112, 0.075) !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
 .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* AG Grid 全局微调（与 themeQuartz 并存） */
+.ag-header-cell-label {
+    justify-content: center;
+}
+
+.deleted-row {
+    background-color: #fef9c3;
+}
+
+.dark .deleted-row {
+    background-color: rgba(234, 179, 8, 0.15);
+}
+
+.ag-side-bar .ag-side-button-label {
+    letter-spacing: 0;
+    font-size: 15px;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif;
+}
+
+@media (max-width: 1024px) {
+    .cc-settings-grid {
+        grid-template-columns: 1fr;
+    }
 }

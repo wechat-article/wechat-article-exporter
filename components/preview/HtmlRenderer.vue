@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen">
     <UButton
-      icon="i-lucide:x"
+      icon="i-heroicons-x-mark-20-solid"
       square
       variant="link"
       color="gray"

@@ -6,7 +6,7 @@ export default () => {
       color: 'sky',
       title: title,
       description: description,
-      icon: 'i-lucide:sparkles',
+      icon: 'i-heroicons-sparkles-20-solid',
       timeout: 5000,
     });
   }
@@ -15,7 +15,7 @@ export default () => {
       color: 'gray',
       title: title,
       description: description,
-      icon: 'i-lucide:bell',
+      icon: 'i-heroicons-bell-alert-20-solid',
       timeout: 5000,
     });
   }
@@ -24,7 +24,7 @@ export default () => {
       color: 'orange',
       title: title,
       description: description,
-      icon: 'i-lucide:triangle-alert',
+      icon: 'i-heroicons-exclamation-triangle-20-solid',
       timeout: 5000,
     });
   }
@@ -33,7 +33,7 @@ export default () => {
       color: 'rose',
       title: title,
       description: description,
-      icon: 'i-lucide:skull',
+      icon: 'i-heroicons-x-circle-20-solid',
       timeout: 5000,
     });
   }

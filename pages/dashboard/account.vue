@@ -27,8 +27,11 @@ import { getArticleCache, hitCache } from '~/store/v2/article';
 import { getAllInfo, getInfoCache, importMpAccounts, type MpAccount } from '~/store/v2/info';
 import type { AccountManifest } from '~/types/account';
 import type { Preferences } from '~/types/preferences';
+import { setupAgGridRuntime } from '~/utils/ag-grid-runtime';
 import { exportAccountJsonFile } from '~/utils/exporter';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
+
+setupAgGridRuntime(useRuntimeConfig().public.aggridLicense);
 
 useHead({
   title: `公众号管理 | ${websiteName}`,
@@ -489,22 +492,22 @@ const { getActualDateRange } = useSyncDeadline();
 <template>
   <div class="h-full">
     <Teleport defer to="#title">
-      <h1 class="text-[28px] leading-[34px] text-slate-12 dark:text-slate-50 font-bold">公众号管理</h1>
+      <h1 class="text-xl font-semibold text-cc-text">公众号管理</h1>
     </Teleport>
 
-    <div class="flex flex-col h-full divide-y divide-gray-200">
+    <div class="cc-page-frame flex flex-col h-full">
       <!-- 顶部操作区 -->
-      <header class="flex items-stretch gap-3 px-3 py-3">
-        <UButton icon="i-lucide:user-plus" color="blue" :disabled="isDeleting || addBtnLoading" @click="addAccount">
+      <header class="cc-page-toolbar flex flex-wrap items-center gap-3 px-4 py-3">
+        <UButton icon="i-heroicons-user-plus-20-solid" color="primary" :disabled="isDeleting || addBtnLoading" @click="addAccount">
           {{ addBtnLoading ? '添加中...' : '添加' }}
         </UButton>
-        <UButton icon="i-lucide:arrow-down-to-line" color="blue" :loading="importBtnLoading" @click="importAccount">
+        <UButton icon="i-heroicons-arrow-down-tray-20-solid" color="primary" :loading="importBtnLoading" @click="importAccount">
           批量导入
           <input ref="fileRef" type="file" accept=".json" class="hidden" @change="handleFileChange" />
         </UButton>
         <UButton
-          icon="i-lucide:arrow-up-from-line"
-          color="blue"
+          icon="i-heroicons-arrow-up-tray-20-solid"
+          color="primary"
           :loading="exportBtnLoading"
           :disabled="!hasSelectedRows"
           @click="exportAccount"
@@ -513,7 +516,7 @@ const { getActualDateRange } = useSyncDeadline();
         </UButton>
         <UButton
           color="rose"
-          icon="i-lucide:user-minus"
+          icon="i-heroicons-user-minus-20-solid"
           class="disabled:opacity-35"
           :loading="isDeleting"
           :disabled="!hasSelectedRows"
@@ -530,7 +533,9 @@ const { getActualDateRange } = useSyncDeadline();
           >同步</UButton
         >
         <div class="hidden xl:flex flex-1 justify-end">
-          <span class="self-end text-sm text-blue-500 font-medium">同步范围: {{ getActualDateRange() }}</span>
+          <span class="self-center rounded-md border border-cc-border bg-white px-3 py-1 text-xs font-medium text-cc-muted"
+            >同步范围: {{ getActualDateRange() }}</span
+          >
         </div>
       </header>
 

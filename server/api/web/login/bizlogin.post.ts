@@ -2,8 +2,12 @@ import dayjs from 'dayjs';
 import { request } from '#shared/utils/request';
 import { getCookieFromResponse, getCookiesFromRequest } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { assertRateLimit } from '~/server/utils/rate-limit-ip';
+import { MP_ENDPOINTS } from '~/server/wechat/endpoints';
 
 export default defineEventHandler(async event => {
+  assertRateLimit(event, 'login_bizlogin', 20);
+
   const cookie = getCookiesFromRequest(event);
 
   const payload: Record<string, string | number> = {
@@ -22,7 +26,7 @@ export default defineEventHandler(async event => {
   const response: Response = await proxyMpRequest({
     event: event,
     method: 'POST',
-    endpoint: 'https://mp.weixin.qq.com/cgi-bin/bizlogin',
+    endpoint: MP_ENDPOINTS.bizlogin,
     query: {
       action: 'login',
     },

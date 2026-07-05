@@ -2,8 +2,8 @@
 FROM node:22-alpine AS build-env
 
 # 安装 Yarn (pin a specific Yarn version)
-RUN corepack enable
-RUN corepack prepare yarn@1.22.22 --activate
+ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org
+RUN npm install -g yarn@1.22.22 --force --registry=${NPM_CONFIG_REGISTRY} && yarn --version
 
 
 # 设置工作目录
@@ -16,11 +16,18 @@ RUN yarn install --frozen-lockfile --production=true && yarn cache clean
 # 复制源代码
 COPY . .
 
-# 构建 Nuxt 应用（生成 .output 目录）
+# 构建 Nuxt 应用（生成 .output 目录）；NUXT_PUBLIC_* 在 build 时写入客户端，运行时改 env 不会生效
+ARG NUXT_PUBLIC_EXPORT_DIRECT_ZIP=true
+ARG NUXT_PUBLIC_DOCS_WEBSITE_URL=
+ARG NUXT_PUBLIC_WXDOWN_RELEASES_URL=
 ENV NODE_ENV=production \
     NITRO_KV_DRIVER=fs \
-    NITRO_KV_BASE=.data/kv
+    NITRO_KV_BASE=.data/kv \
+    NUXT_PUBLIC_EXPORT_DIRECT_ZIP=${NUXT_PUBLIC_EXPORT_DIRECT_ZIP} \
+    NUXT_PUBLIC_DOCS_WEBSITE_URL=${NUXT_PUBLIC_DOCS_WEBSITE_URL} \
+    NUXT_PUBLIC_WXDOWN_RELEASES_URL=${NUXT_PUBLIC_WXDOWN_RELEASES_URL}
 
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN yarn build
 
 

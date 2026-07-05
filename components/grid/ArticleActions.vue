@@ -20,7 +20,7 @@ function preview() {
 <template>
   <div class="flex items-center justify-center">
     <UTooltip text="访问原文" :popper="{ placement: 'top' }">
-      <UButton icon="i-lucide:external-link" color="blue" square variant="ghost" @click="gotoLink" />
+      <UButton icon="i-heroicons-arrow-top-right-on-square-20-solid" color="primary" square variant="ghost" @click="gotoLink" />
     </UTooltip>
     <UTooltip text="预览" :popper="{ placement: 'top' }">
       <UButton

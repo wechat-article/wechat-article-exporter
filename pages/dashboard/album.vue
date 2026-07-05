@@ -1,12 +1,12 @@
 <template>
   <div class="h-full">
     <Teleport defer to="#title">
-      <h1 class="text-[28px] leading-[34px] text-slate-12 dark:text-slate-50 font-bold">合集下载</h1>
+      <h1 class="text-xl font-semibold text-cc-text">合集下载</h1>
     </Teleport>
 
-    <div class="flex flex-col h-full divide-y divide-gray-200">
+    <div class="cc-page-frame flex flex-col h-full">
       <!-- 顶部筛选与操作区 -->
-      <header class="flex flex-col items-start xl:flex-row xl:items-center gap-2 xl:justify-between px-3 py-2">
+      <header class="cc-page-toolbar flex flex-col items-start gap-3 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
         <div class="flex gap-2">
           <div class="flex items-center space-x-3">
             <AccountSelectorForAlbum v-model="selectedAccount" class="w-80" />
@@ -20,7 +20,7 @@
               placeholder="选择合集"
             />
             <div>
-              <Loader v-if="switchSortLoading" :size="24" class="animate-spin text-slate-500" />
+              <Loader v-if="switchSortLoading" :size="24" class="animate-spin text-cc-muted" />
               <div v-else class="flex space-x-2 w-fit" @click="toggleReverse">
                 <ArrowUpNarrowWide v-if="isReverse" />
                 <ArrowDownNarrowWide v-else />
@@ -30,7 +30,7 @@
             <UButton
               color="black"
               variant="solid"
-              class="disabled:bg-slate-4 disabled:text-slate-12"
+              class="disabled:opacity-50"
               :loading="fetchAllArticlesBtnLoading"
               :disabled="!selectedAccount || !selectedAlbum || albumArticles.length === 0 || noMoreData"
               @click="fetchAllArticles"
@@ -40,7 +40,7 @@
         </div>
         <div class="flex items-center space-x-2">
           <UButton
-            color="blue"
+            color="primary"
             variant="link"
             size="md"
             :disabled="!selectedAccount || !selectedAlbum"
@@ -51,7 +51,7 @@
             color="black"
             variant="solid"
             size="md"
-            class="disabled:bg-slate-4 disabled:text-slate-12"
+            class="disabled:opacity-50"
             :disabled="!selectedAccount || !selectedAlbum || albumArticles.length === 0 || batchDownloadLoading"
             @click="doBatchDownload"
           >
@@ -69,13 +69,22 @@
       </header>
 
       <!-- 合集文章列表 -->
-      <main class="flex-1 overflow-y-scroll bg-[#ededed]" v-if="selectedAccount && selectedAlbum">
+      <main
+        v-if="!selectedAccount || !selectedAlbum"
+        class="cc-album-surface flex-1 flex items-center justify-center px-4"
+      >
+        <PageEmptyHint
+          title="请选择公众号与合集"
+          description="在上方选择公众号与合集后，将在此处展示合集文章列表，并可批量下载。"
+        />
+      </main>
+      <main class="cc-album-surface flex-1 overflow-y-scroll" v-else-if="selectedAccount && selectedAlbum">
         <div v-if="albumLoading" class="flex justify-center items-center mt-5">
-          <Loader :size="28" class="animate-spin text-slate-500" />
+          <Loader :size="28" class="animate-spin text-cc-muted" />
         </div>
-        <div v-else-if="albumBaseInfo" class="relative max-w-2xl mx-auto bg-white">
+        <div v-else-if="albumBaseInfo" class="cc-album-card relative my-6 max-w-2xl mx-auto overflow-hidden bg-white">
           <!-- banner -->
-          <div class="px-5 py-7 banner">
+          <div class="cc-album-banner px-5 py-7">
             <h2 class="text-2xl text-white font-bold"># {{ albumBaseInfo.title }}</h2>
           </div>
           <div class="sticky top-0 px-5 py-3 bg-white border-b">
@@ -83,7 +92,7 @@
               <img class="size-5" :src="albumBaseInfo.brand_icon" alt="" />
               <span>{{ albumBaseInfo.nickname }}</span>
             </p>
-            <p class="text-sm text-slate-10">
+            <p class="text-sm text-cc-muted">
               <span>{{ albumBaseInfo.article_count }}篇内容</span>
               <span v-if="albumBaseInfo.description"> · {{ albumBaseInfo.description }}</span>
             </p>
@@ -101,7 +110,7 @@
                     <span v-if="article.pos_num">{{ article.pos_num }}. </span>
                     <span>{{ article.title }}</span>
                   </h3>
-                  <time class="text-sm text-slate-10">{{ formatAlbumTime(+article.create_time) }}</time>
+                  <time class="text-sm text-cc-muted">{{ formatAlbumTime(+article.create_time) }}</time>
                 </div>
                 <img class="size-16 ml-4 flex-shrink-0" :src="article.cover_img_1_1" alt="" />
               </li>
@@ -110,9 +119,9 @@
             <!-- 底部加载条 -->
             <div v-element-visibility="onElementVisibility"></div>
             <p v-if="articleLoading" class="flex justify-center items-center mt-2 py-2">
-              <Loader :size="28" class="animate-spin text-slate-500" />
+              <Loader :size="28" class="animate-spin text-cc-muted" />
             </p>
-            <p v-else-if="noMoreData" class="text-center mt-2 py-2 text-slate-400">已全部加载完毕</p>
+            <p v-else-if="noMoreData" class="text-center mt-2 py-2 text-cc-muted">已全部加载完毕</p>
           </div>
         </div>
       </main>
@@ -125,6 +134,7 @@ import { vElementVisibility } from '@vueuse/components';
 import { ArrowDownNarrowWide, ArrowUpNarrowWide, Loader } from 'lucide-vue-next';
 import { sleep } from '#shared/utils/helpers';
 import { request } from '#shared/utils/request';
+import PageEmptyHint from '~/components/dashboard/PageEmptyHint.vue';
 import AccountSelectorForAlbum from '~/components/selector/AccountSelectorForAlbum.vue';
 import { useDownloadAlbum } from '~/composables/useBatchDownload';
 import { websiteName } from '~/config';
@@ -315,9 +325,3 @@ async function fetchAllArticles() {
   fetchAllArticlesBtnLoading.value = false;
 }
 </script>
-
-<style scoped>
-.banner {
-  background: linear-gradient(rgb(9, 9, 9), rgb(35, 35, 35));
-}
-</style>

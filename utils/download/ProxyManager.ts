@@ -13,7 +13,7 @@ export class ProxyManager {
     maxFailures = DEFAULT_OPTIONS.MAX_FAILURES
   ) {
     if (!proxies.length) {
-      throw new Error('至少需要配置一个代理');
+      throw new Error('未配置代理节点，请前往"设置 → 代理节点"添加私有代理地址');
     }
 
     this.proxies = [...proxies];

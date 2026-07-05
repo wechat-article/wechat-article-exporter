@@ -31,8 +31,11 @@ import { type MpAccount } from '~/store/v2/info';
 import { getMetadataCache, type Metadata } from '~/store/v2/metadata';
 import type { Preferences } from '~/types/preferences';
 import type { AppMsgExWithFakeID } from '~/types/types';
+import { setupAgGridRuntime } from '~/utils/ag-grid-runtime';
 import type { ArticleMetadata } from '~/utils/download/types';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
+
+setupAgGridRuntime(useRuntimeConfig().public.aggridLicense);
 
 useHead({
   title: `文章下载 | ${websiteName}`,
@@ -525,24 +528,24 @@ function copyWechatLink() {
 <template>
   <div class="h-full">
     <Teleport defer to="#title">
-      <h1 class="text-[28px] leading-[34px] text-slate-12 dark:text-slate-50 font-bold">文章下载</h1>
+      <h1 class="text-xl font-semibold text-cc-text">文章下载</h1>
     </Teleport>
 
-    <div class="flex flex-col h-full divide-y divide-gray-200">
+    <div class="cc-page-frame flex flex-col h-full">
       <!-- 顶部筛选与操作区 -->
-      <header class="flex flex-col items-start lg:flex-row lg:items-center lg:justify-between gap-2 px-3 py-2">
+      <header class="cc-page-toolbar flex flex-col items-start gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex flex-col xl:flex-row gap-2">
           <div class="flex space-x-3">
             <AccountSelectorForArticle v-model="selectedAccount" class="w-80" />
           </div>
         </div>
-        <div class="flex items-center space-x-2">
+        <div class="flex flex-wrap items-center gap-2">
           <UButton v-if="downloadBtnLoading" color="black" @click="stopDownload">停止</UButton>
           <ButtonGroup
             :items="[
-              { label: '文章内容', event: 'download-article-html' },
-              { label: '阅读量 (需要Credential)', event: 'download-article-metadata' },
-              { label: '留言内容 (需要Credential)', event: 'download-article-comment' },
+              { label: '正文', event: 'download-article-html' },
+              { label: '阅读量', event: 'download-article-metadata', detail: '需要 Credential' },
+              { label: '留言', event: 'download-article-comment', detail: '需要 Credential' },
             ]"
             @download-article-html="download('html', selectedArticleUrls)"
             @download-article-metadata="download('metadata', selectedArticleUrls)"
@@ -565,8 +568,7 @@ function copyWechatLink() {
               { label: 'HTML', event: 'export-article-html' },
               { label: 'Txt', event: 'export-article-text' },
               { label: 'Markdown', event: 'export-article-markdown' },
-              { label: 'Word (内测中)', event: 'export-article-word' },
-              // { label: 'PDF (计划中)', event: 'export-article-pdf', disabled: true },
+              { label: 'Word', event: 'export-article-word', detail: '内测' },
             ]"
             @export-article-excel="exportFile('excel', selectedArticleUrls)"
             @export-article-json="exportFile('json', selectedArticleUrls)"
@@ -587,9 +589,9 @@ function copyWechatLink() {
 
           <UButton
             :disabled="!selectedAccount"
-            :icon="copied ? 'i-lucide:check' : 'i-heroicons-link-16-solid'"
-            label="复制公众号链接"
-            :color="copied ? 'green' : 'blue'"
+            :icon="copied ? 'i-heroicons-check-20-solid' : 'i-heroicons-link-16-solid'"
+            label="复制链接"
+            :color="copied ? 'green' : 'primary'"
             @click="copyWechatLink"
           />
           <UButton v-if="isDev" @click="debug">调试</UButton>

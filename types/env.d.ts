@@ -1,3 +1,5 @@
 declare interface Window {
-  htmlDocx: any;
+  htmlDocx?: {
+    asBlob(html: string): Blob | BlobPart;
+  };
 }

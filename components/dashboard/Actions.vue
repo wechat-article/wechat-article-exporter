@@ -1,28 +1,9 @@
 <script setup lang="ts">
-import type { ChipColor } from '#ui/types';
 import CredentialsDialog, { type CredentialState } from '~/components/global/CredentialsDialog.vue';
-import QQGroupModal from '~/components/modal/QQGroup.vue';
-import { docsWebSite } from '~/config';
-import { gotoLink } from '~/utils';
 
-const modal = useModal();
-
-// CredentialDialog 相关变量
 const credentialsDialogOpen = ref(false);
 const credentialState = ref<CredentialState>('inactive');
 const credentialPendingCount = ref(0);
-const credentialColor: ComputedRef<ChipColor> = computed<ChipColor>(() => {
-  switch (credentialState.value) {
-    case 'active':
-      return 'green';
-    case 'inactive':
-      return 'gray';
-    case 'warning':
-      return 'amber';
-    default:
-      return 'gray';
-  }
-});
 
 const credentialBadgeText = computed(() => {
   const count = credentialPendingCount.value;
@@ -33,73 +14,35 @@ const isCredentialActive = computed(() => credentialState.value === 'active');
 </script>
 
 <template>
-  <ul class="hidden md:flex items-center gap-5">
-    <!-- 通知 -->
-    <!--    <li>-->
-    <!--      <UTooltip text="通知">-->
-    <!--        <UChip text="3" size="2xl" color="amber">-->
-    <!--          <UIcon name="i-lucide:bell" class="action-icon" />-->
-    <!--        </UChip>-->
-    <!--      </UTooltip>-->
-    <!--    </li>-->
-
-    <li>
-      <UTooltip text="加入QQ群">
-        <UIcon
-          @click="modal.open(QQGroupModal)"
-          name="i-tdesign:logo-qq-filled"
-          class="size-7 text-zinc-400 hover:text-blue-500 cursor-pointer transition-colors"
-        />
-      </UTooltip>
-    </li>
-
-    <!-- Credential -->
+  <ul class="hidden md:flex items-center gap-3">
     <li>
       <CredentialsDialog
         v-model:open="credentialsDialogOpen"
         v-model:state="credentialState"
         @update:pending-count="credentialPendingCount = $event"
       />
-      <UTooltip text="抓取 Credentials">
-        <div class="relative">
+      <UTooltip text="抓取登录凭证">
+        <button
+          type="button"
+          class="relative grid size-9 place-items-center rounded-md border border-cc-border bg-cc-elevated shadow-sm transition hover:border-cc-border-strong hover:bg-white"
+          aria-label="抓取登录凭证"
+          @click="credentialsDialogOpen = true"
+        >
           <UIcon
-            @click="credentialsDialogOpen = true"
-            name="i-lucide:dog"
+            name="i-heroicons-key-20-solid"
             :class="[
-              'size-7 cursor-pointer transition-colors',
-              { 'text-zinc-400 hover:text-blue-500': !isCredentialActive },
-              { 'text-green-500 hover:text-green-600': isCredentialActive },
+              'size-4 transition-colors',
+              { 'text-cc-muted hover:text-cc-accent': !isCredentialActive },
+              { 'text-cc-success hover:opacity-90': isCredentialActive },
             ]"
           />
           <span
             v-if="credentialBadgeText"
-            class="absolute -top-1 -right-1 text-[10px] leading-none rounded-full bg-rose-500 text-white px-1.5 py-0.5 min-w-[16px] text-center"
+            class="absolute -top-1 -right-1 text-[10px] leading-none rounded-full bg-cc-danger text-white px-1.5 py-0.5 min-w-[16px] text-center"
           >
             {{ credentialBadgeText }}
           </span>
-        </div>
-      </UTooltip>
-    </li>
-
-    <!-- 文档 -->
-    <li>
-      <UTooltip text="文档">
-        <UIcon
-          name="i-lucide:book-open"
-          @click="gotoLink(docsWebSite)"
-          class="size-7 text-zinc-400 hover:text-blue-500 cursor-pointer transition-colors"
-        />
-      </UTooltip>
-    </li>
-
-    <!-- GitHub -->
-    <li>
-      <UTooltip text="GitHub">
-        <UIcon
-          @click="gotoLink('https://github.com/wechat-article/wechat-article-exporter')"
-          name="i-lucide:github"
-          class="size-7 text-zinc-400 hover:text-blue-500 cursor-pointer transition-colors"
-        />
+        </button>
       </UTooltip>
     </li>
   </ul>

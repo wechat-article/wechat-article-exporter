@@ -17,23 +17,28 @@
                   placeholder="请输入缓存文章的URL"
                   class="flex-1"
                   v-model="url"
-                  icon="i-lucide:link"
+                  icon="i-heroicons-link-16-solid"
                   color="gray"
                 />
                 <UButton :loading="loading" :disabled="btnDisabled" @click="loadCacheHtml" color="gray">加载</UButton>
               </div>
             </div>
-            <div>
-              <MonacoEditor v-model="htmlCode" lang="html" class="h-[600px] py-3" :options="htmlEditorOptions" />
-            </div>
+            <textarea
+              v-model="htmlCode"
+              class="h-[600px] w-full resize-none bg-white p-4 font-mono text-sm leading-6 outline-none"
+              spellcheck="false"
+            />
           </div>
           <div class="editor-wrapper border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
               <h3 class="font-medium text-gray-800 dark:text-gray-200">Markdown 输出</h3>
             </div>
-            <div>
-              <MonacoEditor v-model="mdCode" lang="markdown" class="h-[600px] py-3" :options="markdownEditorOptions" />
-            </div>
+            <textarea
+              v-model="mdCode"
+              class="h-[600px] w-full resize-none bg-white p-4 font-mono text-sm leading-6 outline-none"
+              readonly
+              spellcheck="false"
+            />
           </div>
         </div>
       </div>
@@ -66,28 +71,6 @@ watch(
   { immediate: true }
 );
 
-// 编辑器通用选项
-const htmlEditorOptions: any = {
-  minimap: { enabled: false },
-  fontSize: 16,
-  theme: 'vs-light',
-  wordWrap: 'on',
-};
-const markdownEditorOptions: any = {
-  ...htmlEditorOptions,
-  readOnly: true,
-  scrollBeyondLastLine: false,
-  horizontalScrollbarSize: 0,
-  layoutInfo: {
-    horizontalScrollbarHeight: 0,
-  },
-  cursorBlinking: 'solid', // 不闪烁光标
-  renderLineHighlight: 'none', // 无行高亮
-  selectionHighlight: false, // 禁用选择高亮
-  overviewRulerLanes: 0, // 隐藏概览尺
-  hideCursorInOverviewRuler: true,
-};
-
 const url = ref('');
 const btnDisabled = computed(() => !/^https?:\/\//i.test(url.value));
 const loading = ref(false);
@@ -100,17 +83,3 @@ async function loadCacheHtml() {
   }
 }
 </script>
-
-<style scoped>
-/* 针对 Markdown 编辑器（第二个 .editor-wrapper）隐藏光标 */
-:deep(.editor-wrapper:nth-child(2) .monaco-editor .cursors-layer > .cursor) {
-  display: none !important;
-}
-
-/* 可选：进一步模拟预览（禁用文本选择） */
-:deep(.editor-wrapper:nth-child(2) .monaco-editor) {
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-}
-</style>

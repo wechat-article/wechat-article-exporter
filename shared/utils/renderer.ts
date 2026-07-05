@@ -410,7 +410,13 @@ function renderMetaInfo(cgiData: any): string {
  * @param cgiData
  */
 async function renderBottomBar(cgiData: any) {
-  const metadata: ArticleMetadata = (await getMetadataCache(cgiData.link)) || {
+  let metadata: ArticleMetadata | undefined;
+  try {
+    metadata = await getMetadataCache(cgiData.link);
+  } catch {
+    // Node.js 等无 IndexedDB 环境使用默认值
+  }
+  metadata ||= {
     readNum: 0,
     oldLikeNum: 0,
     commentNum: 0,

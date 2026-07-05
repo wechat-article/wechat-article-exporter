@@ -1,19 +1,47 @@
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { formatItemShowType, formatTimeStamp } from '#shared/utils/helpers';
 import type { AccountManifest } from '~/types/account';
 import type { AppMsgEx } from '~/types/types';
+import type { SummaryEnrichmentPayload } from '~/utils/download/exporter/summaryEnrichment';
 import type { ArticleMetadata } from '~/utils/download/types';
 
 export type ExcelExportEntity = AppMsgEx &
   Partial<ArticleMetadata> & {
     content?: string;
     comments?: any[];
+    summary_enrichment?: SummaryEnrichmentPayload;
     _accountName: string | null;
   };
 
+type ExcelWorksheet = {
+  columns: Array<{
+    header: string;
+    key: string;
+    width?: number;
+  }>;
+  addRow(row: Record<string, unknown>): void;
+};
+
+type ExcelWorkbook = {
+  addWorksheet(name: string): ExcelWorksheet;
+  xlsx: {
+    writeBuffer(): Promise<BlobPart>;
+  };
+};
+
+type ExcelRuntime = {
+  Workbook: new () => ExcelWorkbook;
+};
+
+async function loadExcelRuntime(): Promise<ExcelRuntime> {
+  const mod = await import('exceljs');
+  return ((mod as unknown as { default?: ExcelRuntime }).default ?? mod) as unknown as ExcelRuntime;
+}
+
 // 导出为 excel 文件
 export async function export2ExcelFile(data: ExcelExportEntity[], filename: string) {
+  const ExcelJS = await loadExcelRuntime();
+
   // 创建工作簿和工作表
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Sheet1');

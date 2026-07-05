@@ -1,12 +1,6 @@
 /**
- * 查询 ip 黑名单
+ * 查询 ip 黑名单（已停用外部服务，返回空）
  */
-import { EXTERNAL_API_SERVICE } from '~/config';
-import { fetchExternal } from '~/server/utils/fetch_external';
-
-export default defineEventHandler(async event => {
-  return await fetchExternal(`${EXTERNAL_API_SERVICE}/api/cf-worker/blocked-ip-list`, {
-    label: '获取 IP 黑名单',
-    default: [],
-  });
+export default defineEventHandler(async () => {
+  return [];
 });

@@ -45,7 +45,13 @@ export class AccountCookie {
 
   // 根据 cookie 中的 expires 来确定是否已过期
   public get isExpired(): boolean {
-    // todo
+    const now = Date.now();
+    for (const cookie of this._cookie) {
+      const ts = cookie.expires_timestamp;
+      if (typeof ts === 'number' && ts < now) {
+        return true;
+      }
+    }
     return false;
   }
 

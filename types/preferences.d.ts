@@ -35,6 +35,9 @@ interface ExportConfig {
   // 导出json中是否包含评论
   exportJsonIncludeComments: boolean;
 
+  // 导出json中是否包含人工允许导出的摘要审计
+  exportJsonIncludeSummaryEnrichment: boolean;
+
   // 导出excel中是否包含文章内容
   exportExcelIncludeContent: boolean;
 

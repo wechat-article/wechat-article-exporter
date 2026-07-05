@@ -14,15 +14,20 @@ async function run() {
 
     console.group(group.name);
     for (const samplePath of group.samples) {
-      const html = read(samplePath);
-      const cgiData = await parseCgiDataNew(html);
-      if (!cgiData) {
-        console.warn('提取 window.cgiDataNew 对象失败');
-        continue;
+      try {
+        const html = read(samplePath);
+        const cgiData = await parseCgiDataNew(html);
+        if (!cgiData) {
+          console.warn('提取 window.cgiDataNew 对象失败:', samplePath);
+          continue;
+        }
+        console.log('item_show_type:', cgiData.item_show_type);
+        // Node.js 环境无 IndexedDB，跳过 comments 渲染
+        const normalizeHTML = await renderHTMLFromCgiDataNew(cgiData, false);
+        write(normalizeOutPath(samplePath), normalizeHTML);
+      } catch (e) {
+        console.error('处理失败:', samplePath, e);
       }
-      console.log('item_show_type:', cgiData.item_show_type);
-      const normalizeHTML = await renderHTMLFromCgiDataNew(cgiData);
-      write(normalizeOutPath(samplePath), normalizeHTML);
     }
     console.groupEnd();
     console.log();

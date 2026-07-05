@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import mime from 'mime';
 import { formatTimeStamp, sleep } from '#shared/utils/helpers';
+import { parseJSObject } from '#shared/utils/js-literal';
 import { request } from '#shared/utils/request';
 import { getComment } from '~/apis';
 import { getAssetCache, updateAssetCache } from '~/store/v2/assets';
@@ -191,7 +192,7 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
   if (ipWrp && ipWording && ipWordingMatchResult && ipWordingMatchResult.groups && ipWordingMatchResult.groups.data) {
     const json = ipWordingMatchResult.groups.data;
     // eslint-disable-next-line no-eval
-    eval('window.ip_wording = ' + json);
+    (window as any).ip_wording = parseJsLiteral(json);
     const ipWordingDisplay = getIpWoridng((window as any).ip_wording);
     if (ipWordingDisplay !== '') {
       ipWording.innerHTML = ipWordingDisplay;
@@ -226,8 +227,9 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
     const qmtplTextMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?};)/s);
     if (qmtplTextMatchResult && qmtplTextMatchResult.groups && qmtplTextMatchResult.groups.code) {
       const code = qmtplTextMatchResult.groups.code;
-      // eslint-disable-next-line no-eval
-      eval(code);
+      (window as any).__QMTPL_SSR_DATA__ = parseJsLiteral(
+        code.replace(/^window.__QMTPL_SSR_DATA__s*=s*/, '').replace(/;?$/, '')
+      );
       const data = (window as any).__QMTPL_SSR_DATA__;
       if (data && typeof data.title === 'string' && !$js_text_desc.innerHTML.trim()) {
         let text = data.title as string;
@@ -251,7 +253,7 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
         if (match && match.groups && match.groups.value) {
           const code = `window.${key} = ${match.groups.value}`;
           // eslint-disable-next-line no-eval
-          eval(code);
+          (window as any)[key] = match.groups.value.slice(1, -1);
           // @ts-ignore
           return (window as any)[key] as string;
         }
@@ -443,7 +445,8 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
     const qmtplMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?)<\/script>/s);
     if (qmtplMatchResult && qmtplMatchResult.groups && qmtplMatchResult.groups.code) {
       const code = qmtplMatchResult.groups.code;
-      eval(code);
+      const qmtplExpr = code.replace(/^window\.__QMTPL_SSR_DATA__\s*=\s*/, '').replace(/;?$/, '');
+      (window as any).__QMTPL_SSR_DATA__ = parseJSObject(qmtplExpr);
       const data = (window as any).__QMTPL_SSR_DATA__;
       let desc = data.desc.replace(/\r/g, '').replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;');
       desc = decode_html(desc, false);
@@ -454,7 +457,8 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
     const pictureMatchResult = html.match(/(?<code>window\.picture_page_info_list\s*=.+\.slice\(0,\s*20\);)/s);
     if (pictureMatchResult && pictureMatchResult.groups && pictureMatchResult.groups.code) {
       const code = pictureMatchResult.groups.code;
-      eval(code);
+      const arrExpr = code.replace(/^window\.picture_page_info_list\s*=\s*/, '').replace(/\.slice\(0,\s*20\);?$/, '');
+      (window as any).picture_page_info_list = parseJSObject<any[]>(arrExpr).slice(0, 20);
       const picture_page_info_list = (window as any).picture_page_info_list;
       const containerEl = $jsArticleContent.querySelector('#js_share_content_page_hd')!;
       let innerHTML =
@@ -478,7 +482,7 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
     );
     if (videoContentMatchResult && videoContentMatchResult.groups && videoContentMatchResult.groups.value) {
       const code = 'window.videoContentNoEncode = ' + videoContentMatchResult.groups.value;
-      eval(code);
+      (window as any).videoContentNoEncode = videoContentMatchResult.groups.value.slice(1, -1);
       let desc = (window as any).videoContentNoEncode;
       desc = desc.replace(/\r/g, '').replace(/\n/g, '<br>');
       $js_common_share_desc.innerHTML = desc;
@@ -492,7 +496,7 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
     const mpVideoCoverUrlMatchResult = html.match(/(?<code>window\.__mpVideoCoverUrl\s*=\s*'[^']*';)/s);
     if (mpVideoCoverUrlMatchResult && mpVideoCoverUrlMatchResult.groups && mpVideoCoverUrlMatchResult.groups.code) {
       const code = mpVideoCoverUrlMatchResult.groups.code;
-      eval(code);
+      (window as any).__mpVideoCoverUrl = code.match(/=s*'([^']*)';?$/)?.[1] ?? '';
       poster = (window as any).__mpVideoCoverUrl;
     }
 
@@ -501,7 +505,8 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
     const mpVideoTransInfoMatchResult = html.match(/(?<code>window\.__mpVideoTransInfo\s*=\s*\[.+?];)/s);
     if (mpVideoTransInfoMatchResult && mpVideoTransInfoMatchResult.groups && mpVideoTransInfoMatchResult.groups.code) {
       const code = mpVideoTransInfoMatchResult.groups.code;
-      eval(code);
+      const videoExpr = code.replace(/^window\.__mpVideoTransInfo\s*=\s*/, '').replace(/;?$/, '');
+      (window as any).__mpVideoTransInfo = parseJSObject(videoExpr);
       const mpVideoTransInfo = (window as any).__mpVideoTransInfo;
       if (Array.isArray(mpVideoTransInfo) && mpVideoTransInfo.length > 0) {
         mpVideoTransInfo.forEach((trans: any) => {
@@ -594,7 +599,11 @@ export async function packHTMLAssets(fakeid: string, html: string, title: string
   );
   if (videoPageInfosMatchResult && videoPageInfosMatchResult.groups && videoPageInfosMatchResult.groups.code) {
     const code = videoPageInfosMatchResult.groups.code;
-    eval(code);
+    const videoExpr = code
+      .replace(/var\s+videoPageInfos\s*=\s*/, '')
+      .replace(/;?\s*window\.__videoPageInfos\s*=\s*videoPageInfos;?/, '');
+    const __videoPageInfos = parseJSObject<VideoPageInfo[]>(videoExpr);
+    (window as any).__videoPageInfos = __videoPageInfos;
     const videoPageInfos: VideoPageInfo[] = (window as any).__videoPageInfos;
     videoPageInfos.forEach(videoPageInfo => {
       videoPageInfo.mp_video_trans_info.forEach(trans => {

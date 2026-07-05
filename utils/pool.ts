@@ -299,6 +299,10 @@ export async function downloads<T extends DownloadResource>(
   // 初始化 pool
   pool.init(privateProxy);
 
+  if (pool.proxies.length === 0) {
+    throw new Error('未配置代理节点，请前往"设置 → 代理节点"添加私有代理地址');
+  }
+
   const queue = new PQueue({ concurrency: pool.proxies.length });
 
   const tasks = resources.map(resource => queue.add(() => download<T>(resource, downloadFn, useProxy)));

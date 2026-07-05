@@ -2,12 +2,14 @@
 import { formatDistance } from 'date-fns';
 import { request } from '#shared/utils/request';
 import LoginModal from '~/components/modal/Login.vue';
-import StorageUsage from '~/components/StorageUsage.vue';
+import StorageUsage from '~/components/ui/StorageUsage.vue';
+import toastFactory from '~/composables/toast';
 import { IMAGE_PROXY } from '~/config';
 import type { LogoutResponse } from '~/types/types';
 
 const loginAccount = useLoginAccount();
 const modal = useModal();
+const toast = toastFactory();
 
 const now = ref(new Date());
 const distance = computed(() => {
@@ -83,7 +85,7 @@ async function logout() {
   if (statusCode === 200) {
     loginAccount.value = null;
   } else {
-    alert(statusText);
+    toast.error('退出登录失败', statusText);
   }
   logoutBtnLoading.value = false;
 }
@@ -100,14 +102,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <footer class="flex flex-col space-y-2 pt-3 border-t dark:border-slate-600">
-    <div v-if="loginAccount" class="space-y-3">
+  <footer class="flex flex-col space-y-3 border-t border-cc-border pt-4 text-cc-muted">
+    <div v-if="loginAccount" class="space-y-2">
       <div class="flex items-center space-x-2">
         <img
           v-if="loginAccount.avatar"
           :src="IMAGE_PROXY + loginAccount.avatar"
           alt=""
-          class="rounded-full size-10 ring-1 ring-gray-300"
+          class="rounded-full size-10 ring-1 ring-cc-border"
         />
         <UTooltip
           v-if="loginAccount.nickname"
@@ -123,18 +125,25 @@ onUnmounted(() => {
         <UButton
           icon="i-heroicons-arrow-left-start-on-rectangle-16-solid"
           :loading="logoutBtnLoading"
-          class="bg-slate-10 hover:bg-rose-500 disabled:bg-rose-500"
+          class="border border-cc-border bg-white/40 text-cc-accent hover:bg-cc-danger hover:text-white disabled:opacity-60"
           @click="logout"
           >退出
         </UButton>
       </div>
-      <div class="text-sm">
-        <span>登录信息过期时间还剩: </span>
-        <span class="font-mono" :class="warning ? 'text-rose-500' : 'text-green-500'">{{ distance }}</span>
+      <div class="text-xs text-cc-muted">
+        <span>会话剩余 </span>
+        <span class="font-mono" :class="warning ? 'text-cc-danger' : 'text-cc-success'">{{
+          distance
+        }}</span>
       </div>
     </div>
     <div v-else>
-      <UButton color="gray" variant="solid" @click="login">登录公众号</UButton>
+      <UButton
+        class="w-full justify-center border border-cc-border bg-white/45 text-cc-accent hover:bg-cc-accent hover:text-white"
+        variant="solid"
+        @click="login"
+        >登录公众号</UButton
+      >
     </div>
     <StorageUsage />
   </footer>
