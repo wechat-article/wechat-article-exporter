@@ -4,8 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/tmp/outputs/nginx-handoff-validate-20260704.txt"
 TEMPLATE="$ROOT/deploy/nginx/wcpt-loopback.conf.template"
-RUNBOOK="$ROOT/docs/tencent-lighthouse-nginx-handoff.md"
-MATRIX="$ROOT/docs/deployment-matrix.md"
+PROFILE="$ROOT/deploy/tencent-lighthouse-default-profile.md"
 
 mkdir -p "$ROOT/tmp/outputs"
 : > "$OUT"
@@ -35,8 +34,7 @@ require_text() {
 }
 
 require_file "$TEMPLATE"
-require_file "$RUNBOOK"
-require_file "$MATRIX"
+require_file "$PROFILE"
 
 require_text "$TEMPLATE" "proxy_pass http://127\\.0\\.0\\.1:3088;" "loopback_upstream"
 require_text "$TEMPLATE" 'proxy_set_header Host \$host;' "host_header"
@@ -45,9 +43,18 @@ require_text "$TEMPLATE" "client_max_body_size 64m;" "client_body_size"
 require_text "$TEMPLATE" "__WCPT_DOMAIN__" "domain_placeholder"
 require_text "$TEMPLATE" "__TLS_CERT_PATH__" "cert_placeholder"
 require_text "$TEMPLATE" "__TLS_KEY_PATH__" "key_placeholder"
-require_text "$RUNBOOK" "production unchanged" "boundary_production_unchanged"
-require_text "$RUNBOOK" "provider_call=false" "boundary_provider_call"
-require_text "$MATRIX" "127\\.0\\.0\\.1:3088" "deployment_matrix_loopback"
+require_text "$PROFILE" "profile_id: lighthouse-default" "profile_id"
+require_text "$PROFILE" "WECHAT_ARTICLE_EXPORTER_IMAGE=wechat-article-exporter:local" "default_image"
+require_text "$PROFILE" "INSTALL_PDF_RUNTIME=false" "default_pdf_runtime_disabled"
+require_text "$PROFILE" "WECHAT_ARTICLE_EXPORTER_IMAGE=wechat-article-exporter:pdf-local" "pdf_optin_image"
+require_text "$PROFILE" "INSTALL_PDF_RUNTIME=true" "pdf_optin_runtime"
+require_text "$PROFILE" "NUXT_OPEN_API_ENABLED=false" "open_api_default_off"
+require_text "$PROFILE" "NUXT_LLM_ENABLED=false" "llm_default_off"
+require_text "$PROFILE" "NUXT_LLM_PROVIDER_CALL_AUTHORIZED=false" "provider_call_default_off"
+require_text "$PROFILE" "127\\.0\\.0\\.1:3088" "profile_loopback"
+require_text "$PROFILE" "production unchanged" "boundary_production_unchanged"
+require_text "$PROFILE" "provider_call=false" "boundary_provider_call"
+require_text "$PROFILE" "deploy_attempted=false" "boundary_deploy_attempted"
 
 if ! command -v nginx >/dev/null 2>&1; then
   note "nginx_binary=absent"
