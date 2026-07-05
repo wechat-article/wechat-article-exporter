@@ -11,7 +11,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 501, statusMessage: '当前部署环境不支持 PDF 导出，请使用 Docker 部署' });
   }
 
-  const browser = await getBrowser();
+  let browser: Awaited<ReturnType<typeof getBrowser>>;
+  try {
+    browser = await getBrowser();
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+    const message = error instanceof Error ? error.message : '';
+    if (code === 'ERR_MODULE_NOT_FOUND' || message.includes('Could not find Chrome') || message.includes('executable')) {
+      throw createError({ statusCode: 501, statusMessage: 'PDF_RUNTIME_UNAVAILABLE' });
+    }
+    throw error;
+  }
+
   const page = await browser.newPage();
 
   try {
