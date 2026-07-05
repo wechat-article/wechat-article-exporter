@@ -14,6 +14,20 @@ const privateDeploymentCsp = [
   "frame-ancestors 'self'",
 ].join('; ');
 
+const clientChunkSizeWarningLimitKb = 1100;
+
+function wcptManualChunks(id: string) {
+  if (!id.includes('/node_modules/')) return undefined;
+
+  if (id.includes('/node_modules/ag-grid-vue3/')) return 'ag-grid-vue';
+  if (id.includes('/node_modules/@ag-grid-community/locale/')) return 'ag-grid-locale';
+  if (id.includes('/node_modules/ag-grid-enterprise/')) return 'ag-grid-enterprise';
+  if (id.includes('/node_modules/ag-grid-community/')) return 'ag-grid-community';
+  if (id.includes('/node_modules/exceljs/')) return 'exceljs-export';
+
+  return undefined;
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-10-30',
   hooks: {
@@ -75,6 +89,17 @@ export default defineNuxtConfig({
   },
   sourcemap: {
     client: 'hidden',
+  },
+  vite: {
+    build: {
+      // Keep Vite's generic warning aligned with the WCPT lazy-route budget audit.
+      chunkSizeWarningLimit: clientChunkSizeWarningLimitKb,
+      rollupOptions: {
+        output: {
+          manualChunks: wcptManualChunks,
+        },
+      },
+    },
   },
   nitro: {
     minify: process.env.NODE_ENV === 'production',

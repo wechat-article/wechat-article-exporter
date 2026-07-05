@@ -6,6 +6,7 @@
     "debug": "nuxt dev --inspect",
     "dev": "nuxt dev",
     "build": "nuxt build",
+    "audit:bundle": "node scripts/client-bundle-budget-audit.mjs",
     "preview": "NITRO_PRESET=cloudflare_pages nuxt build && npx wrangler --cwd dist pages dev",
     "test": "vitest run",
     "verify": "yarn test && yarn build",
