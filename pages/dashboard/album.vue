@@ -47,6 +47,23 @@
             @click="gotoLink(originalAlbumURL)"
             >跳转到原始链接</UButton
           >
+          <div
+            class="flex items-center gap-1.5"
+            title="每个压缩包包含的文章数。合集较大或含大量视频/图片时请调小，以降低单次打包的内存占用，避免 Array buffer allocation failed"
+          >
+            <label class="text-xs text-slate-500 whitespace-nowrap">分包大小</label>
+            <UInput
+              :model-value="chunkSizeSetting"
+              @update:model-value="val => setChunkSize(Number(val))"
+              type="number"
+              :min="minChunkSize"
+              :max="maxChunkSize"
+              size="xs"
+              class="w-16"
+              :disabled="batchDownloadLoading"
+            />
+            <span class="text-xs text-slate-500">篇/包</span>
+          </div>
           <UButton
             color="black"
             variant="solid"
@@ -57,16 +74,39 @@
           >
             <Loader v-if="batchDownloadLoading" :size="20" class="animate-spin" />
             <span v-if="batchDownloadLoading"
-              >{{ batchDownloadPhase }}:
-              <span v-if="batchDownloadPhase === '下载文章内容'"
-                >{{ batchDownloadedCount }}/{{ selectedArticleCount }}</span
-              >
-              <span v-if="batchDownloadPhase === '打包'">{{ batchPackedCount }}/{{ batchDownloadedCount }}</span>
+              >分包 {{ batchCurrentChunk }}/{{ batchTotalChunks }} · {{ batchDownloadPhase }}
+              <span v-if="batchDownloadPhase === '下载文章内容'">{{ batchDownloadedCount }}/{{ currentChunkTotal }}</span>
+              <span v-else-if="batchDownloadPhase === '打包压缩'">{{ batchPackedCount }}/{{ batchDownloadedCount }}</span>
             </span>
+            <span v-else-if="batchResumable">继续下载</span>
             <span v-else>批量下载</span>
           </UButton>
         </div>
       </header>
+
+      <!-- 批量下载进度条 -->
+      <div
+        v-if="batchDownloadLoading || batchStatusText"
+        class="px-3 py-2 bg-slate-50 dark:bg-slate-800/40"
+      >
+        <div class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300 mb-1">
+          <span>
+            <span v-if="batchDownloadLoading">
+              正在处理第 {{ batchCurrentChunk }}/{{ batchTotalChunks }} 个分包 · {{ batchDownloadPhase }}
+            </span>
+            <span v-else>下载进度</span>
+          </span>
+          <span>{{ batchCompletedChunks }}/{{ batchTotalChunks }} 分包 ({{ batchOverallProgress }}%)</span>
+        </div>
+        <UProgress :value="batchOverallProgress" :max="100" size="sm" />
+        <p
+          v-if="batchStatusText"
+          class="mt-1 text-xs"
+          :class="batchFailedChunks.length > 0 ? 'text-red-500' : 'text-slate-500'"
+        >
+          {{ batchStatusText }}
+        </p>
+      </div>
 
       <!-- 合集文章列表 -->
       <main class="flex-1 overflow-y-scroll bg-[#ededed]" v-if="selectedAccount && selectedAlbum">
@@ -127,6 +167,7 @@ import { sleep } from '#shared/utils/helpers';
 import { request } from '#shared/utils/request';
 import AccountSelectorForAlbum from '~/components/selector/AccountSelectorForAlbum.vue';
 import { useDownloadAlbum } from '~/composables/useBatchDownload';
+import { useDownloadSettings } from '~/composables/useDownloadSettings';
 import { websiteName } from '~/config';
 import { type MpAccount } from '~/store/v2/info';
 import type { AppMsgAlbumResult, ArticleItem, BaseInfo } from '~/types/album';
@@ -288,9 +329,44 @@ const {
   phase: batchDownloadPhase,
   downloadedCount: batchDownloadedCount,
   packedCount: batchPackedCount,
+  currentChunk: batchCurrentChunk,
+  totalChunks: batchTotalChunks,
+  completedChunks: batchCompletedChunks,
+  failedChunks: batchFailedChunks,
+  totalArticles: batchTotalArticles,
+  statusText: batchStatusText,
+  resumable: batchResumable,
+  overallProgress: batchOverallProgress,
   download: batchDownload,
+  checkResumable: batchCheckResumable,
 } = useDownloadAlbum();
 const selectedArticleCount = ref(0);
+
+// 分包大小设置(持久化)，供用户按合集大小/资源体量自行调整
+const { chunkSize: chunkSizeSetting, setChunkSize, minChunkSize, maxChunkSize } = useDownloadSettings();
+
+// 当前合集下载任务的唯一标识(用于断点续传)
+const downloadTaskId = computed(() => {
+  if (selectedAccount.value && selectedAlbum.value) {
+    return `${selectedAccount.value.fakeid}-${selectedAlbum.value.id}`;
+  }
+  return '';
+});
+
+// 当前分包内进度(当前分包已下载/已打包，分母为该分包内文章数)
+const currentChunkTotal = computed(() => {
+  if (!batchTotalChunks.value || !batchTotalArticles.value) return 0;
+  const chunkSize = Math.ceil(batchTotalArticles.value / batchTotalChunks.value);
+  const index = Math.max(batchCurrentChunk.value - 1, 0);
+  return Math.min(chunkSize, batchTotalArticles.value - index * chunkSize);
+});
+
+// 切换合集或调整分包大小时，检测是否存在可续传的历史进度(需匹配当前分包大小)
+watch([downloadTaskId, () => albumArticles.length, chunkSizeSetting], () => {
+  if (downloadTaskId.value && albumArticles.length > 0) {
+    batchCheckResumable(downloadTaskId.value, albumArticles.length, chunkSizeSetting.value);
+  }
+});
 
 function doBatchDownload() {
   const articles: DownloadableArticle[] = albumArticles.map(article => ({
@@ -301,7 +377,7 @@ function doBatchDownload() {
   }));
   selectedArticleCount.value = articles.length;
   const filename = downloadFileName.value;
-  batchDownload(articles, filename);
+  batchDownload(articles, filename, { taskId: downloadTaskId.value, chunkSize: chunkSizeSetting.value });
 }
 
 // 抓取全部文章链接
