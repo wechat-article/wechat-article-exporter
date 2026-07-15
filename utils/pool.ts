@@ -2,9 +2,9 @@ import dayjs from 'dayjs';
 import PQueue from 'p-queue';
 import { v4 as uuid } from 'uuid';
 import { sleep } from '#shared/utils/helpers';
-import { PUBLIC_PROXY_LIST } from '~/config/public-proxy';
 import type { DownloadableArticle } from '~/types/types';
 import type { AudioResource, VideoResource } from '~/types/video';
+import { resolveDownloadProxyList, resolveDownloadProxyListFromLocalStorage } from '~/utils/download/proxy-list';
 
 /**
  * 代理实例
@@ -171,7 +171,7 @@ class ProxyPool {
 }
 
 // 代理池
-export const pool = new ProxyPool(PUBLIC_PROXY_LIST);
+export const pool = new ProxyPool(resolveDownloadProxyList());
 
 /**
  * 使用代理 proxy 下载资源
@@ -285,19 +285,8 @@ export async function downloads<T extends DownloadResource>(
   downloadFn: DownloadFn<T>,
   useProxy = true
 ) {
-  // 检查是否设置了私有代理地址
-  const privateProxy: string[] = [];
-  try {
-    const proxy = JSON.parse(window.localStorage.getItem('wechat-proxy')!);
-    if (Array.isArray(proxy) && proxy.length > 0) {
-      privateProxy.push(...proxy);
-    }
-  } catch (e) {
-    console.log(e);
-  }
-
   // 初始化 pool
-  pool.init(privateProxy);
+  pool.init(resolveDownloadProxyListFromLocalStorage(window.localStorage));
 
   const queue = new PQueue({ concurrency: pool.proxies.length });
 
