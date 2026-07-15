@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { EXTERNAL_API_SERVICE } from '~/config';
+import { extractBalancedJsLiteral, parseWechatJSObject } from '#shared/utils/js-literal';
 import { extractCommentId } from '~/utils/comment';
 
 /**
@@ -130,7 +130,7 @@ export function validateHTMLContent(html: string): ['Success' | 'Deleted' | 'Exc
  * @return 脚本代码 (纯代码，不含 <script> 标签)
  * @remarks 内部使用 cheerio 库进行解析，可运行在浏览器端和服务器端。
  */
-function extractCgiScript(html: string) {
+export function extractCgiDataNewScript(html: string) {
   const $ = cheerio.load(html);
 
   const scriptEl = $('script[type="text/javascript"][h5only]').filter((i, el) => {
@@ -146,88 +146,28 @@ function extractCgiScript(html: string) {
   return scriptEl.html()?.trim() || null;
 }
 
-/**
- * 从 html 中提取 cgiDataNew 对象
- * @param html 文章的完整 html 内容
- * @return window.cgiDataNew 对象，解析失败时返回 null
- */
-function parseCgiDataNewOnClient(html: string): Promise<any> {
-  const code = extractCgiScript(html);
-  if (!code) {
-    return Promise.resolve(null);
-  }
+export function extractCgiDataNewExpression(code: string): string | null {
+  const markerIndex = code.indexOf('window.cgiDataNew');
+  if (markerIndex < 0) return null;
 
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.srcdoc = `<script type="text/javascript">${code}</script>`;
-  document.body.appendChild(iframe);
+  const assignIndex = code.indexOf('=', markerIndex);
+  if (assignIndex < 0) return null;
 
-  return new Promise((resolve, reject) => {
-    iframe.onload = function () {
-      // @ts-ignore
-      const data = iframe.contentWindow.cgiDataNew;
+  const objectStart = code.indexOf('{', assignIndex);
+  if (objectStart < 0) return null;
 
-      // 用完后清理
-      document.body.removeChild(iframe);
-      resolve(data);
-    };
-    iframe.onerror = function (e) {
-      reject(e);
-    };
-  });
+  return extractBalancedJsLiteral(code, objectStart);
 }
 
-/**
- * 从 html 中提取 cgiDataNew 对象
- * @deprecated Cloudflare 平台禁止任何动态执行脚本，故本方法在 CF 平台无效
- * @param html 文章的完整 html 内容
- * @return window.cgiDataNew 对象，解析失败时返回 null
- */
-function parseCgiDataNewOnServerDeprecated(html: string): Promise<any> {
-  const code = extractCgiScript(html);
-  if (!code) {
-    return Promise.resolve(null);
-  }
-
-  // 1. 创建沙箱
-  const sandbox: any = {
-    window: {},
-    console: { log: () => {}, error: () => {} }, // 可选：屏蔽 console
-    // 如果脚本依赖其他全局，可在这里 mock（如 Date, Math 等已存在）
-  };
-  sandbox.window = sandbox; // 关键：让 window.xxx 落入沙箱
-
-  // 2. 执行代码（new Function 比 eval 稍安全）
-  const func = new Function('window', code);
-  func(sandbox.window);
-
-  return sandbox.cgiDataNew || sandbox.window?.cgiDataNew;
-}
-
-/**
- * 从 html 中提取 cgiDataNew 对象
- * @param html 文章的完整 html 内容
- * @return window.cgiDataNew 对象，解析失败时返回 null
- */
-async function parseCgiDataNewOnServer(html: string): Promise<any> {
-  const code = extractCgiScript(html);
-  if (!code) {
-    return Promise.resolve(null);
-  }
+export function parseCgiDataNewFromScript(code: string): any {
+  const expr = extractCgiDataNewExpression(code);
+  if (!expr) return null;
 
   try {
-    const data = await fetch(`${EXTERNAL_API_SERVICE}/api/tools/eval-js-code`, {
-      method: 'POST',
-      body: code,
-    }).then(res => res.json());
-    if (data && data.executionError === null) {
-      return data.window.cgiDataNew;
-    }
+    return parseWechatJSObject(expr);
+  } catch {
     return null;
-  } catch (error) {
-    console.error(error);
   }
-  return null;
 }
 
 /**
@@ -236,9 +176,6 @@ async function parseCgiDataNewOnServer(html: string): Promise<any> {
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
 export async function parseCgiDataNew(html: string): Promise<any> {
-  if (process.client && typeof document === 'object') {
-    return parseCgiDataNewOnClient(html);
-  } else {
-    return parseCgiDataNewOnServer(html);
-  }
+  const code = extractCgiDataNewScript(html);
+  return code ? parseCgiDataNewFromScript(code) : null;
 }

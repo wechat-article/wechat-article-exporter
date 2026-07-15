@@ -4,7 +4,7 @@ import type { Preferences } from '~/types/preferences';
 
 const defaultOptions: Partial<Preferences> = {
   hideDeleted: true,
-  privateProxyList: [],
+  privateProxyList: ['http://localhost:8787'],
   privateProxyAuthorization: '',
   exportConfig: {
     dirname: '${title}',
@@ -12,6 +12,7 @@ const defaultOptions: Partial<Preferences> = {
     exportExcelIncludeContent: true,
     exportJsonIncludeComments: true,
     exportJsonIncludeContent: true,
+    exportJsonIncludeSummaryEnrichment: false,
     exportHtmlIncludeComments: true,
   },
   downloadConfig: {

@@ -2,27 +2,30 @@
   <USlideover v-model="open" :ui="{ width: 'max-w-[500px]' }">
     <UCard
       class="flex flex-col flex-1"
-      :ui="{ body: { base: 'flex-1' }, ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }"
+      :ui="{ body: { base: 'flex-1' }, ring: '', divide: 'divide-y divide-cc-border' }"
     >
       <template #header>
         <div class="flex justify-between items-center">
-          <h2 class="font-bold text-2xl">抓取 Credentials</h2>
+          <h2 class="font-bold text-2xl">抓取登录凭证</h2>
         </div>
       </template>
 
       <div>
         <UTabs
           :items="tabs"
-          :ui="{ list: { marker: { background: 'bg-blue-500 text-white' }, tab: { active: 'text-white' } } }"
+          :ui="{ list: { marker: { background: 'bg-cc-accent text-white' }, tab: { active: 'text-white' } } }"
         >
           <template #item="{ item }">
             <div v-if="item.key === 'wxdown'" class="space-y-5">
-              <p class="flex items-center text-sm">
-                <span class="text-rose-500 font-semibold">所需软件：</span>
-                <UButton @click="downloadProgram" variant="ghost" color="gray"
-                  >去下载 wxdown-service 程序
-                  <UIcon name="i-lucide:arrow-up-right" class="size-5" />
-                </UButton>
+              <p class="flex flex-wrap items-center gap-2 text-sm text-cc-muted">
+                <span class="text-rose-500 font-semibold shrink-0">本地程序：</span>
+                <template v-if="wxdownReleasesUrl">
+                  <UButton @click="downloadProgram" variant="ghost" color="gray"
+                    >获取 wxdown-service
+                    <UIcon name="i-heroicons-arrow-up-right-20-solid" class="size-5" />
+                  </UButton>
+                </template>
+                <span v-else class="text-xs leading-relaxed">安装包请通过内部渠道或运维获取；配置好后再填写下方 WebSocket 地址。</span>
               </p>
               <div class="flex justify-between items-center gap-3">
                 <UInput
@@ -36,32 +39,32 @@
                 <UButton
                   v-if="!wsMonitoring"
                   :disabled="!wsURL || monitoring"
-                  color="blue"
+                  color="primary"
                   @click="startListenService(true)"
                 >
                   开始监控
                 </UButton>
-                <UButton v-else icon="i-line-md:loading-twotone-loop" color="green" @click="stopListenService"
+                <UButton v-else icon="i-heroicons-arrow-path-20-solid" color="green" @click="stopListenService"
                   >监控中，结束监控</UButton
                 >
               </div>
             </div>
             <div v-if="item.key === 'mitmproxy'">
               <p class="flex items-center text-sm">
-                <span class="text-rose-500 font-semibold">所需软件：</span>
+                <span class="text-rose-500 font-semibold shrink-0">插件脚本：</span>
                 <UButton @click="downloadPlugin" variant="ghost" color="gray"
-                  >去下载 mitmproxy 插件
-                  <UIcon name="i-lucide:arrow-up-right" class="size-5" />
+                  >下载 credential.py
+                  <UIcon name="i-heroicons-arrow-down-tray-20-solid" class="size-5" />
                 </UButton>
               </p>
               <div class="text-sm my-5">
                 <p class="flex justify-between items-end">执行以下命令启动 mitmproxy 服务并加载 credential.py 插件：</p>
                 <p class="flex justify-between items-center bg-black text-white p-2 my-2 rounded-md">
                   <code>mitmdump -s credential.py -q</code>
-                  <UIcon v-if="copied" name="i-lucide:copy-check" />
+                  <UIcon v-if="copied" name="i-heroicons-clipboard-document-check-20-solid" />
                   <UIcon
                     v-else
-                    name="i-lucide:copy"
+                    name="i-heroicons-clipboard-document-20-solid"
                     class="cursor-pointer"
                     @click="copy('mitmdump -s credential.py -q')"
                   />
@@ -73,21 +76,21 @@
                   color="gray"
                   v-model="apiKey"
                   :disabled="authorized || wsMonitoring"
-                  placeholder="请输入API Key"
+                  placeholder="本地凭证服务口令"
                 />
                 <UButton
                   class="px-5"
-                  color="blue"
+                  color="primary"
                   :loading="authorizeBtnLoading"
                   :disabled="!apiKey || authorized || wsMonitoring || monitoring"
                   @click="authorize"
                   >认证</UButton
                 >
 
-                <UButton v-if="!monitoring" :disabled="!authorized || wsMonitoring" color="blue" @click="start"
+                <UButton v-if="!monitoring" :disabled="!authorized || wsMonitoring" color="primary" @click="start"
                   >开始监控</UButton
                 >
-                <UButton v-else icon="i-line-md:loading-twotone-loop" color="green" @click="stop"
+                <UButton v-else icon="i-heroicons-arrow-path-20-solid" color="green" @click="stop"
                   >监控中，结束监控</UButton
                 >
               </div>
@@ -98,7 +101,7 @@
           <li
             v-for="credential in credentials"
             :key="credential.biz"
-            class="relative flex items-center border rounded-md hover:ring ring-blue-500 hover:shadow-md transition-all duration-300 p-3 space-x-5"
+            class="relative flex items-center border border-cc-border rounded-md hover:ring ring-cc-accent hover:shadow-md transition-all duration-300 p-3 space-x-5"
           >
             <div class="size-20 border rounded-full">
               <img :src="credential.avatar" alt="" />
@@ -142,6 +145,7 @@ import dayjs from 'dayjs';
 import { getArticleList, getArticleListWithCredential } from '~/apis';
 import LoginModal from '~/components/modal/Login.vue';
 import toastFactory from '~/composables/toast';
+import { useCommercialConfig } from '~/composables/useCommercialConfig';
 import useLoginCheck from '~/composables/useLoginCheck';
 import { CREDENTIAL_API_HOST, CREDENTIAL_LIVE_MINUTES, isDev } from '~/config';
 import { getInfoCache, type MpAccount } from '~/store/v2/info';
@@ -164,14 +168,16 @@ async function pullData(fakeid: string) {
   pullArticleLoading.value = false;
 }
 
+const { wxdownReleasesUrl } = useCommercialConfig();
+
 const tabs = [
   {
     key: 'wxdown',
-    label: 'wxdown 程序版',
+    label: '监听程序（WS）',
   },
   {
     key: 'mitmproxy',
-    label: 'mitmproxy 插件版',
+    label: 'mitmproxy',
   },
 ];
 
@@ -301,7 +307,6 @@ onMounted(() => {
     start();
   }
   refreshCredentialAddedState();
-  startListenService();
 });
 
 onUnmounted(() => {
@@ -316,12 +321,17 @@ async function downloadPlugin() {
   link.click();
 }
 
-// 下载 wxdown-service 程序
+// 下载 wxdown-service 安装包（公网地址由 NUXT_PUBLIC_WXDOWN_RELEASES_URL 配置；未配置则不跳转）
 async function downloadProgram() {
+  const url = wxdownReleasesUrl?.trim();
+  if (!url) {
+    toast.info('安装包获取', '请通过内部渠道或运维获取 wxdown-service，配置完成后再使用本页监听。');
+    return;
+  }
   const link = document.createElement('a');
   link.target = '_blank';
-  link.href = 'https://github.com/wechat-article/wxdown-service/releases';
-  link.download = 'wxdown-service';
+  link.rel = 'noopener noreferrer';
+  link.href = url;
   link.click();
 }
 
@@ -342,17 +352,18 @@ async function authorize() {
     if (response.status === 200) {
       authorized.value = true;
       localStorage.setItem('auto-detect-credentials:apikey', apiKey.value);
-      alert('认证成功');
+      toast.success('认证成功', '');
     } else {
       authorized.value = false;
       localStorage.removeItem('auto-detect-credentials:apikey');
-      alert('认证失败，请确认 API Key 是否正确');
+      toast.error('认证失败', '请确认本地服务口令是否正确');
     }
-  } catch (error: any) {
-    if (error.message === 'Failed to fetch') {
-      alert('mitmproxy 服务未启动');
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg === 'Failed to fetch') {
+      toast.error('无法连接服务', '请确认 mitmproxy 服务已启动');
     } else {
-      alert(error.message);
+      toast.error('认证请求失败', msg);
     }
     authorized.value = false;
   } finally {

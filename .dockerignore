@@ -22,6 +22,11 @@ node_modules
 .DS_Store
 .idea
 .data
+docker-persist
+tmp
+.kiro
+.codegraph
+.playwright-cli
 
 design
 docs

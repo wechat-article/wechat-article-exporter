@@ -1,10 +1,11 @@
-import dayjs from 'dayjs';
 import { H3Event, parseCookies } from 'h3';
 import { v4 as uuidv4 } from 'uuid';
 import { isDev, USER_AGENT } from '~/config';
 import { RequestOptions } from '~/server/types';
+import { createAuthKeySetCookieHeader, createExpiredUuidSetCookieHeader } from '~/server/utils/auth-cookie';
 import { cookieStore, getCookieFromStore } from '~/server/utils/CookieStore';
 import { logRequest, logResponse } from '~/server/utils/logger';
+import { buildAllowedMpProxyUrl, createMpProxyEndpointBlockedBody } from '~/server/utils/mp-proxy-allowlist';
 
 /**
  * 代理微信公众号请求
@@ -12,7 +13,18 @@ import { logRequest, logResponse } from '~/server/utils/logger';
  * @param options 请求参数
  */
 export async function proxyMpRequest(options: RequestOptions) {
-  const runtimeConfig = useRuntimeConfig();
+  const endpointResult = buildAllowedMpProxyUrl(options.endpoint, options.query);
+  if (!endpointResult.allowed) {
+    const body = createMpProxyEndpointBlockedBody(endpointResult.reason);
+    if (options.parseJson) {
+      return body;
+    }
+
+    return new Response(JSON.stringify(body), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const headers = new Headers({
     Referer: 'https://mp.weixin.qq.com/',
@@ -33,16 +45,12 @@ export async function proxyMpRequest(options: RequestOptions) {
     redirect: options.redirect || 'follow',
   };
 
-  // 处理参数
-  if (options.query) {
-    options.endpoint += '?' + new URLSearchParams(options.query as Record<string, string>).toString();
-  }
   if (options.method === 'POST' && options.body) {
     requestInit.body = new URLSearchParams(options.body as Record<string, string>).toString();
   }
 
   // 构造请求
-  const request = new Request(options.endpoint, requestInit);
+  const request = new Request(endpointResult.url, requestInit);
 
   // 记录请求报文
   const requestId = uuidv4().replace(/-/g, '');
@@ -85,18 +93,16 @@ export async function proxyMpRequest(options: RequestOptions) {
         throw new Error(`redirect_url 中未找到 token 参数: ${redirectUrl}`);
       }
 
-      console.log('token', token);
       const success = await cookieStore.setCookie(authKey, token, mpResponse.headers.getSetCookie());
       if (!success) {
         throw new Error('cookie 写入 KV 存储失败');
       }
-      console.log('cookie 写入成功');
 
       setCookies = [
-        `auth-key=${authKey}; Path=/; Expires=${dayjs().add(4, 'days').toString()}; Secure; HttpOnly`,
+        createAuthKeySetCookieHeader(authKey),
 
         // 登录成功后，删除浏览器的 uuid cookie
-        `uuid=EXPIRED; Path=/; Expires=${dayjs().subtract(1, 'days').toString()}; Secure; HttpOnly`,
+        createExpiredUuidSetCookieHeader(),
       ];
     } catch (error) {
       console.error('action(login) failed:', error);

@@ -9,6 +9,32 @@ const customLocaleText = {
   columns: '配置字段',
 };
 
+const isCompactGridViewport =
+  import.meta.client && (window.matchMedia?.('(max-width: 767px)').matches ?? window.innerWidth < 768);
+
+const sharedGridSideBar: GridOptions['sideBar'] = isCompactGridViewport
+  ? false
+  : {
+      toolPanels: [
+        {
+          id: 'columns',
+          labelDefault: 'Columns',
+          labelKey: 'columns',
+          iconKey: 'columns',
+          toolPanel: 'agColumnsToolPanel',
+          minWidth: 225,
+          maxWidth: 225,
+          width: 225,
+          toolPanelParams: {
+            suppressRowGroups: true,
+            suppressValues: true,
+            suppressPivotMode: true,
+          },
+        },
+      ],
+      position: 'right',
+    };
+
 /**
  * Grid表格公共配置
  */
@@ -16,31 +42,12 @@ export const sharedGridOptions: GridOptions = {
   localeText: customLocaleText,
   rowNumbers: {
     resizable: true,
-    minWidth: 80,
-    maxWidth: 120,
+    minWidth: isCompactGridViewport ? 48 : 80,
+    maxWidth: isCompactGridViewport ? 64 : 120,
   },
   loadingOverlayComponent: GridLoading,
   noRowsOverlayComponent: GridNoRows,
-  sideBar: {
-    toolPanels: [
-      {
-        id: 'columns',
-        labelDefault: 'Columns',
-        labelKey: 'columns',
-        iconKey: 'columns',
-        toolPanel: 'agColumnsToolPanel',
-        minWidth: 225,
-        maxWidth: 225,
-        width: 225,
-        toolPanelParams: {
-          suppressRowGroups: true,
-          suppressValues: true,
-          suppressPivotMode: true,
-        },
-      },
-    ],
-    position: 'right',
-  },
+  sideBar: sharedGridSideBar,
   enableCellTextSelection: true,
   tooltipShowDelay: 0,
   tooltipShowMode: 'whenTruncated',
@@ -57,7 +64,7 @@ export const sharedGridOptions: GridOptions = {
   },
   selectionColumnDef: {
     sortable: true,
-    width: 80,
+    width: isCompactGridViewport ? 48 : 80,
     pinned: 'left',
   },
   rowSelection: {
@@ -66,15 +73,25 @@ export const sharedGridOptions: GridOptions = {
     selectAll: 'filtered',
   },
   theme: themeQuartz.withParams({
-    borderColor: '#e5e7eb',
+    accentColor: '#D75C70',
+    backgroundColor: '#FDF8F6',
+    borderColor: 'rgba(53, 20, 26, 0.12)',
+    browserColorScheme: 'light',
+    chromeBackgroundColor: '#FCF5F2',
+    foregroundColor: '#35141A',
+    headerBackgroundColor: '#F7EEEB',
     rowBorder: true,
     columnBorder: true,
     headerFontWeight: 700,
-    oddRowBackgroundColor: '#00005506',
+    headerTextColor: '#35141A',
+    oddRowBackgroundColor: '#FCF5F2',
+    rowHoverColor: '#F9ECEE',
+    selectedRowBackgroundColor: '#F5DDE2',
     sidePanelBorder: true,
-    fontFamily: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif', // 优先使用常见中文字体
-    headerFontFamily: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif', // 表头也同步优化（可选）
-    fontSize: 14, // 默认通常是 13-14px，可适当增大到 15 或 16，让文字更舒展
-    // cellHorizontalPadding: 36, // 默认约 12px，增大可给单元格文字更多水平空间，缓解密集感
+    wrapperBorderRadius: 0,
+    fontFamily:
+      '"Avenir Next", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif',
+    headerFontFamily: '"Avenir Next", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif',
+    fontSize: 14,
   }),
 };

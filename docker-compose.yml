@@ -1,0 +1,67 @@
+services:
+  proxy-forwarder:
+    image: node:22-alpine
+    container_name: wechat-proxy-forwarder
+    profiles:
+      - local-proxy
+    working_dir: /app
+    command: ["node", "scripts/proxy-server.mjs"]
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      PORT: "8787"
+      UPSTREAM_PROXY_HOST: "host.docker.internal"
+      UPSTREAM_PROXY_PORT: "7890"
+    volumes:
+      - ./scripts/proxy-server.mjs:/app/scripts/proxy-server.mjs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  wechat-article-exporter:
+    build:
+      context: .
+      args:
+        VERSION: local
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org}
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-http://deb.debian.org/debian}
+        DEBIAN_SECURITY_MIRROR: ${DEBIAN_SECURITY_MIRROR:-http://deb.debian.org/debian-security}
+        INSTALL_PDF_RUNTIME: ${INSTALL_PDF_RUNTIME:-false}
+        NUXT_PUBLIC_EXPORT_DIRECT_ZIP: "true"
+        # 私有化默认留空；需要公网文档/下载时再填
+        NUXT_PUBLIC_DOCS_WEBSITE_URL: ""
+        NUXT_PUBLIC_WXDOWN_RELEASES_URL: ""
+    image: ${WECHAT_ARTICLE_EXPORTER_IMAGE:-wechat-article-exporter:local}
+    container_name: wechat-article-exporter
+    ports:
+      - "127.0.0.1:3088:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      NITRO_KV_DRIVER: fs
+      NITRO_KV_BASE: .data/kv
+      NUXT_OPEN_API_ENABLED: ${NUXT_OPEN_API_ENABLED:-false}
+      NUXT_LLM_ENABLED: ${NUXT_LLM_ENABLED:-false}
+      NUXT_LLM_PROVIDER: ${NUXT_LLM_PROVIDER:-deepseek}
+      NUXT_LLM_REQUEST_TIMEOUT_MS: ${NUXT_LLM_REQUEST_TIMEOUT_MS:-30000}
+      NUXT_LLM_ARTICLE_SUMMARY_MODE: ${NUXT_LLM_ARTICLE_SUMMARY_MODE:-disabled}
+      NUXT_LLM_PROVIDER_CALL_AUTHORIZED: ${NUXT_LLM_PROVIDER_CALL_AUTHORIZED:-false}
+      NUXT_LLM_LIVE_POLICY_ACCEPTED: ${NUXT_LLM_LIVE_POLICY_ACCEPTED:-false}
+      NUXT_LLM_LIVE_MAX_DAILY_CALLS: ${NUXT_LLM_LIVE_MAX_DAILY_CALLS:-100}
+      NUXT_LLM_LIVE_MAX_CONCURRENCY: ${NUXT_LLM_LIVE_MAX_CONCURRENCY:-1}
+      NUXT_LLM_LIVE_MAX_RETRIES: ${NUXT_LLM_LIVE_MAX_RETRIES:-0}
+      NUXT_LLM_LIVE_SOURCE_RETENTION: ${NUXT_LLM_LIVE_SOURCE_RETENTION:-none}
+      NUXT_LLM_LIVE_EVIDENCE_LEVEL: ${NUXT_LLM_LIVE_EVIDENCE_LEVEL:-sanitized_metrics_only}
+      NUXT_LLM_LIVE_ROLLBACK_MODE: ${NUXT_LLM_LIVE_ROLLBACK_MODE:-disabled}
+      NUXT_LLM_LIVE_OBSERVABILITY: ${NUXT_LLM_LIVE_OBSERVABILITY:-local_sanitized}
+      NUXT_LLM_DEEPSEEK_API_KEY: ${NUXT_LLM_DEEPSEEK_API_KEY:-}
+      NUXT_LLM_DEEPSEEK_BASE_URL: ${NUXT_LLM_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      NUXT_LLM_DEEPSEEK_MODEL: ${NUXT_LLM_DEEPSEEK_MODEL:-deepseek-v4-flash}
+      NUXT_LLM_KIMI_API_KEY: ${NUXT_LLM_KIMI_API_KEY:-}
+      NUXT_LLM_KIMI_BASE_URL: ${NUXT_LLM_KIMI_BASE_URL:-https://api.moonshot.ai/v1}
+      NUXT_LLM_KIMI_MODEL: ${NUXT_LLM_KIMI_MODEL:-kimi-k2.6}
+    volumes:
+      # 持久化 Nitro KV（登录态等）；数据在宿主机 ./docker-persist/.data
+      - ./docker-persist/.data:/app/.data
+    restart: unless-stopped

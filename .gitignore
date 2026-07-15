@@ -29,3 +29,6 @@ samples/**/output
 
 # wrangler
 .wrangler
+
+# Docker 本地持久化卷（含 KV，勿提交）
+docker-persist/

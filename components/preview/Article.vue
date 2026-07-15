@@ -8,6 +8,7 @@
 
 <script setup lang="ts">
 import { parseCgiDataNew } from '#shared/utils/html';
+import { parseJSObject } from '#shared/utils/js-literal';
 import { renderHTMLFromCgiDataNew } from '#shared/utils/renderer';
 import HtmlRenderer from '~/components/preview/HtmlRenderer.vue';
 import toastFactory from '~/composables/toast';
@@ -107,7 +108,7 @@ async function normalizeHtmlForPreview(cachedHtml: HtmlAsset, html: string): Pro
   const ipWordingMatchResult = html.match(/window\.ip_wording = (?<data>{\s+countryName: '[^']+',[^}]+})/s);
   if (ipWrp && ipWording && ipWordingMatchResult && ipWordingMatchResult.groups && ipWordingMatchResult.groups.data) {
     const json = ipWordingMatchResult.groups.data;
-    eval('window.ip_wording = ' + json);
+    (window as any).ip_wording = parseJSObject(json);
     const ipWordingDisplay = getIpWoridng((window as any).ip_wording);
     if (ipWordingDisplay !== '') {
       ipWording.innerHTML = ipWordingDisplay;
@@ -202,8 +203,8 @@ async function normalizeHtmlForPreview(cachedHtml: HtmlAsset, html: string): Pro
     const qmtplTextMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?};)/s);
     if (qmtplTextMatchResult && qmtplTextMatchResult.groups && qmtplTextMatchResult.groups.code) {
       const code = qmtplTextMatchResult.groups.code;
-      // eslint-disable-next-line no-eval
-      eval(code);
+      const qmtplExpr = code.replace(/^window\.__QMTPL_SSR_DATA__\s*=\s*/, '').replace(/;?$/, '');
+      (window as any).__QMTPL_SSR_DATA__ = parseJSObject(qmtplExpr);
       const data = (window as any).__QMTPL_SSR_DATA__;
       if (data && typeof data.title === 'string' && !$js_text_desc.innerHTML.trim()) {
         let text = data.title as string;
@@ -227,7 +228,7 @@ async function normalizeHtmlForPreview(cachedHtml: HtmlAsset, html: string): Pro
         if (match && match.groups && match.groups.value) {
           const code = `window.${key} = ${match.groups.value}`;
           // eslint-disable-next-line no-eval
-          eval(code);
+          (window as any)[key] = match.groups.value.slice(1, -1);
           // @ts-ignore
           return (window as any)[key] as string;
         }
@@ -296,7 +297,8 @@ async function normalizeHtmlForPreview(cachedHtml: HtmlAsset, html: string): Pro
     const qmtplMatchResult = html.match(/(?<code>window\.__QMTPL_SSR_DATA__\s*=\s*\{.+?)<\/script>/s);
     if (qmtplMatchResult && qmtplMatchResult.groups && qmtplMatchResult.groups.code) {
       const code = qmtplMatchResult.groups.code;
-      eval(code);
+      const qmtplExpr2 = code.replace(/^window\.__QMTPL_SSR_DATA__\s*=\s*/, '').replace(/;?$/, '');
+      (window as any).__QMTPL_SSR_DATA__ = parseJSObject(qmtplExpr2);
       const data = (window as any).__QMTPL_SSR_DATA__;
       let desc = data.desc.replace(/\r/g, '').replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;');
       desc = decode_html(desc, false);
@@ -307,7 +309,8 @@ async function normalizeHtmlForPreview(cachedHtml: HtmlAsset, html: string): Pro
     const pictureMatchResult = html.match(/(?<code>window\.picture_page_info_list\s*=.+\.slice\(0,\s*20\);)/s);
     if (pictureMatchResult && pictureMatchResult.groups && pictureMatchResult.groups.code) {
       const code = pictureMatchResult.groups.code;
-      eval(code);
+      const arrExpr = code.replace(/^window\.picture_page_info_list\s*=\s*/, '').replace(/\.slice\(0,\s*20\);?$/, '');
+      (window as any).picture_page_info_list = parseJSObject<any[]>(arrExpr).slice(0, 20);
       const picture_page_info_list = (window as any).picture_page_info_list;
       const containerEl = $jsArticleContent.querySelector('#js_share_content_page_hd')!;
       let innerHTML =

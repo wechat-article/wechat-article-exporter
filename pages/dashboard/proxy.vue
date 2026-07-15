@@ -1,48 +1,45 @@
 <template>
   <div class="h-full">
     <Teleport defer to="#title">
-      <h1 class="text-[28px] leading-[34px] text-slate-12 dark:text-slate-50 font-bold">公共代理</h1>
+      <h1 class="text-xl font-semibold text-cc-text">公共代理</h1>
     </Teleport>
 
-    <div class="flex flex-col h-full divide-y divide-gray-200">
+    <div class="cc-page-frame flex flex-col h-full">
       <!-- header -->
-      <header class="px-4 py-5 sm:px-6">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-2xl font-semibold">统计信息</h2>
-
-          <p class="font-serif font-bold">可用: {{ totalSuccess }}，不可用: {{ totalFailure }}</p>
-        </div>
-        <div class="flex justify-between items-center">
-          <p class="text-rose-500 text-sm">
-            警告: 公共代理资源有限，请合理使用。 若需抓取大量数据，请搭建自己的私有代理节点。<br />
-            若发现某ip存在滥用公共代理从而导致官网无法使用，将有可能被封禁。
+      <header class="cc-page-toolbar px-4 py-3 sm:px-6">
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+          <h2 class="text-lg font-semibold">统计</h2>
+          <p class="text-sm tabular-nums text-cc-text">
+            可用 {{ totalSuccess }} · 不可用 {{ totalFailure }}
           </p>
-          <p class="mt-2 px-3 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-300 rounded-md dark:text-amber-300 dark:bg-amber-900/30 dark:border-amber-700">
-            所有代理额度将在每天早上 8:00 刷新。
+        </div>
+        <div class="flex flex-wrap items-start gap-3 justify-between">
+          <p class="text-xs text-cc-muted max-w-2xl leading-relaxed">
+            公共代理额度有限，大量抓取请自建代理。滥用可能导致当前 IP 被封；额度每日 8:00 刷新。
           </p>
           <UPopover :popper="{ placement: 'left-start', arrow: true }">
             <UButton
-              :icon="hasBlocked ? 'i-lucide:annoyed' : 'i-lucide:smile'"
-              variant="link"
+              :icon="hasBlocked ? 'i-heroicons-face-frown-20-solid' : 'i-heroicons-face-smile-20-solid'"
+              variant="soft"
+              size="sm"
+              square
               :color="hasBlocked ? 'rose' : 'green'"
+              aria-label="当前 IP 与封禁列表"
             />
 
             <template #panel>
-              <div class="p-4 space-y-3 max-h-80 overflow-y-scroll">
+              <div class="p-3 space-y-3 max-h-80 overflow-y-auto text-sm">
                 <div>
-                  <p>当前IP:</p>
-                  <code class="font-medium" :class="hasBlocked ? 'text-rose-500' : 'text-green-500'">
-                    {{ currentIP }}
-                  </code>
+                  <p class="text-xs text-cc-muted mb-1">当前 IP</p>
+                  <code class="font-mono text-xs" :class="hasBlocked ? 'text-rose-500' : 'text-green-600'">{{
+                    currentIP
+                  }}</code>
                 </div>
                 <div>
-                  <p class="flex justify-between items-center min-w-64">
-                    <span>已被封禁IP:</span>
-                    <span class="text-xs text-gray-500">若存在误伤，请联系开发者</span>
-                  </p>
-                  <ul>
+                  <p class="text-xs text-cc-muted mb-1">封禁列表（误伤请联系开发者）</p>
+                  <ul class="font-mono text-xs">
                     <li v-for="ip in blockedIPS" :key="ip">
-                      <code class="text-rose-500">{{ ip }}</code>
+                      <code class="text-rose-600">{{ ip }}</code>
                     </li>
                   </ul>
                 </div>
@@ -53,9 +50,9 @@
       </header>
 
       <!-- 数据展示区 -->
-      <div class="flex-1 px-4 py-5 sm:py-6 overflow-y-scroll">
+      <div class="flex-1 px-4 py-3 sm:py-4 overflow-y-scroll">
         <div v-if="loading" class="flex justify-center items-center mt-5">
-          <Loader :size="28" class="animate-spin text-slate-500" />
+          <Loader :size="28" class="animate-spin text-cc-muted" />
         </div>
         <ProxyMetrics :data="metricsData" />
       </div>
@@ -66,7 +63,7 @@
 <script setup lang="ts">
 import { Loader } from 'lucide-vue-next';
 import { request } from '#shared/utils/request';
-import ProxyMetrics from '~/components/ProxyMetrics.vue';
+import ProxyMetrics from '~/components/ui/ProxyMetrics.vue';
 import { websiteName } from '~/config';
 import type { AccountMetric } from '~/types/proxy';
 
@@ -109,7 +106,7 @@ onMounted(async () => {
       currentIP.value = data.ip;
     }),
     request<{ ips: string[] } | string[]>('/api/web/worker/blocked-ip-list').then(data => {
-      blockedIPS.value = Array.isArray(data) ? data : (data.ips || []);
+      blockedIPS.value = Array.isArray(data) ? data : data.ips || [];
     }),
   ]);
 });

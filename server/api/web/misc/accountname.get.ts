@@ -1,45 +1,34 @@
 import * as cheerio from 'cheerio';
 import { USER_AGENT } from '~/config';
+import {
+  buildAllowedWechatDirectFetchUrl,
+  WECHAT_ACCOUNT_NAME_HOSTS,
+} from '~/server/utils/wechat-direct-fetch';
 
 interface AccountNameQuery {
   url: string;
-}
-
-// 允许服务端请求的微信域名白名单
-const ALLOWED_HOSTS = new Set(['mp.weixin.qq.com', 'weixin.qq.com']);
-
-/**
- * 验证 URL 是否为允许的微信域名
- */
-function isAllowedUrl(rawUrl: string): boolean {
-  try {
-    const parsed = new URL(rawUrl);
-    // 只允许 https 协议
-    if (parsed.protocol !== 'https:') {
-      return false;
-    }
-    return ALLOWED_HOSTS.has(parsed.hostname);
-  } catch {
-    return false;
-  }
 }
 
 /**
  * 根据文章 url 获取公众号名称
  */
 export default defineEventHandler(async event => {
-  let { url } = getQuery<AccountNameQuery>(event);
-  url = decodeURIComponent(url);
+  const { url: rawUrl } = getQuery<AccountNameQuery>(event);
+  const url = decodeURIComponent((rawUrl || '').trim());
+  const urlResult = buildAllowedWechatDirectFetchUrl(url, {
+    allowedHosts: WECHAT_ACCOUNT_NAME_HOSTS,
+  });
 
-  if (!isAllowedUrl(url)) {
+  if (!urlResult.allowed) {
     throw createError({
       statusCode: 400,
-      statusMessage: '不允许的 URL：仅支持微信公众平台域名',
+      statusMessage: 'Bad Request',
+      message: '不允许的 URL：仅支持微信公众平台域名',
     });
   }
 
-  // Cloudflare Workers fetch 不支持 redirect: 'error'，使用 'manual' 后手动判断状态码以达到反 SSRF 效果
-  const res = await fetch(url, {
+  // 使用 manual 后手动判断状态码；目标 URL 仍先经过 allowlist 归一化以防 SSRF。
+  const res = await fetch(urlResult.url, {
     headers: {
       Referer: 'https://mp.weixin.qq.com/',
       Origin: 'https://mp.weixin.qq.com',

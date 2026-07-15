@@ -1,25 +1,32 @@
 <template>
-  <UCard class="mx-4 mt-10 flex-1">
+  <UCard
+    class="cc-settings-card flex-1"
+    :ui="{
+      ring: '',
+      divide: 'divide-y divide-cc-border',
+      header: { padding: 'px-5 py-4 sm:px-6' },
+      body: { padding: 'px-5 py-5 sm:px-6' },
+    }"
+  >
     <template #header>
-      <h3 class="text-2xl font-semibold">导出选项</h3>
-      <p class="text-sm text-slate-10 font-serif">配置文章的导出选项</p>
+      <h3 class="text-xl font-semibold">导出选项</h3>
     </template>
 
     <div class="flex flex-col space-y-5">
-      <div>
-        <p class="mb-2">
-          <span class="mr-3">导出目录名:</span>
-          <span class="inline-block w-8">
+      <div class="cc-field">
+        <div class="flex items-center gap-2">
+          <label class="cc-field-label" for="export-dirname">导出目录名</label>
+          <span class="inline-flex">
             <UPopover mode="hover" :popper="{ placement: 'right' }">
-              <UButton color="white" size="sm" trailing-icon="i-heroicons:variable-16-solid" />
+              <UButton color="primary" variant="ghost" size="xs" trailing-icon="i-heroicons:variable-16-solid" />
 
               <template #panel>
-                <div class="p-4">
-                  <p class="my-2 text-sm text-gray-500">
-                    使用 <code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded font-mono text-xs">${变量名}</code> 的格式插入变量，例如：<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded font-mono text-xs">${YYYY}-${MM}-${DD}_${title}</code>
+                <div class="p-4 text-cc-text">
+                  <p class="my-2 text-sm text-cc-muted">
+                    使用 <code class="px-1 py-0.5 bg-rose-50 font-mono text-xs text-cc-accent">${变量名}</code> 的格式插入变量，例如：<code class="px-1 py-0.5 bg-rose-50 font-mono text-xs text-cc-accent">${YYYY}-${MM}-${DD}_${title}</code>
                   </p>
-                  <p class="my-2 font-medium">支持的变量：</p>
-                  <table class="w-full border-collapse border">
+                  <p class="my-2 font-medium">支持的变量</p>
+                  <table class="w-full border-collapse border border-cc-border">
                     <tbody>
                       <tr>
                         <th class="w-20">变量</th>
@@ -39,40 +46,40 @@
               </template>
             </UPopover>
           </span>
-        </p>
-        <p class="text-sm mb-2 text-gray-500">影响 <span class="font-mono">html/txt/markdown/word/pdf</span> 的导出</p>
+        </div>
+        <p class="cc-field-help">影响 <span class="font-mono">html/txt/markdown/word</span> 的导出目录结构。</p>
         <UInput
+          id="export-dirname"
           placeholder="目录名格式"
-          class="w-[600px] font-mono"
+          class="w-full max-w-[600px] font-mono"
           name="dirname"
           v-model="preferences.exportConfig.dirname"
         />
-        <p class="mt-2 text-sm text-gray-500">
+        <p class="cc-form-preview mt-1 px-3 py-2 text-sm">
           <span class="mr-1">预览:</span>
-          <span class="font-mono text-gray-700 dark:text-gray-300">{{ dirnamePreview }}</span>
+          <span class="font-mono text-cc-text">{{ dirnamePreview }}</span>
         </p>
       </div>
-      <div>
-        <p class="mb-2 flex items-center gap-3">
-          <span>目录名最大长度:</span>
-          <span class="text-xs text-gray-500">(0表示不限制)</span>
-          <UInput
-            class=""
-            placeholder="目录名最大长度"
-            v-model="preferences.exportConfig.maxlength"
-            type="number"
-            min="0"
-          />
-        </p>
+      <div class="cc-field max-w-xs">
+        <label class="cc-field-label" for="export-dirname-maxlength">目录名最大长度</label>
+        <p class="cc-field-help">0 表示不限制。</p>
+        <UInput
+          id="export-dirname-maxlength"
+          placeholder="目录名最大长度"
+          v-model="preferences.exportConfig.maxlength"
+          type="number"
+          min="0"
+        />
       </div>
-      <div>
+      <p class="cc-field-label">内容包含规则</p>
+      <div class="cc-option-row">
         <UCheckbox
           v-model="preferences.exportConfig.exportExcelIncludeContent"
           name="exportExcelIncludeContent"
           label="导出 Excel 中包含文章内容"
         />
       </div>
-      <div>
+      <div class="cc-option-row space-y-3">
         <UCheckbox
           v-model="preferences.exportConfig.exportJsonIncludeContent"
           name="exportJsonIncludeContent"
@@ -83,8 +90,13 @@
           name="exportJsonIncludeComments"
           label="导出 JSON 中包含留言数据"
         />
+        <UCheckbox
+          v-model="preferences.exportConfig.exportJsonIncludeSummaryEnrichment"
+          name="exportJsonIncludeSummaryEnrichment"
+          label="导出 JSON 中包含已人工允许的摘要审计"
+        />
       </div>
-      <div>
+      <div class="cc-option-row">
         <UCheckbox
           v-model="preferences.exportConfig.exportHtmlIncludeComments"
           name="exportHtmlIncludeComments"
@@ -146,7 +158,7 @@ table th {
   padding: 0.5rem 0.25rem;
 }
 table td {
-  border: 1px solid #00002d17;
+  border: 1px solid rgba(53, 20, 26, 0.12);
   padding: 0.25rem 0.5rem;
 }
 
@@ -161,15 +173,15 @@ th:last-child {
 }
 
 th {
-  border: 1px solid #00002d17;
+  border: 1px solid rgba(53, 20, 26, 0.12);
   border-top: none;
 }
 
 tr:nth-child(even) {
-  background-color: #00005506;
+  background-color: rgba(215, 92, 112, 0.05);
 }
 
 tr:hover {
-  background-color: #00005506;
+  background-color: rgba(215, 92, 112, 0.08);
 }
 </style>

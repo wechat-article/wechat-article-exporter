@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="./assets/logo.svg" alt="Logo">
-</p>
-
 # wechat-article-exporter
 
 ![GitHub stars]

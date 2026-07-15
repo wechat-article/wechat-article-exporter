@@ -8,7 +8,12 @@ export const isDev = process.env.NODE_ENV === 'development';
 /**
  * 网站标题
  */
-export const websiteName = '公众号文章导出';
+export const websiteName = 'WCPT';
+
+/**
+ * 网站副标题
+ */
+export const websiteSubtitle = 'WeChat Post Transform';
 
 /**
  * 文章列表每页大小，20为最大有效值
@@ -40,9 +45,9 @@ export const CREDENTIAL_LIVE_MINUTES: number = 25;
 export const CREDENTIAL_API_HOST = 'http://127.0.0.1:8088';
 
 /**
- * 文档站点地址
+ * 文档站点地址（静态构建用；运行时请以 `useCommercialConfig().docsWebsiteUrl` 为准）
  */
-export const docsWebSite = 'https://docs.mptext.top';
+export const docsWebSite = '';
 
 // 图片代理服务 todo: 这个可以在设置里增加一个配置项，网站是否启用图片代理，否的话置空即可。相应的，可以与 no-referer 配置互斥。
 // export const IMAGE_PROXY = 'https://image.baidu.com/search/down?thumburl=';
@@ -72,10 +77,3 @@ export const ITEM_SHOW_TYPE: Record<number, string> = {
   11: '文章分享',
   17: '短文',
 };
-
-/**
- * 外部接口服务
- */
-export const EXTERNAL_API_SERVICE = 'https://my-cron-service.deno.dev';
-
-export const STATUS_API_SERVICE = 'https://status.mptext.top';

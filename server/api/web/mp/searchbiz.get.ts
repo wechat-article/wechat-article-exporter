@@ -3,7 +3,10 @@
  */
 
 import { getTokenFromStore } from '~/server/utils/CookieStore';
+import { logProxyFailure, mpProxyErrorBody } from '~/server/utils/proxy-error-response';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { assertRateLimit } from '~/server/utils/rate-limit-ip';
+import { MP_ENDPOINTS } from '~/server/wechat/endpoints';
 
 interface SearchBizQuery {
   begin?: number;
@@ -12,6 +15,8 @@ interface SearchBizQuery {
 }
 
 export default defineEventHandler(async event => {
+  assertRateLimit(event, 'mp_searchbiz', 60);
+
   const token = await getTokenFromStore(event);
   if (!token) {
     return { base_resp: { ret: -1, err_msg: '未登录或登录已过期，请重新扫码登录' } };
@@ -36,15 +41,11 @@ export default defineEventHandler(async event => {
   return proxyMpRequest({
     event: event,
     method: 'GET',
-    endpoint: 'https://mp.weixin.qq.com/cgi-bin/searchbiz',
+    endpoint: MP_ENDPOINTS.searchbiz,
     query: params,
     parseJson: true,
   }).catch(e => {
-    return {
-      base_resp: {
-        ret: -1,
-        err_msg: '搜索公众号接口失败，请重试',
-      },
-    };
+    logProxyFailure('searchbiz', e, { keyword });
+    return mpProxyErrorBody('搜索公众号接口失败，请重试', { code: 'SEARCHBIZ_PROXY', retryable: true });
   });
 });

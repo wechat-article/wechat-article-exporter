@@ -2,7 +2,9 @@
  * 搜索公众号文章列表接口
  */
 
+import { logProxyFailure, mpProxyErrorBody } from '~/server/utils/proxy-error-response';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { MP_ENDPOINTS } from '~/server/wechat/endpoints';
 
 interface SearchBizQuery {
   begin?: number;
@@ -34,15 +36,11 @@ export default defineEventHandler(async event => {
   return proxyMpRequest({
     event: event,
     method: 'GET',
-    endpoint: 'https://mp.weixin.qq.com/mp/profile_ext',
+    endpoint: MP_ENDPOINTS.profileExt,
     query: params,
     parseJson: true,
   }).catch(e => {
-    return {
-      base_resp: {
-        ret: -1,
-        err_msg: '搜索公众号接口失败，请重试',
-      },
-    };
+    logProxyFailure('profile_ext_getmsg', e, { id: query.id });
+    return mpProxyErrorBody('获取公众号文章列表失败，请重试', { code: 'PROFILE_EXT', retryable: true });
   });
 });

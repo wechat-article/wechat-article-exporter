@@ -8,6 +8,10 @@ import { DEFAULT_OPTIONS } from './constants';
 import { ProxyManager } from './ProxyManager';
 import type { Callback, DownloaderStatus, DownloadOptions } from './types';
 
+type ResolvedDownloadOptions = Required<Omit<DownloadOptions, 'directZip'>> & {
+  directZip?: boolean;
+};
+
 const credentials = useLocalStorage<ParsedCredential[]>('auto-detect-credentials:credentials', []);
 const preferences: Ref<Preferences> = usePreferences() as unknown as Ref<Preferences>;
 
@@ -24,7 +28,7 @@ export class BaseDownloader {
   protected readonly failed: Set<string>; // 文章抓取异常列表
   protected readonly deleted: Set<string>; // 文章已删除列表
 
-  protected readonly options: Required<DownloadOptions>;
+  protected readonly options: ResolvedDownloadOptions;
   protected isRunning: boolean;
   protected readonly abortControllers: Map<string, AbortController>; // 每个文章url对应一个controller，方便进行取消
   public readonly proxyManager: ProxyManager;
@@ -54,6 +58,7 @@ export class BaseDownloader {
       maxRetries: options.maxRetries ?? DEFAULT_OPTIONS.MAX_RETRIES,
       cooldownPeriod: options.cooldownPeriod ?? DEFAULT_OPTIONS.COOLDOWN_PERIOD,
       maxFailures: options.maxFailures ?? DEFAULT_OPTIONS.MAX_FAILURES,
+      directZip: options.directZip,
     };
 
     this.proxyManager = new ProxyManager(proxies, this.options.cooldownPeriod, this.options.maxFailures);

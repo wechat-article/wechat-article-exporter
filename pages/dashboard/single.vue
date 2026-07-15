@@ -20,6 +20,8 @@ import GridArticleActions from '~/components/grid/ArticleActions.vue';
 import GridLoading from '~/components/grid/Loading.vue';
 import GridNoRows from '~/components/grid/NoRows.vue';
 import PreviewArticle from '~/components/preview/Article.vue';
+import ArticleSummaryPanel from '~/components/single/ArticleSummaryPanel.vue';
+import SingleArticleUrlBar from '~/components/single/SingleArticleUrlBar.vue';
 import toastFactory from '~/composables/toast';
 import { websiteName } from '~/config';
 import { sharedGridOptions } from '~/config/shared-grid-options';
@@ -29,8 +31,11 @@ import { getHtmlCache } from '~/store/v2/html';
 import type { Metadata } from '~/store/v2/metadata';
 import type { Preferences } from '~/types/preferences';
 import type { AppMsgExWithFakeID } from '~/types/types';
+import { setupAgGridRuntime } from '~/utils/ag-grid-runtime';
 import type { ArticleMetadata } from '~/utils/download/types';
 import { createBooleanColumnFilterParams, createDateColumnFilterParams } from '~/utils/grid';
+
+setupAgGridRuntime(useRuntimeConfig().public.aggridLicense);
 
 useHead({
   title: `单篇文章下载 | ${websiteName}`,
@@ -378,6 +383,9 @@ function onSelectionChanged(event: SelectionChangedEvent) {
 const selectedArticleUrls = computed(() => {
   return selectedArticles.value.map(article => article.link);
 });
+const selectedSummaryArticle = computed(() => {
+  return selectedArticles.value.length === 1 ? selectedArticles.value[0] : null;
+});
 const contentNotDownloadedCount = computed(() => {
   return selectedArticles.value.filter(article => !article.contentDownload).length;
 });
@@ -585,23 +593,20 @@ async function removeRows() {
 <template>
   <div class="h-full">
     <Teleport defer to="#title">
-      <h1 class="text-[28px] leading-[34px] text-slate-12 dark:text-slate-50 font-bold">单篇文章下载</h1>
+      <h1 class="text-xl font-semibold text-cc-text">单篇文章下载</h1>
     </Teleport>
 
-    <div class="flex flex-col h-full divide-y divide-gray-200">
+    <div class="cc-page-frame flex flex-col h-full">
       <!-- 顶部操作区 -->
-      <header class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-3 py-3">
-        <div class="flex flex-1 gap-3">
-          <UInput v-model="inputUrl" placeholder="请输入公众号文章链接" class="flex-1" @keyup.enter="addArticle" />
-          <UButton color="blue" @click="addArticle">添加</UButton>
-        </div>
-        <div class="flex items-center gap-3">
+      <header class="cc-page-toolbar flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <SingleArticleUrlBar v-model="inputUrl" @add="addArticle" />
+        <div class="flex flex-wrap items-center gap-2">
           <ButtonGroup
             :items="[
-              { label: '修复fakeid', event: 'fix-fakeid' },
-              { label: '文章内容', event: 'download-article-html' },
-              { label: '阅读量 (需要Credential)', event: 'download-article-metadata' },
-              { label: '留言内容 (需要Credential)', event: 'download-article-comment' },
+              { label: 'fakeid', event: 'fix-fakeid', detail: '修复 fakeid' },
+              { label: '正文', event: 'download-article-html' },
+              { label: '阅读量', event: 'download-article-metadata', detail: '需要 Credential' },
+              { label: '留言', event: 'download-article-comment', detail: '需要 Credential' },
             ]"
             @fix-fakeid="download('fakeid', selectedArticleUrls)"
             @download-article-html="download('html', selectedArticleUrls)"
@@ -625,8 +630,8 @@ async function removeRows() {
               { label: 'HTML', event: 'export-article-html' },
               { label: 'Txt', event: 'export-article-text' },
               { label: 'Markdown', event: 'export-article-markdown' },
-              { label: 'Word (内测中)', event: 'export-article-word' },
-              { label: 'PDF (内测中)', event: 'export-article-pdf' },
+              { label: 'Word', event: 'export-article-word', detail: '内测' },
+              { label: 'PDF', event: 'export-article-pdf', detail: '内测' },
             ]"
             @export-article-excel="exportFile('excel', selectedArticleUrls)"
             @export-article-json="exportFile('json', selectedArticleUrls)"
@@ -652,15 +657,19 @@ async function removeRows() {
         </div>
       </header>
 
-      <ag-grid-vue
-        style="width: 100%; height: 100%"
-        :rowData="globalRowData"
-        :columnDefs="columnDefs"
-        :gridOptions="gridOptions"
-        @grid-ready="onGridReady"
-        @filter-changed="onFilterChanged"
-        @selection-changed="onSelectionChanged"
-      />
+      <ArticleSummaryPanel :article="selectedSummaryArticle" :selected-count="selectedArticles.length" />
+
+      <div class="min-h-0 flex-1">
+        <ag-grid-vue
+          style="width: 100%; height: 100%"
+          :rowData="globalRowData"
+          :columnDefs="columnDefs"
+          :gridOptions="gridOptions"
+          @grid-ready="onGridReady"
+          @filter-changed="onFilterChanged"
+          @selection-changed="onSelectionChanged"
+        />
+      </div>
     </div>
 
     <PreviewArticle ref="previewArticleRef" />

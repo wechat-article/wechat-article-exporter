@@ -1,6 +1,8 @@
 import { format } from 'date-fns';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { getErrorMessage } from '#shared/utils/client-error';
+import toastFactory from '~/composables/toast';
 import type { DownloadableArticle } from '~/types/types';
 import { downloadArticleHTMLs, packHTMLAssets } from '~/utils';
 
@@ -8,6 +10,7 @@ import { downloadArticleHTMLs, packHTMLAssets } from '~/utils';
  * 批量下载合集文章
  */
 export function useDownloadAlbum() {
+  const toast = toastFactory();
   const loading = ref(false);
   const phase = ref();
   const downloadedCount = ref(0);
@@ -36,8 +39,8 @@ export function useDownloadAlbum() {
 
       const blob = await zip.generateAsync({ type: 'blob' });
       saveAs(blob, `${filename}.zip`);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      toast.error('合集打包失败', getErrorMessage(e));
       console.error(e);
     } finally {
       loading.value = false;

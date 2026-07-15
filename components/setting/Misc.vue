@@ -1,12 +1,20 @@
 <template>
-  <UCard class="mx-4 mt-10 flex-1">
+  <UCard
+    class="cc-settings-card flex-1"
+    :ui="{
+      ring: '',
+      divide: 'divide-y divide-cc-border',
+      header: { padding: 'px-5 py-4 sm:px-6' },
+      body: { padding: 'px-5 py-5 sm:px-6' },
+    }"
+  >
     <template #header>
-      <h3 class="text-2xl font-semibold">其他</h3>
+      <h3 class="text-xl font-semibold">其他</h3>
     </template>
 
-    <div class="flex">
+    <div class="flex flex-col gap-6 xl:flex-row">
       <div class="flex-1 flex flex-col space-y-3">
-        <div class="flex gap-1">
+        <div class="cc-option-row flex items-start gap-2">
           <UCheckbox v-model="preferences.hideDeleted" name="hideDeleted" label="隐藏已删除文章" />
           <UPopover mode="hover" :popper="{ placement: 'top' }">
             <template #panel>
@@ -19,7 +27,7 @@
           </UPopover>
         </div>
 
-        <div class="flex gap-1">
+        <div class="cc-option-row flex items-start gap-2">
           <UCheckbox
             v-model="preferences.downloadConfig.forceDownloadContent"
             name="forceDownloadContent"
@@ -36,7 +44,7 @@
           </UPopover>
         </div>
 
-        <div class="flex gap-1">
+        <div class="cc-option-row flex items-start gap-2">
           <UCheckbox
             v-model="preferences.downloadConfig.metadataOverrideContent"
             name="metadataOverrideContent"
@@ -54,9 +62,9 @@
         </div>
       </div>
       <div class="flex-1">
-        <div>
-          <p class="flex">
-            <span class="text-sm">公众号同步频率：</span>
+        <div class="cc-field">
+          <p class="flex items-center gap-1">
+            <label class="cc-field-label" for="account-sync-seconds">公众号同步频率</label>
             <UPopover mode="hover" :popper="{ placement: 'top' }">
               <template #panel>
                 <p class="max-w-[300px] p-3 text-sm text-gray-500">
@@ -68,10 +76,12 @@
               <UIcon color="gray" name="i-heroicons:question-mark-circle-16-solid" class="size-5" />
             </UPopover>
           </p>
+          <p class="cc-field-help">控制抓取间隔；数值越小同步越快，也更容易触发限制。</p>
           <UInput
+            id="account-sync-seconds"
             type="number"
             v-model="preferences.accountSyncSeconds"
-            placeholder="配置公众号同步频率"
+            placeholder="例如 5"
             class="w-52 font-mono"
           >
             <template #trailing>
@@ -81,18 +91,23 @@
         </div>
       </div>
     </div>
-    <div class="border border-slate-200 p-3 rounded-md mt-5">
-      <p class="flex justify-between items-center mb-3">
-        <span class="text-xl font-medium">
-          同步时间范围:
-          <span class="text-xs text-slate-500">(说明: 只能从当前时间开始往前同步)</span>
+    <div class="cc-control-panel mt-5 p-4">
+      <p class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-3">
+        <span class="text-[15px] font-semibold inline-flex items-center gap-1">
+          同步时间范围
+          <UPopover mode="hover" :popper="{ placement: 'top' }">
+            <template #panel>
+              <p class="max-w-[280px] p-2 text-xs text-gray-500">仅从当前时间向前回溯同步，不能选择未来日期。</p>
+            </template>
+            <UIcon color="gray" name="i-heroicons:question-mark-circle-16-solid" class="size-4 opacity-70" />
+          </UPopover>
         </span>
-        <span class="text-sm text-blue-500 font-medium">实际同步范围: {{ getActualDateRange() }}</span>
+        <span class="text-sm text-cc-accent font-medium">实际同步范围: {{ getActualDateRange() }}</span>
       </p>
 
-      <div class="flex gap-3">
+      <div class="flex flex-col gap-3 sm:flex-row">
         <USelectMenu
-          class="w-1/2"
+          class="w-full sm:w-1/2"
           v-model="preferences.syncDateRange"
           :options="DURATION_OPTIONS"
           value-attribute="value"

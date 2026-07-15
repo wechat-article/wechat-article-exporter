@@ -133,7 +133,7 @@ async function bizLogin() {
           square
           variant="link"
           color="gray"
-          icon="i-lucide:x"
+          icon="i-heroicons-x-mark-20-solid"
           class="absolute right-3 top-3"
           @click="closeModal"
         />
@@ -141,7 +141,7 @@ async function bizLogin() {
 
       <!-- 二维码图片展示区 -->
       <div class="flex flex-col justify-center items-center mx-auto size-80">
-        <UIcon v-if="loading" name="i-lucide:loader" :size="28" class="animate-spin text-slate-500" />
+        <UIcon v-if="loading" name="i-heroicons-arrow-path-20-solid" :size="28" class="animate-spin text-slate-500" />
         <p v-if="msg" class="text-rose-500">{{ msg }}</p>
         <img v-if="qrcodeSrc" :src="qrcodeSrc" alt="" class="w-full rounded-md" />
       </div>

@@ -1,9 +1,35 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [],
+  content: [
+    './components/**/*.{vue,js,ts}',
+    './layouts/**/*.vue',
+    './pages/**/*.vue',
+    './composables/**/*.{js,ts}',
+    './plugins/**/*.{js,ts}',
+    './app.vue',
+    './error.vue',
+  ],
   theme: {
     extend: {
       colors: {
+        cc: {
+          app: 'var(--cc-bg-app)',
+          sidebar: 'var(--cc-bg-sidebar)',
+          'sidebar-soft': 'var(--cc-bg-sidebar-soft)',
+          elevated: 'var(--cc-bg-elevated)',
+          panel: 'var(--cc-bg-panel)',
+          border: 'var(--cc-border)',
+          'border-strong': 'var(--cc-border-strong)',
+          text: 'var(--cc-text)',
+          muted: 'var(--cc-text-muted)',
+          subtle: 'var(--cc-text-subtle)',
+          accent: 'var(--cc-accent)',
+          'accent-hover': 'var(--cc-accent-hover)',
+          'accent-warm': 'var(--cc-accent-warm)',
+          success: 'var(--cc-success)',
+          danger: 'var(--cc-danger)',
+          ring: 'var(--cc-ring)',
+        },
         slate: {
           1: '#00005503',
           2: '#00005506',

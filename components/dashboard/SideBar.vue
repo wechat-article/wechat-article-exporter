@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import BottomPanel from '~/components/dashboard/BottomPanel.vue';
 import NavMenus from '~/components/dashboard/NavMenus.vue';
-import { websiteName } from '~/config';
+import { websiteName, websiteSubtitle } from '~/config';
 </script>
 
 <template>
-  <aside
-    class="hidden md:flex flex-col h-screen w-[250px] flex-shrink-0 justify-between border-r border-slate-4 dark:border-slate-700 bg-slate-1 px-4 pb-6"
-  >
+  <aside class="cc-sidebar hidden md:flex flex-col h-screen w-[232px] flex-shrink-0 justify-between px-4 pb-5">
     <!-- 网站标题 & Logo -->
     <div class="flex items-center h-[60px]">
-      <NuxtLink to="/" class="px-2 font-bold text-xl">{{ websiteName }}</NuxtLink>
+      <NuxtLink to="/" class="cc-brand flex min-w-0 items-center gap-3 font-semibold transition-colors">
+        <span class="cc-brand-mark">W</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-semibold">{{ websiteName }}</span>
+          <span class="cc-brand-kicker block">{{ websiteSubtitle }}</span>
+        </span>
+      </NuxtLink>
     </div>
 
     <!-- 导航菜单 -->
