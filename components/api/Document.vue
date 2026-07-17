@@ -17,6 +17,8 @@ interface Props {
   description: string;
   url: string;
   method: string;
+  offline?: boolean;
+  rateLimit?: { guest: string; member: string };
   params: TParam[];
   responseSample: any;
   remark?: string;
@@ -31,13 +33,31 @@ const host = window.location.protocol + '//' + window.location.host;
 <template>
   <div class="space-y-5">
     <h2 class="flex items-center space-x-3 text-2xl font-semibold font-serif py-2">
-      <span>{{ index }}. {{ name }}</span>
-      <ApiDebugModal :initial-selected="name" />
+      <span :class="offline ? 'line-through text-gray-400 dark:text-gray-500' : ''">{{ index }}. {{ name }}</span>
+      <UBadge v-if="offline" color="red" variant="subtle" size="xs">已下线</UBadge>
+      <ApiDebugModal v-else :initial-selected="name" />
     </h2>
+    <p v-if="offline" class="text-rose-500 text-sm">
+      ⚠️ 该接口已下线，不再提供服务，此文档仅作历史保留。
+    </p>
 
     <div>
       <p class="font-semibold mb-2">简要描述</p>
       <p class="font-serif">{{ description }}</p>
+    </div>
+    <div v-if="rateLimit" class="flex flex-wrap items-center gap-2 text-sm">
+      <span class="font-semibold">调用频率:</span>
+      <span class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 dark:bg-gray-800">
+        <span class="text-gray-500">游客</span>
+        <span class="font-medium">{{ rateLimit.guest }}</span>
+      </span>
+      <span
+        class="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+      >
+        <UIcon name="i-lucide:crown" class="size-3.5" />
+        <span>会员</span>
+        <span class="font-medium">{{ rateLimit.member }}</span>
+      </span>
     </div>
     <div v-if="remark">
       <p class="font-semibold mb-2">备注:</p>

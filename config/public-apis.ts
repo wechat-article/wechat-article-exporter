@@ -5,6 +5,7 @@ export const apis = [
     description: '根据公众号名称或关键字查询公众号列表。',
     url: '/api/public/v1/account',
     method: 'GET',
+    rateLimit: { guest: '5 次/分钟', member: '100 次/分钟' },
     params: [
       {
         label: '关键字',
@@ -69,6 +70,7 @@ export const apis = [
     description: '根据公众号文章链接查询公众号。',
     url: '/api/public/v1/accountbyurl',
     method: 'GET',
+    rateLimit: { guest: '5 次/分钟', member: '100 次/分钟' },
     params: [
       {
         label: '文章链接',
@@ -106,6 +108,7 @@ export const apis = [
     description: '获取公众号的历史文章列表',
     url: '/api/public/v1/article',
     method: 'GET',
+    rateLimit: { guest: '5 次/分钟', member: '100 次/分钟' },
     params: [
       {
         label: '公众号id',
@@ -260,6 +263,7 @@ export const apis = [
     description: '获取文章内容，支持 html / markdown / text / json 格式',
     url: '/api/public/v1/download',
     method: 'GET',
+    rateLimit: { guest: '1 次/分钟', member: '60 次/分钟' },
     params: [
       {
         label: '文章链接',
@@ -281,10 +285,11 @@ export const apis = [
       },
     ],
     responseSample: {},
-    remark: '此接口不需要 API 密钥',
+    remark: '此接口不需要 API 密钥（会员携带 X-Api-Token 请求头可提升调用频率，见页面顶部「会员授权」）',
   },
   {
     name: '查询公众号主体信息 (beta)',
+    offline: true,
     description: '根据公众号的 fakeid 查询主体信息',
     url: '/api/public/beta/authorinfo',
     method: 'GET',
@@ -312,6 +317,7 @@ export const apis = [
   },
   {
     name: '查询公众号主体信息 (beta)',
+    offline: true,
     description: '根据公众号的 fakeid 查询主体信息',
     url: '/api/public/beta/aboutbiz',
     method: 'GET',

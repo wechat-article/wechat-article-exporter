@@ -8,6 +8,9 @@ interface Props {
 }
 const props = defineProps<Props>();
 
+// 已下线的接口不参与在线调试
+const availableApis = computed(() => apis.filter(api => !(api as { offline?: boolean }).offline));
+
 const isOpen = ref(false);
 const selectedApi = ref(apis[0]);
 
@@ -113,7 +116,7 @@ function submit() {
             <USelectMenu
               class="flex-1"
               v-model="selectedApi"
-              :options="apis"
+              :options="availableApis"
               option-attribute="name"
               @change="apiChange"
             >
