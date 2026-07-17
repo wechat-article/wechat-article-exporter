@@ -1,5 +1,6 @@
 import { getTokenFromStore } from '~/server/utils/CookieStore';
 import { proxyMpRequest } from '~/server/utils/proxy-request';
+import { enforceRateLimit } from '~/server/utils/rate-limit';
 
 interface AppMsgPublishQuery {
   fakeid: string;
@@ -9,6 +10,9 @@ interface AppMsgPublishQuery {
 }
 
 export default defineEventHandler(async event => {
+  // 分级限流（查询类）：游客 5 次/分钟（按 IP），会员 100 次/分钟（按 X-Api-Token）
+  await enforceRateLimit(event, 'query');
+
   const token = await getTokenFromStore(event);
 
   if (!token) {

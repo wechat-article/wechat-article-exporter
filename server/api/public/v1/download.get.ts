@@ -2,6 +2,7 @@ import TurndownService from 'turndown';
 import { urlIsValidMpArticle } from '#shared/utils';
 import { normalizeHtml, parseCgiDataNew } from '#shared/utils/html';
 import { USER_AGENT } from '~/config';
+import { enforceRateLimit } from '~/server/utils/rate-limit';
 
 interface SearchBizQuery {
   url: string;
@@ -9,6 +10,10 @@ interface SearchBizQuery {
 }
 
 export default defineEventHandler(async event => {
+  // 分级限流（下载类）：游客 1 次/分钟（按 IP），会员 60 次/分钟（按 X-Api-Token）。
+  // 放在最前面，使被限流的请求在 fetch/cheerio 解析之前返回 429，不消耗 CPU。
+  await enforceRateLimit(event, 'download');
+
   const query = getQuery<SearchBizQuery>(event);
   if (!query.url) {
     return {
