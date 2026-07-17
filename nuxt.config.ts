@@ -42,6 +42,9 @@ export default defineNuxtConfig({
     storage: {
       kv: {
         driver: process.env.NITRO_KV_DRIVER || 'memory',
+        // cloudflare-kv-binding 驱动使用；Workers 部署时对应 wrangler.toml 中的 KV 绑定名。
+        // fs / memory 驱动会忽略该选项，因此对 Docker / 本地 dev 无影响。
+        binding: 'KV',
         base: process.env.NITRO_KV_BASE,
       },
     },
