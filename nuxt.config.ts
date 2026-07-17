@@ -45,7 +45,9 @@ export default defineNuxtConfig({
         // cloudflare-kv-binding 驱动使用；Workers 部署时对应 wrangler.toml 中的 KV 绑定名。
         // fs / memory 驱动会忽略该选项，因此对 Docker / 本地 dev 无影响。
         binding: 'KV',
-        base: process.env.NITRO_KV_BASE,
+        // base 对 fs 驱动是存储目录(.data/kv)；但对 cloudflare-kv-binding 会变成键前缀，
+        // 导致读到 `.data/kv:member:xxx` 而非 `member:xxx` → 键不匹配。故 CF 下不加 base。
+        base: process.env.NITRO_KV_DRIVER === 'cloudflare-kv-binding' ? undefined : process.env.NITRO_KV_BASE,
       },
     },
   },
