@@ -61,7 +61,8 @@ async function queryMemberInfo() {
 }
 
 function fmtDate(ms?: number | null) {
-  return ms ? new Date(ms).toLocaleString('zh-CN') : '-';
+  // 固定东八区（北京时间），不随访问者本地时区变化
+  return ms ? new Date(ms).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '-';
 }
 </script>
 
@@ -217,7 +218,7 @@ function fmtDate(ms?: number | null) {
             </p>
             <div class="mt-1.5 space-y-0.5 text-gray-600 dark:text-gray-300">
               <p>剩余天数：<span class="font-medium">{{ memberInfo.remainingDays }}</span> 天</p>
-              <p>到期时间：{{ fmtDate(memberInfo.expiresAt) }}</p>
+              <p>到期时间：{{ fmtDate(memberInfo.expiresAt) }} <span class="text-xs text-gray-400">北京时间</span></p>
               <p v-if="memberInfo.createdAt">开通时间：{{ fmtDate(memberInfo.createdAt) }}</p>
             </div>
           </template>
@@ -226,7 +227,7 @@ function fmtDate(ms?: number | null) {
               <UIcon name="i-lucide:alert-triangle" class="size-4" />会员已过期
             </p>
             <div class="mt-1.5 space-y-0.5 text-gray-600 dark:text-gray-300">
-              <p>到期时间：{{ fmtDate(memberInfo.expiresAt) }}</p>
+              <p>到期时间：{{ fmtDate(memberInfo.expiresAt) }} <span class="text-xs text-gray-400">北京时间</span></p>
               <p class="text-rose-500">请续费后恢复会员额度。</p>
             </div>
           </template>
