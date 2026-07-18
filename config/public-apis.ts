@@ -285,7 +285,7 @@ export const apis = [
       },
     ],
     responseSample: {},
-    remark: '此接口不需要 API 密钥（会员携带 X-Api-Token 请求头可提升调用频率，见页面顶部「会员授权」）',
+    remark: '此接口不需要 API 密钥',
   },
   {
     name: '查询公众号主体信息 (beta)',

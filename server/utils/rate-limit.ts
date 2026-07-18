@@ -39,6 +39,11 @@ const GROUPS: Record<RateGroup, GroupConfig> = {
  * @remarks 应在接口处理逻辑（proxy/fetch/cheerio）之前调用，使被限流的请求提前返回、不消耗 CPU。
  */
 export async function enforceRateLimit(event: H3Event, group: RateGroup): Promise<void> {
+  // 会员/限速层未开启（默认，fork 私有部署）→ 完全不限速
+  if (!useRuntimeConfig(event).public.membership.enabled) {
+    return;
+  }
+
   const env = (event.context as { cloudflare?: { env?: RateLimitEnv } }).cloudflare?.env;
 
   const token = getRequestHeader(event, 'X-Api-Token') || '';

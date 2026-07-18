@@ -7,6 +7,9 @@ import type { GetAuthKeyResult } from '~/types/types';
 
 const toast = toastFactory();
 
+// 会员/限速层配置（默认关闭；开启后才展示会员授权与限速说明）
+const membership = useRuntimeConfig().public.membership;
+
 const loading = ref(false);
 const authKey = ref('');
 async function getAuthKey() {
@@ -74,14 +77,16 @@ function fmtDate(ms?: number | null) {
       API 以供接入。
     </p>
 
-    <!-- 计费提示 -->
+    <!-- 计费提示（仅开启会员/限速时显示）-->
     <div
+      v-if="membership.enabled"
       class="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30"
     >
       <UIcon name="i-lucide:info" class="mt-0.5 size-5 shrink-0 text-amber-500" />
       <p class="text-sm text-amber-800 dark:text-amber-200">
         所有公开接口按调用频率分为<span class="font-semibold">「免费」</span>与<span class="font-semibold">「会员」</span
-        >两档；开通会员（<span class="font-semibold">¥0.5 / 天</span>）可大幅提升频率上限，详见下方「会员授权」。调用量很大的话，推荐私有部署。
+        >两档；开通会员（<span class="font-semibold">¥{{ membership.price }} / 天</span
+        >）可大幅提升频率上限，详见下方「会员授权」。调用量很大的话，推荐私有部署。
       </p>
     </div>
 
@@ -115,8 +120,8 @@ function fmtDate(ms?: number | null) {
       </div>
     </section>
 
-    <!-- 会员授权（付费） -->
-    <section class="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
+    <!-- 会员授权（付费，仅开启会员/限速时显示）-->
+    <section v-if="membership.enabled" class="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
       <h3 class="mb-4 flex items-center gap-2 text-xl font-semibold">
         <UIcon name="i-lucide:crown" class="text-amber-500" />
         <span>会员授权</span>
@@ -135,7 +140,7 @@ function fmtDate(ms?: number | null) {
               <p class="mt-0.5 text-sm text-gray-500">微信加好友，按天购买，随时开通</p>
             </div>
             <p class="shrink-0 text-3xl font-bold text-amber-600 dark:text-amber-400">
-              ¥0.5<span class="text-base font-normal text-gray-400"> / 天</span>
+              ¥{{ membership.price }}<span class="text-base font-normal text-gray-400"> / 天</span>
             </p>
           </div>
 
@@ -146,7 +151,9 @@ function fmtDate(ms?: number | null) {
                 <tr>
                   <th class="px-4 py-2.5 text-left font-medium">接口</th>
                   <th class="px-4 py-2.5 text-center font-medium">游客 · 免费</th>
-                  <th class="px-4 py-2.5 text-center font-medium text-amber-600 dark:text-amber-400">会员 · ¥0.5/天</th>
+                  <th class="px-4 py-2.5 text-center font-medium text-amber-600 dark:text-amber-400">
+                  会员 · ¥{{ membership.price }}/天
+                </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -179,12 +186,8 @@ function fmtDate(ms?: number | null) {
           class="flex flex-col items-center rounded-xl border border-amber-200 bg-amber-50/40 p-5 text-center dark:border-amber-900/50 dark:bg-amber-950/20"
         >
           <p class="mb-3 text-sm font-medium">微信扫码加好友开通</p>
-          <img
-            src="/images/member-wechat-qr.png"
-            alt="微信二维码"
-            class="size-40 rounded-lg border bg-white object-contain"
-          />
-          <p class="mt-3 text-xs text-gray-500">扫码加好友，备注「API 会员」</p>
+          <img :src="membership.qr" alt="微信二维码" class="size-40 rounded-lg border bg-white object-contain" />
+          <p class="mt-3 text-xs text-gray-500">扫码加好友，备注「{{ membership.wechatNote }}」</p>
           <div class="mt-4 flex flex-wrap items-center justify-center gap-1.5 text-xs text-gray-400">
             <span>加好友</span>
             <UIcon name="i-lucide:arrow-right" class="size-3" />

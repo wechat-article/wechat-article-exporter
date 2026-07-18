@@ -25,6 +25,9 @@ interface Props {
 }
 defineProps<Props>();
 
+// 会员/限速层：关闭时不展示「调用频率」行
+const membershipEnabled = useRuntimeConfig().public.membership.enabled;
+
 const open = ref(false);
 
 const host = window.location.protocol + '//' + window.location.host;
@@ -45,7 +48,7 @@ const host = window.location.protocol + '//' + window.location.host;
       <p class="font-semibold mb-2">简要描述</p>
       <p class="font-serif">{{ description }}</p>
     </div>
-    <div v-if="rateLimit" class="flex flex-wrap items-center gap-2 text-sm">
+    <div v-if="rateLimit && membershipEnabled" class="flex flex-wrap items-center gap-2 text-sm">
       <span class="font-semibold">调用频率:</span>
       <span class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 dark:bg-gray-800">
         <span class="text-gray-500">游客</span>

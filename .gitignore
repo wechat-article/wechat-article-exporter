@@ -29,3 +29,6 @@ samples/**/output
 
 # wrangler
 .wrangler
+
+# 会员收款/加好友二维码（个人信息，不入库；各部署各自放置，见 README 会员层）
+/public/images/member-wechat-qr.png

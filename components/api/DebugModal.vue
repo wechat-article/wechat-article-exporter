@@ -17,6 +17,8 @@ const selectedApi = ref(apis[0]);
 const payload: Ref<Record<string, any>> = ref({});
 // 会员令牌（X-Api-Token）：所有接口通用，填写后按会员额度调用；留空按游客
 const apiToken = ref('');
+// 会员/限速层关闭时（fork 私有部署）不显示令牌输入
+const membershipEnabled = useRuntimeConfig().public.membership.enabled;
 
 const host = window.location.protocol + '//' + window.location.host;
 
@@ -169,7 +171,7 @@ function submit() {
               <p class="font-semibold mb-2">请求方式:</p>
               <p class="font-mono border p-2 rounded-md">{{ selectedApi.method }}</p>
             </div>
-            <div>
+            <div v-if="membershipEnabled">
               <p class="font-semibold mb-2">
                 会员令牌 (X-Api-Token)：
                 <span class="text-xs font-normal text-gray-400">可选，填写后按会员额度调用，留空按游客</span>
