@@ -1,6 +1,6 @@
-import TurndownService from 'turndown';
 import { urlIsValidMpArticle } from '#shared/utils';
 import { normalizeHtml, parseCgiDataNew } from '#shared/utils/html';
+import { createTurndownService } from '#shared/utils/markdown';
 import { USER_AGENT } from '~/config';
 import { enforceRateLimit } from '~/server/utils/rate-limit';
 
@@ -81,7 +81,7 @@ export default defineEventHandler(async event => {
         },
       });
     case 'markdown':
-      return new Response(new TurndownService().turndown(normalizeHtml(rawHtml, 'html')), {
+      return new Response(createTurndownService().turndown(normalizeHtml(rawHtml, 'html')).trim(), {
         status: 200,
         headers: {
           'Content-Type': 'text/markdown; charset=UTF-8',
