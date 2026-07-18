@@ -15,6 +15,8 @@ const isOpen = ref(false);
 const selectedApi = ref(apis[0]);
 
 const payload: Ref<Record<string, any>> = ref({});
+// 会员令牌（X-Api-Token）：所有接口通用，填写后按会员额度调用；留空按游客
+const apiToken = ref('');
 
 const host = window.location.protocol + '//' + window.location.host;
 
@@ -70,10 +72,17 @@ function submit() {
     url += '?' + new URLSearchParams(params).toString();
   }
 
+  const headers: Record<string, string> = {};
+  const token = apiToken.value.trim();
+  if (token) {
+    headers['X-Api-Token'] = token;
+  }
+
   btnLoading.value = true;
   resp.value = null;
   fetch(url, {
     method: selectedApi.value.method,
+    headers,
   })
     .then(resp => {
       if (resp.headers.get('content-type') === 'application/json') {
@@ -159,6 +168,13 @@ function submit() {
             <div>
               <p class="font-semibold mb-2">请求方式:</p>
               <p class="font-mono border p-2 rounded-md">{{ selectedApi.method }}</p>
+            </div>
+            <div>
+              <p class="font-semibold mb-2">
+                会员令牌 (X-Api-Token)：
+                <span class="text-xs font-normal text-gray-400">可选，填写后按会员额度调用，留空按游客</span>
+              </p>
+              <UInput v-model="apiToken" placeholder="粘贴会员令牌 (X-Api-Token)" />
             </div>
             <div>
               <p class="font-semibold mb-2">参数:</p>
