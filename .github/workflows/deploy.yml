@@ -45,3 +45,6 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # 必须用支持 [[ratelimits]] 和 [[worker_loaders]] 的 wrangler 版本，
+          # 否则旧版会静默忽略这两个绑定（限流失效、LOADER 缺失，json 下载拿不到 cgiData）
+          wranglerVersion: '4.112.0'
