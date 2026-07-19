@@ -5,7 +5,6 @@
 #     CLOUDFLARE_API_TOKEN  —— Cloudflare API Token（模板 "Edit Cloudflare Workers"，Account 选本账号、
 #                              Zone 选 mptext.top；用于部署 worker + down.mptext.top 自定义域）
 #     NUXT_AGGRID_LICENSE   —— AG-Grid 企业版授权（不填则表格有水印，不影响功能）
-#     NUXT_SENTRY_DSN       —— （可选）Sentry DSN
 #   Variables（可选）:
 #     NUXT_PUBLIC_MEMBERSHIP_ENABLED  —— 是否开启会员/限流层。默认（不设）关闭：
 #                                        fork 私有部署留空即可，无限速、无付费 UI。
@@ -42,7 +41,6 @@ jobs:
           NUXT_PUBLIC_MEMBERSHIP_PRICE: ${{ vars.NUXT_PUBLIC_MEMBERSHIP_PRICE }}
           NUXT_PUBLIC_MEMBERSHIP_WECHAT_NOTE: ${{ vars.NUXT_PUBLIC_MEMBERSHIP_WECHAT_NOTE }}
           NUXT_AGGRID_LICENSE: ${{ secrets.NUXT_AGGRID_LICENSE }}
-          NUXT_SENTRY_DSN: ${{ secrets.NUXT_SENTRY_DSN }}
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
