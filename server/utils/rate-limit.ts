@@ -69,16 +69,6 @@ export async function enforceRateLimit(event: H3Event, group: RateGroup): Promis
   const route = (event.path || '').split('?')[0];
   const key = isMember ? `m:${token}:${route}` : `ip:${getClientIp(event)}:${route}`;
 
-  // [临时调试] 排查限流为何不生效，确诊后删除
-  console.log('[rl-debug]', JSON.stringify({
-    group,
-    enabled: useRuntimeConfig(event).public.membership.enabled,
-    hasCfCtx: !!(event.context as { cloudflare?: unknown }).cloudflare,
-    envKeys: Object.keys((event.context as { cloudflare?: { env?: object } }).cloudflare?.env || {}),
-    hasLimiter: !!limiter,
-    ip: getClientIp(event),
-  }));
-
   // 无绑定（本地开发）→ 跳过限流
   if (!limiter) {
     return;
