@@ -1,0 +1,49 @@
+# 自动部署 wechat-article-exporter 到 Cloudflare Workers（push 到 master 触发）
+#
+# 前置：在 GitHub 仓库 Settings → Secrets and variables → Actions 配置：
+#   Secrets:
+#     CLOUDFLARE_API_TOKEN  —— Cloudflare API Token（模板 "Edit Cloudflare Workers"，Account 选本账号、
+#                              Zone 选 mptext.top；用于部署 worker + down.mptext.top 自定义域）
+#     NUXT_AGGRID_LICENSE   —— AG-Grid 企业版授权（不填则表格有水印，不影响功能）
+#     NUXT_SENTRY_DSN       —— （可选）Sentry DSN
+#   Variables（可选）:
+#     NUXT_PUBLIC_MEMBERSHIP_ENABLED  —— 是否开启会员/限流层。默认（不设）关闭：
+#                                        fork 私有部署留空即可，无限速、无付费 UI。
+#                                        仅官方公开部署需在仓库 Variables 里设为 "true"。
+#     NUXT_PUBLIC_MEMBERSHIP_PRICE / NUXT_PUBLIC_MEMBERSHIP_WECHAT_NOTE  —— 会员页展示文案，不设用默认值
+#
+# 说明：
+# - 会员/限流开关在「构建期」烘入产物；开源项目默认关闭，fork 后不设该变量即不限速。
+# - 运行时绑定（KV / ratelimits / worker_loader）在 wrangler.toml 声明，CI 不碰。
+# - 运行时 secrets（若有 DEBUG_KEY 等）用 `wrangler secret put` 单独管理，已存在于线上 worker。
+# - 注意：会员付款二维码 public/images/member-wechat-qr.png 已 gitignore，CI 构建不含该图；
+#   如需在会员页显示，请把图片提交进仓库或用 NUXT_PUBLIC_MEMBERSHIP_QR 指向外链。
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Build (Cloudflare preset)
+        run: yarn build:cf
+        env:
+          NUXT_PUBLIC_MEMBERSHIP_ENABLED: ${{ vars.NUXT_PUBLIC_MEMBERSHIP_ENABLED }}
+          NUXT_PUBLIC_MEMBERSHIP_PRICE: ${{ vars.NUXT_PUBLIC_MEMBERSHIP_PRICE }}
+          NUXT_PUBLIC_MEMBERSHIP_WECHAT_NOTE: ${{ vars.NUXT_PUBLIC_MEMBERSHIP_WECHAT_NOTE }}
+          NUXT_AGGRID_LICENSE: ${{ secrets.NUXT_AGGRID_LICENSE }}
+          NUXT_SENTRY_DSN: ${{ secrets.NUXT_SENTRY_DSN }}
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
