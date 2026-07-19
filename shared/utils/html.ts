@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
-import { EXTERNAL_API_SERVICE } from '~/config';
 import { extractCommentId } from '~/utils/comment';
+import { evalCgiViaLoader, type WorkerLoaderLike } from './cgi-sandbox';
 
 /**
  * 处理文章的 html 内容
@@ -178,67 +178,44 @@ function parseCgiDataNewOnClient(html: string): Promise<any> {
 }
 
 /**
- * 从 html 中提取 cgiDataNew 对象
- * @deprecated Cloudflare 平台禁止任何动态执行脚本，故本方法在 CF 平台无效
+ * 从 html 中提取 cgiDataNew 对象（服务端）。
+ * - CF 运行时（有 LOADER）：用内置 Dynamic Worker 沙箱执行，不再依赖外部服务。
+ * - 非 CF 环境（nuxt dev / node，无 LOADER）：用 new Function 兜底（node 允许，CF 禁止）。
  * @param html 文章的完整 html 内容
+ * @param loader Dynamic Workers 绑定（来自 event.context.cloudflare.env.LOADER）
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-function parseCgiDataNewOnServerDeprecated(html: string): Promise<any> {
+async function parseCgiDataNewOnServer(html: string, loader?: WorkerLoaderLike): Promise<any> {
   const code = extractCgiScript(html);
   if (!code) {
-    return Promise.resolve(null);
-  }
-
-  // 1. 创建沙箱
-  const sandbox: any = {
-    window: {},
-    console: { log: () => {}, error: () => {} }, // 可选：屏蔽 console
-    // 如果脚本依赖其他全局，可在这里 mock（如 Date, Math 等已存在）
-  };
-  sandbox.window = sandbox; // 关键：让 window.xxx 落入沙箱
-
-  // 2. 执行代码（new Function 比 eval 稍安全）
-  const func = new Function('window', code);
-  func(sandbox.window);
-
-  return sandbox.cgiDataNew || sandbox.window?.cgiDataNew;
-}
-
-/**
- * 从 html 中提取 cgiDataNew 对象
- * @param html 文章的完整 html 内容
- * @return window.cgiDataNew 对象，解析失败时返回 null
- */
-async function parseCgiDataNewOnServer(html: string): Promise<any> {
-  const code = extractCgiScript(html);
-  if (!code) {
-    return Promise.resolve(null);
+    return null;
   }
 
   try {
-    const data = await fetch(`${EXTERNAL_API_SERVICE}/api/tools/eval-js-code`, {
-      method: 'POST',
-      body: code,
-    }).then(res => res.json());
-    if (data && data.executionError === null) {
-      return data.window.cgiDataNew;
+    if (loader) {
+      return await evalCgiViaLoader(loader, code);
     }
-    return null;
+    // 兜底：非 CF 环境用 new Function（仅本地 node/nuxt dev 会走到；CF 平台禁止动态执行）
+    const sandbox: any = { console: { log: () => {}, error: () => {} } };
+    sandbox.window = sandbox;
+    new Function('window', code)(sandbox.window);
+    return sandbox.cgiDataNew || sandbox.window?.cgiDataNew || null;
   } catch (error) {
     console.error(error);
+    return null;
   }
-  return null;
 }
 
 /**
  * 从 html 中提取 cgiDataNew 对象
  * @param html 文章的完整 html 内容
+ * @param loader （服务端）Dynamic Workers 绑定；客户端忽略
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-export async function parseCgiDataNew(html: string): Promise<any> {
+export async function parseCgiDataNew(html: string, loader?: WorkerLoaderLike): Promise<any> {
   if (process.client && typeof document === 'object') {
     return parseCgiDataNewOnClient(html);
   } else {
-    return parseCgiDataNewOnServer(html);
+    return parseCgiDataNewOnServer(html, loader);
   }
 }

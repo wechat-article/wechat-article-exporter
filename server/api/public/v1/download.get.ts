@@ -74,8 +74,11 @@ export default defineEventHandler(async event => {
           'Content-Type': 'text/markdown; charset=UTF-8',
         },
       });
-    case 'json':
-      return await parseCgiDataNew(rawHtml);
+    case 'json': {
+      // 内置沙箱：从 CF 运行时取 LOADER（Dynamic Workers）；无 LOADER 时（node/nuxt dev）html.ts 会用 new Function 兜底
+      const loader = (event.context as any).cloudflare?.env?.LOADER;
+      return await parseCgiDataNew(rawHtml, loader);
+    }
     default:
       throw new Error(`Unknown format ${format}`);
   }

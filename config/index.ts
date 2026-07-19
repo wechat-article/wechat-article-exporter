@@ -75,7 +75,6 @@ export const ITEM_SHOW_TYPE: Record<number, string> = {
 
 /**
  * 外部接口服务
+ * STATUS：cf-worker 状态类接口，由 cron.mptext.top 提供
  */
-export const EXTERNAL_API_SERVICE = 'https://my-cron-service.deno.dev';
-
-export const STATUS_API_SERVICE = 'https://status.mptext.top';
+export const STATUS_API_SERVICE = 'https://cron.mptext.top';
