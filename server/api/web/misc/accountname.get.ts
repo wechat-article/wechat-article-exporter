@@ -55,6 +55,15 @@ export default defineEventHandler(async event => {
   }
   const rawHtml = await res.text();
 
+  // 微信改版后文章页移除了 .wx_follow_nickname 这个 class，公众号名称改为承载在内联 JS 变量里。
+  // 优先从 `var nickname = htmlDecode("…")` / `var nickname = "…"` 提取，兼容新旧两种写法。
+  const match = rawHtml.match(/var\s+nickname\s*=\s*(?:htmlDecode\()?\s*["']([^"']+)["']/);
+  if (match) {
+    // 借助 cheerio 顺带解码 HTML 实体（如 &amp; -> &）；公众号昵称不含尖括号，拼接安全
+    return cheerio.load(`<div>${match[1]}</div>`).text().trim();
+  }
+
+  // 兜底：旧结构的 .wx_follow_nickname，或新结构中已渲染的 .account_nickname_inner
   const $ = cheerio.load(rawHtml);
-  return $('.wx_follow_nickname:first').text().trim();
+  return $('.wx_follow_nickname, .account_nickname_inner').first().text().trim();
 });
