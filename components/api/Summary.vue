@@ -185,8 +185,8 @@ function fmtDate(ms?: number | null) {
         <div
           class="flex flex-col items-center rounded-xl border border-amber-200 bg-amber-50/40 p-5 text-center dark:border-amber-900/50 dark:bg-amber-950/20"
         >
-          <p class="mb-3 text-sm font-medium">微信扫码加好友开通</p>
-          <img :src="membership.qr" alt="微信二维码" class="size-40 rounded-lg border bg-white object-contain" />
+          <p class="mb-3 text-sm font-medium">微信或QQ扫码加好友开通</p>
+          <img :src="membership.qr" alt="会员二维码" class="size-40 rounded-lg border bg-white object-contain" />
           <p class="mt-3 text-xs text-gray-500">扫码加好友，备注「{{ membership.wechatNote }}」</p>
           <div class="mt-4 flex flex-wrap items-center justify-center gap-1.5 text-xs text-gray-400">
             <span>加好友</span>
