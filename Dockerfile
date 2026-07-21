@@ -18,6 +18,7 @@ COPY . .
 
 # 构建 Nuxt 应用（生成 .output 目录）
 ENV NODE_ENV=production \
+    NODE_OPTIONS=--max-old-space-size=4096 \
     NITRO_KV_DRIVER=fs \
     NITRO_KV_BASE=.data/kv
 
@@ -50,6 +51,7 @@ WORKDIR /app
 
 # 复制构建输出
 COPY --from=build-env /app/.output ./
+COPY --from=build-env /app/cli ./cli
 # puppeteer 被 Rollup external 排除，运行时需要从 node_modules 加载（Chromium 已通过 apt 安装，跳过下载）
 RUN npm install --no-save --ignore-scripts puppeteer@24
 
