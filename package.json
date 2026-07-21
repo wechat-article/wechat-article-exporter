@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@ag-grid-community/locale": "^34.0.0",
+    "@cf-wasm/quickjs": "^0.2.6",
     "@iconify-json/famicons": "^1.2.0",
     "@iconify-json/heroicons": "^1.2.2",
     "@iconify-json/heroicons-solid": "^1.2.1",

@@ -12,7 +12,7 @@ interface SearchBizQuery {
 export default defineEventHandler(async event => {
   // 分级限流（下载类）：游客 1 次/分钟（按 IP），会员 60 次/分钟（按 X-Api-Token）。
   // 放在最前面，使被限流的请求在 fetch/cheerio 解析之前返回 429，不消耗 CPU。
-  await enforceRateLimit(event, 'download');
+  const { isMember, tokenStatus } = await enforceRateLimit(event, 'download');
 
   const query = getQuery<SearchBizQuery>(event);
   if (!query.url) {
@@ -42,6 +42,19 @@ export default defineEventHandler(async event => {
         err_msg: '不支持的format',
       },
     };
+  }
+
+  // 会员专属格式：markdown / text / json 仅限会员（携带有效 X-Api-Token），游客只能取 html。
+  // 仅在会员/限速层开启时生效（fork 私有部署 membership.enabled=false 时不限制，全部格式开放）。
+  const membershipEnabled = useRuntimeConfig(event).public.membership.enabled;
+  const MEMBER_ONLY_FORMATS = ['markdown', 'text', 'json'];
+  if (membershipEnabled && !isMember && MEMBER_ONLY_FORMATS.includes(format)) {
+    const hint =
+      tokenStatus === 'expired' ? '会员令牌已过期，续费后恢复；' : tokenStatus === 'invalid' ? '会员令牌无效；' : '';
+    throw createError({
+      statusCode: 403,
+      statusMessage: `${hint}${format} 格式仅限会员（请在请求头携带有效 X-Api-Token），游客仅支持 html 格式`,
+    });
   }
 
   const rawHtml = await fetch(url, {
@@ -75,9 +88,8 @@ export default defineEventHandler(async event => {
         },
       });
     case 'json': {
-      // 内置沙箱：从 CF 运行时取 LOADER（Dynamic Workers）；无 LOADER 时（node/nuxt dev）html.ts 会用 new Function 兜底
-      const loader = (event.context as any).cloudflare?.env?.LOADER;
-      return await parseCgiDataNew(rawHtml, loader);
+      // 用 QuickJS-WASM 沙箱在主 Worker 内执行 cgi 脚本，取回 window.cgiDataNew（node / CF workerd 通用）
+      return await parseCgiDataNew(rawHtml);
     }
     default:
       throw new Error(`Unknown format ${format}`);

@@ -260,7 +260,7 @@ export const apis = [
   },
   {
     name: '获取文章内容',
-    description: '获取文章内容，支持 html / markdown / text / json 格式',
+    description: '获取文章内容，支持 html / markdown / text / json 格式（markdown / text / json 仅限会员）',
     url: '/api/public/v1/download',
     method: 'GET',
     rateLimit: { guest: '1 次/分钟', member: '60 次/分钟' },
@@ -281,7 +281,8 @@ export const apis = [
         required: false,
         default: 'html',
         type: 'String',
-        remark: '支持 html / markdown / text / json 格式',
+        remark:
+          '支持 html / markdown / text / json；其中 markdown / text / json 仅限会员（携带有效 X-Api-Token），游客仅支持 html',
       },
     ],
     responseSample: {},

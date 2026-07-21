@@ -1,6 +1,5 @@
 import * as cheerio from 'cheerio';
 import { extractCommentId } from '~/utils/comment';
-import { evalCgiViaLoader, type WorkerLoaderLike } from './cgi-sandbox';
 
 /**
  * 处理文章的 html 内容
@@ -179,27 +178,25 @@ function parseCgiDataNewOnClient(html: string): Promise<any> {
 
 /**
  * 从 html 中提取 cgiDataNew 对象（服务端）。
- * - CF 运行时（有 LOADER）：用内置 Dynamic Worker 沙箱执行，不再依赖外部服务。
- * - 非 CF 环境（nuxt dev / node，无 LOADER）：用 new Function 兜底（node 允许，CF 禁止）。
+ * 用 QuickJS-WASM 沙箱在主 Worker 内执行 cgi 脚本（node / CF workerd 通用），不再依赖 Dynamic Workers。
  * @param html 文章的完整 html 内容
- * @param loader Dynamic Workers 绑定（来自 event.context.cloudflare.env.LOADER）
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-async function parseCgiDataNewOnServer(html: string, loader?: WorkerLoaderLike): Promise<any> {
+async function parseCgiDataNewOnServer(html: string): Promise<any> {
   const code = extractCgiScript(html);
   if (!code) {
     return null;
   }
 
   try {
-    if (loader) {
-      return await evalCgiViaLoader(loader, code);
+    // 仅服务端动态引入沙箱，避免 QuickJS wasm 被打进客户端 SPA bundle（客户端走 iframe 路径）。
+    // 用 !process.client 作守卫：客户端构建时 process.client=true → 该分支被静态消除（wasm 不进客户端）；
+    // 服务端(Nitro/workerd) 及纯 node 测试环境下条件为真 → 正常执行。
+    if (!process.client) {
+      const { evalCgiViaQuickJS } = await import('./cgi-sandbox');
+      return await evalCgiViaQuickJS(code);
     }
-    // 兜底：非 CF 环境用 new Function（仅本地 node/nuxt dev 会走到；CF 平台禁止动态执行）
-    const sandbox: any = { console: { log: () => {}, error: () => {} } };
-    sandbox.window = sandbox;
-    new Function('window', code)(sandbox.window);
-    return sandbox.cgiDataNew || sandbox.window?.cgiDataNew || null;
+    return null;
   } catch (error) {
     console.error(error);
     return null;
@@ -209,13 +206,12 @@ async function parseCgiDataNewOnServer(html: string, loader?: WorkerLoaderLike):
 /**
  * 从 html 中提取 cgiDataNew 对象
  * @param html 文章的完整 html 内容
- * @param loader （服务端）Dynamic Workers 绑定；客户端忽略
  * @return window.cgiDataNew 对象，解析失败时返回 null
  */
-export async function parseCgiDataNew(html: string, loader?: WorkerLoaderLike): Promise<any> {
+export async function parseCgiDataNew(html: string): Promise<any> {
   if (process.client && typeof document === 'object') {
     return parseCgiDataNewOnClient(html);
   } else {
-    return parseCgiDataNewOnServer(html, loader);
+    return parseCgiDataNewOnServer(html);
   }
 }

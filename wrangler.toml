@@ -48,8 +48,5 @@ name = "RL_MEMBER_DOWNLOAD"
 namespace_id = "1004"
 simple = { limit = 60, period = 60 } # 会员：60 次 / 分钟（按 token）
 
-# Dynamic Workers（worker_loader）：内置 cgiData 脚本沙箱执行，替代原来 fetch cron.mptext.top/api/tools/eval-js-code。
-# 需付费 Workers 计划 + Dynamic Workers（同账号已在用）。仅由 /api/public/v1/download?format=json 触发，
-# 该接口在 enforceRateLimit(download) 保护之下（游客 1 次/分钟、会员 60 次/分钟）。
-[[worker_loaders]]
-binding = "LOADER"
+# 说明：cgiData 脚本沙箱已改为主 Worker 内的 QuickJS-WASM 执行（shared/utils/cgi-sandbox.ts），
+# 不再使用 Dynamic Workers（worker_loader），因此移除了原先的 [[worker_loaders]] LOADER 绑定以停止其计费。
