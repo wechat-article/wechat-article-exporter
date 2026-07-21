@@ -11,15 +11,31 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE: ghcr.io/wechat-article/wechat-article-exporter
+
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest  # AMD64 主机，用于交叉构建 ARM
+  # 阶段一：在各架构的「原生」runner 上并行构建，各自推送单架构镜像（-amd64 / -arm64）。
+  # 不再用 QEMU 交叉模拟 —— 之前 ARM64 分支在 AMD64 主机上模拟 Node 会崩溃
+  # (qemu: uncaught target signal 4 - Illegal instruction)。
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm  # GitHub 官方原生 ARM64 runner（公开仓库免费），无需 QEMU
+    runs-on: ${{ matrix.runner }}
     steps:
       # 检出代码
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 设置 Docker Buildx（启用多架构）
+      # 设置 Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -31,31 +47,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 设置 QEMU（用于 ARM 交叉构建）
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      # 从标签提取版本（匹配 v1.0.0 格式）
-      - name: Extract version from tag
-        id: version
-        run: |
-          VERSION="${{ github.ref_name }}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-
-      # 构建并推送多架构镜像
-      - name: Build and push multi-arch image
+      # 构建当前架构并推送带架构后缀的单架构镜像
+      - name: Build and push (${{ matrix.arch }})
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile  # 你的 Dockerfile 路径
-          push: true  # 直接推送
-          platforms: linux/amd64,linux/arm64  # 目标架构
-          tags: |
-            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-amd64
-            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}-arm64
-            ghcr.io/wechat-article/wechat-article-exporter:${{ steps.version.outputs.version }}
-            ghcr.io/wechat-article/wechat-article-exporter:latest
+          file: ./Dockerfile
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.IMAGE }}:${{ github.ref_name }}-${{ matrix.arch }}
           build-args: |
-            VERSION=${{ steps.version.outputs.version }}  # 传递到 Dockerfile 的 ARG
-          cache-from: type=gha  # 使用 GitHub Actions 缓存加速
-          cache-to: type=gha,mode=max
+            VERSION=${{ github.ref_name }}
+          provenance: false  # 关闭 provenance，避免单架构 tag 变成含 unknown/unknown 的 index，保证合并后的 manifest 干净
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+  # 阶段二：把两个单架构镜像合并成一个多架构 manifest，打上 :<version> 和 :latest
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # 登录 GHCR
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 合并 -amd64 / -arm64 为多架构 manifest（buildx 已随 runner 预装，无需额外安装）
+      - name: Create and push multi-arch manifest
+        run: |
+          VERSION="${{ github.ref_name }}"
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE }}:${VERSION} \
+            -t ${{ env.IMAGE }}:latest \
+            ${{ env.IMAGE }}:${VERSION}-amd64 \
+            ${{ env.IMAGE }}:${VERSION}-arm64
+
+      # 打印最终 manifest，确认 amd64 + arm64 都在
+      - name: Inspect
+        run: docker buildx imagetools inspect ${{ env.IMAGE }}:${{ github.ref_name }}
