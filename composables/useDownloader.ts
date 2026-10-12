@@ -4,6 +4,8 @@ import type { Metadata } from '~/store/v2/metadata';
 import { Downloader } from '~/utils/download/Downloader';
 import type { DownloaderStatus } from '~/utils/download/types';
 
+type DownloadTaskType = 'html' | 'metadata' | 'comment' | 'fakeid';
+
 export interface DownloadArticleOptions {
   // 文章内容下载成功回调
   onContent: (url: string) => void;
@@ -22,6 +24,9 @@ export interface DownloadArticleOptions {
 
   // 修复单篇文章下载的 fakeid 专用
   onFakeID: (url: string, fakeid: string) => void;
+
+  // 抓取任务结束回调（用于展示失败明细）
+  onFinish: (type: DownloadTaskType, status: DownloaderStatus) => void;
 }
 
 export default (options: Partial<DownloadArticleOptions> = {}) => {
@@ -75,6 +80,9 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【文章内容】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}, 检测到已被删除:${status.deleted.length}`
         );
+        if (typeof options.onFinish === 'function') {
+          options.onFinish('html', status);
+        }
       });
       downloader.on('download:stop', () => {
         toast.info('HTML下载任务已停止');
@@ -134,6 +142,9 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【阅读量】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}, 检测到已被删除:${status.deleted.length}`
         );
+        if (typeof options.onFinish === 'function') {
+          options.onFinish('metadata', status);
+        }
       });
 
       await downloader.startDownload('metadata');
@@ -178,6 +189,9 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【留言内容】抓取完成',
           `本次抓取耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}`
         );
+        if (typeof options.onFinish === 'function') {
+          options.onFinish('comment', status);
+        }
       });
 
       await downloader.startDownload('comments');
@@ -225,6 +239,9 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
           '【fakeid】修复完成',
           `本次耗时 ${formatElapsedTime(seconds)}, 成功:${status.completed.length}, 失败:${status.failed.length}`
         );
+        if (typeof options.onFinish === 'function') {
+          options.onFinish('fakeid', status);
+        }
       });
 
       await downloader.startDownload('fakeid');
@@ -237,7 +254,7 @@ export default (options: Partial<DownloadArticleOptions> = {}) => {
     }
   }
 
-  async function download(type: 'html' | 'metadata' | 'comment' | 'fakeid', urls: string[]) {
+  async function download(type: DownloadTaskType, urls: string[]) {
     if (type === 'html') {
       await downloadArticleHTML(urls);
     } else if (type === 'metadata') {

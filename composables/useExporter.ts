@@ -3,7 +3,11 @@ import toastFactory from '~/composables/toast';
 import { Exporter } from '~/utils/download/Exporter';
 import type { ExporterStatus } from '~/utils/download/types';
 
-export default () => {
+export interface UseExporterOptions {
+  onContentMissing: (urls: string[]) => void;
+}
+
+export default (options: Partial<UseExporterOptions> = {}) => {
   const toast = toastFactory();
 
   const loading = ref(false);
@@ -287,10 +291,18 @@ export default () => {
   function exportFile(
     type: 'excel' | 'json' | 'html' | 'text' | 'markdown' | 'word' | 'pdf',
     urls: string[],
-    contentNotDownloadedCount?: number,
+    contentNotDownloaded: number | string[] = [],
   ) {
-    if (needsContentFormats.has(type) && contentNotDownloadedCount) {
+    const contentNotDownloadedUrls = Array.isArray(contentNotDownloaded) ? contentNotDownloaded : [];
+    const contentNotDownloadedCount = Array.isArray(contentNotDownloaded)
+      ? contentNotDownloaded.length
+      : contentNotDownloaded;
+
+    if (needsContentFormats.has(type) && contentNotDownloadedCount > 0) {
       toast.warning('提示', `有 ${contentNotDownloadedCount} 篇文章尚未抓取内容，请先抓取内容后再导出`);
+      if (contentNotDownloadedUrls.length > 0 && typeof options.onContentMissing === 'function') {
+        options.onContentMissing(contentNotDownloadedUrls);
+      }
       return;
     }
 
