@@ -4,34 +4,53 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>公众号文章导出工具已下线</title>
+    <title>wechat-article-exporter（公众号文章导出，down.mptext.top）已下线</title>
     <meta
       name="description"
-      content="公众号文章导出工具（down.mptext.top）已下线。作者的新工具「取阅」提供公众号历史文章采集、RSS 订阅与新文章推送。"
+      content="公众号文章批量下载工具 wechat-article-exporter（在线网站 down.mptext.top）已下线。作者的新工具「取阅」提供公众号历史文章采集、RSS 订阅与新文章推送。"
     />
     <link rel="canonical" href="https://down.mptext.top/" />
     <link rel="icon" href="/favicon.ico" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://down.mptext.top/" />
+    <meta property="og:site_name" content="wechat-article-exporter" />
+    <meta property="og:title" content="wechat-article-exporter（公众号文章导出）已下线" />
+    <meta
+      property="og:description"
+      content="在线网站 down.mptext.top 已停止服务。作者的新工具「取阅」：feed.zoro.build"
+    />
     <style>
+      /*
+       * 版式：首屏一条从旧地址指向新地址的箭头，下面一张共用边框的格子表，放新工具与几条说明。
+       * 不用阴影与卡片，层次靠 1px 细线、字重与灰阶；整页只有箭头和新地址用一道渐变。
+       */
       :root {
-        --bg: #f7f8fa;
-        --card: #ffffff;
-        --text: #1f2933;
-        --muted: #5b6673;
-        --line: #e3e7ec;
-        --brand: #1d5fd6;
-        --brand-text: #ffffff;
-        --brand-soft: #edf3fd;
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --text: #0a0a0a;
+        --muted: #5f5f5f;
+        --faint: #8f8f8f;
+        --line: #e6e6e6;
+        --grid: rgba(0, 0, 0, 0.045);
+        --btn: #0a0a0a;
+        --on-btn: #ffffff;
+        --from: #7c5cff;
+        --to: #00b3d6;
+        --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #14171b;
-          --card: #1d2126;
-          --text: #e7eaee;
-          --muted: #a2acb8;
-          --line: #30363d;
-          --brand: #4f8df0;
-          --brand-text: #0e1420;
-          --brand-soft: #1f2a3a;
+          --bg: #000000;
+          --surface: #0a0a0a;
+          --text: #ededed;
+          --muted: #a1a1a1;
+          --faint: #6f6f6f;
+          --line: #1f1f1f;
+          --grid: rgba(255, 255, 255, 0.05);
+          --btn: #ededed;
+          --on-btn: #0a0a0a;
+          --from: #9b85ff;
+          --to: #3cd3ef;
         }
       }
       * {
@@ -48,120 +67,490 @@
           'Microsoft YaHei',
           'Segoe UI',
           sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
-      main {
-        max-width: 640px;
+      p,
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+      a {
+        color: inherit;
+        text-decoration-color: var(--faint);
+        text-underline-offset: 4px;
+      }
+      a:hover {
+        text-decoration-color: currentColor;
+      }
+      .wrap {
+        max-width: 1320px;
         margin: 0 auto;
-        padding: 56px 16px 64px;
+        padding: 0 20px;
+      }
+
+      /* 顶栏 */
+      .top {
+        border-bottom: 1px solid var(--line);
+      }
+      .top .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: 56px;
+        font-size: 14px;
+      }
+      .top .name {
+        font: 600 14px/1 var(--mono);
+      }
+      .top a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .top a:hover {
+        color: var(--text);
+      }
+
+      /* 首屏：网格底 + 居中标题 */
+      .hero {
+        position: relative;
+        isolation: isolate;
+        padding: 72px 0 56px;
+        text-align: center;
+      }
+      /* 网格只铺在底下一层并向下淡出，不连带把上面的字和地址框一起淡掉 */
+      .hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background-image:
+          linear-gradient(var(--grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+        background-size: 32px 32px;
+        background-position: center top;
+        -webkit-mask-image: linear-gradient(#000 40%, transparent);
+        mask-image: linear-gradient(#000 40%, transparent);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .pill i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #e5484d;
       }
       h1 {
-        margin: 0 0 16px;
-        font-size: 28px;
-        line-height: 1.3;
+        margin-top: 24px;
+        font-size: clamp(34px, 6vw, 64px);
+        line-height: 1.15;
+        font-weight: 700;
+        letter-spacing: -0.02em;
       }
-      h2 {
-        margin: 40px 0 8px;
-        font-size: 20px;
+      h1 span {
+        display: inline-block;
       }
-      h3 {
-        margin: 0 0 6px;
+      /* 首屏两处重点都短，整段不折开 */
+      .lead strong {
+        white-space: nowrap;
+      }
+      .lead {
+        max-width: 46em;
+        text-wrap: balance;
+        margin: 20px auto 0;
+        color: var(--muted);
         font-size: 17px;
       }
-      p {
-        margin: 0 0 12px;
+
+      /* 旧地址 → 新地址 */
+      .route {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        gap: 12px;
+        margin-top: 48px;
       }
-      .muted {
-        color: var(--muted);
-      }
-      .card {
-        margin-top: 12px;
-        padding: 20px;
-        background: var(--card);
+      .addr {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 16px 22px;
         border: 1px solid var(--line);
         border-radius: 12px;
+        background: var(--surface);
+        text-align: left;
+        text-decoration: none;
+      }
+      .addr small {
+        color: var(--faint);
+        font-size: 12px;
+        letter-spacing: 0.02em;
+      }
+      .addr b {
+        font: 600 clamp(18px, 2.2vw, 24px) / 1.2 var(--mono);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+      .addr.old b {
+        color: var(--faint);
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+      }
+      /* 新地址：渐变描边 */
+      .addr.new {
+        border: 1px solid transparent;
+        background:
+          linear-gradient(var(--surface), var(--surface)) padding-box,
+          linear-gradient(135deg, var(--from), var(--to)) border-box;
+      }
+      .addr.new b {
+        background: linear-gradient(90deg, var(--from), var(--to));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .addr.new:hover {
+        background:
+          linear-gradient(var(--bg), var(--bg)) padding-box,
+          linear-gradient(135deg, var(--from), var(--to)) border-box;
+      }
+      /* 箭头：窄屏竖向，宽屏横向；一个亮点沿线流过 */
+      .arrow {
+        position: relative;
+        width: 2px;
+        height: 48px;
+        background: linear-gradient(var(--line), var(--from));
+      }
+      .arrow::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: -1px;
+        border: 6px solid transparent;
+        border-top: 9px solid var(--from);
+        border-bottom: 0;
+        transform: translateX(-50%);
+      }
+      .arrow::before {
+        content: '';
+        position: absolute;
+        left: -2px;
+        top: 0;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--to);
+        box-shadow: 0 0 8px var(--to);
+        animation: flow-y 2.4s ease-in-out infinite;
+      }
+      @keyframes flow-y {
+        from {
+          top: 0;
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+        }
+        to {
+          top: calc(100% - 12px);
+          opacity: 0;
+        }
+      }
+      @keyframes flow-x {
+        from {
+          left: 0;
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+        }
+        to {
+          left: calc(100% - 14px);
+          opacity: 0;
+        }
+      }
+
+      /* 格子表：共用 1px 边框 */
+      .bento {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1px;
+        margin: 8px 0 0;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--line);
+        overflow: hidden;
+      }
+      .cell {
+        padding: 28px;
+        background: var(--surface);
+      }
+      .eyebrow {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--faint);
+        font: 500 12px/1.5 var(--mono);
+        letter-spacing: 0.06em;
+      }
+      h2 {
+        font-size: 22px;
+        line-height: 1.35;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .cell p {
+        margin-top: 8px;
+        color: var(--muted);
+      }
+      .cell.small p {
+        font-size: 15px;
+      }
+      .cell.small h3 {
+        font-size: 15px;
+        font-weight: 600;
       }
       .btn {
-        display: inline-block;
-        margin-top: 8px;
-        padding: 9px 18px;
-        border: 1px solid var(--brand);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        padding: 0 16px;
+        height: 40px;
         border-radius: 8px;
+        background: var(--btn);
+        color: var(--on-btn);
+        font-size: 15px;
         font-weight: 600;
         text-decoration: none;
       }
-      .btn-primary {
-        background: var(--brand);
-        color: var(--brand-text);
+      .btn:hover {
+        opacity: 0.86;
       }
-      .btn-secondary {
-        background: var(--brand-soft);
-        color: var(--brand);
+      .btn.ghost {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--text);
       }
-      ul {
-        margin: 12px 0 0;
-        padding-left: 20px;
-        color: var(--muted);
-        font-size: 15px;
+      .btn.ghost:hover {
+        opacity: 1;
+        background: var(--bg);
       }
-      li + li {
-        margin-top: 4px;
-      }
-      footer {
-        margin-top: 40px;
-        padding-top: 16px;
-        border-top: 1px solid var(--line);
+      .fine {
+        margin: 24px 0 0;
+        padding: 16px 0 0;
+        border-top: 1px dashed var(--line);
+        list-style: none;
         color: var(--muted);
         font-size: 14px;
       }
-      a {
-        color: var(--brand);
-        overflow-wrap: anywhere;
+      .fine li {
+        position: relative;
+        padding-left: 20px;
       }
-      .btn-primary:hover,
-      .btn-secondary:hover {
-        opacity: 0.88;
+      .fine li + li {
+        margin-top: 6px;
+      }
+      .fine li::before {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 0.65em;
+        width: 8px;
+        height: 1px;
+        background: var(--faint);
+      }
+
+      /* 正文里的重点：比周围的灰字深一档、加粗，不换颜色 */
+      strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .addr.new {
+        position: relative;
+        padding-right: 92px;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--from) 12%, transparent);
+      }
+      .addr .go {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--btn);
+        color: var(--on-btn);
+        font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+      }
+      /* 必须先办的事：顶上一道渐变线，标签换成强调色 */
+      .cell.must {
+        position: relative;
+      }
+      .cell.must::before {
+        content: '';
+        position: absolute;
+        inset: 0 0 auto;
+        height: 2px;
+        background: linear-gradient(90deg, var(--from), var(--to));
+      }
+      .cell.must .eyebrow {
+        color: var(--from);
+      }
+      .cell .btn {
+        height: 36px;
+        margin-top: 16px;
+        font-size: 14px;
+      }
+      .mail {
+        font-family: var(--mono);
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      footer {
+        padding: 32px 0 48px;
+        color: var(--faint);
+        font-size: 13px;
+      }
+
+      @media (min-width: 900px) {
+        .wrap {
+          padding: 0 40px;
+        }
+        .hero {
+          padding: 96px 0 72px;
+        }
+        .route {
+          grid-template-columns: auto minmax(120px, 1fr) auto;
+          align-items: center;
+          gap: 20px;
+          max-width: 1040px;
+          margin: 64px auto 0;
+        }
+        .arrow {
+          justify-self: stretch;
+          width: auto;
+          height: 2px;
+          background: linear-gradient(90deg, var(--line), var(--from));
+        }
+        .arrow::after {
+          left: auto;
+          right: -1px;
+          bottom: auto;
+          top: 50%;
+          border: 6px solid transparent;
+          border-left: 9px solid var(--from);
+          border-right: 0;
+          transform: translateY(-50%);
+        }
+        .arrow::before {
+          top: -2px;
+          animation-name: flow-x;
+        }
+        .bento {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .cell {
+          padding: 36px;
+        }
+        .span-2 {
+          grid-column: span 2;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .arrow::before {
+          animation: none;
+          display: none;
+        }
       }
     </style>
   </head>
   <body>
+    <header class="top">
+      <div class="wrap">
+        <span class="name">wechat-article-exporter</span>
+        <a href="https://feed.zoro.build/">feed.zoro.build →</a>
+      </div>
+    </header>
+
     <main>
-      <h1>公众号文章导出工具已下线</h1>
-      <p>微信已关闭这个工具依赖的接口，同步功能无法恢复，在线网站因此停止服务。谢谢大家一直以来的使用。</p>
-      <p class="muted">
-        之前同步的文章保存在你当时使用的浏览器里，不在服务器上。这个页面不提供查看和导出。
-      </p>
+      <section class="hero">
+        <div class="wrap">
+          <span class="pill"><i></i>已于 2026 年 10 月下线</span>
+          <h1><span>公众号文章导出</span><span>工具已下线</span></h1>
+          <p class="lead">
+            公众号文章批量下载工具 wechat-article-exporter 的在线网站 down.mptext.top <strong>已停止服务</strong>。微信已关闭这个工具依赖的接口，<strong>同步功能无法恢复</strong>。谢谢大家一直以来的使用。
+          </p>
 
-      <h2>我现在在做的新工具：取阅</h2>
-      <p class="muted">
-        下面两项功能都在新网站 feed.zoro.build 上，由同一位作者开发。新网站是邀请制注册，需要先<a
-          href="https://feed.zoro.build/invite"
-          >申请邀请码</a
-        >，通过后邀请码会发到你的邮箱。
-      </p>
-
-      <section class="card">
-        <h3>公众号历史文章采集</h3>
-        <p>
-          填公众号的 gh_id、微信号或任意一篇文章的链接，列出它发过的文章（标题、发布时间、阅读、点赞、原文链接等），导出 Excel 或 JSON。
-        </p>
-        <a class="btn btn-primary" href="https://feed.zoro.build/history-fetch">去采集历史文章</a>
-        <ul>
-          <li>导出的是文章清单，不是旧工具那样的 HTML、Word、PDF 正文文件。</li>
-          <li>使用前要在电脑上用 Keyhole 提取一份采集凭据，步骤在采集页上。</li>
-          <li>注册后有赠送额度，用完按采集到的篇数计费。</li>
-        </ul>
+          <div class="route">
+            <span class="addr old"><small>旧网站 · 已停止服务</small><b>down.mptext.top</b></span>
+            <span class="arrow" aria-hidden="true"></span>
+            <a class="addr new" href="https://feed.zoro.build/"
+              ><small>新工具「取阅」· 同一位作者开发</small><b>feed.zoro.build</b
+              ><span class="go">访问 →</span></a
+            >
+          </div>
+        </div>
       </section>
 
-      <section class="card">
-        <h3>公众号 RSS 订阅与新文章推送</h3>
-        <p>订阅关心的公众号，用 RSS 阅读器或通知渠道接收新文章。</p>
-        <a class="btn btn-secondary" href="https://feed.zoro.build/">了解取阅</a>
-      </section>
+      <section class="wrap" aria-labelledby="next-title">
+        <div class="bento">
+          <div class="cell span-2">
+            <span class="eyebrow">取阅 · 01</span>
+            <h2 id="next-title">公众号历史文章采集</h2>
+            <p>
+              填公众号的 gh_id、微信号或任意一篇文章的链接，列出它发过的文章（标题、发布时间、阅读、点赞、原文链接等），<strong>导出 Excel 或 JSON</strong>。
+            </p>
+            <a class="btn" href="https://feed.zoro.build/history-fetch">去采集历史文章 →</a>
+            <ul class="fine">
+              <li>导出的是<strong>文章清单</strong>，不是旧工具那样的 HTML、Word、PDF 正文文件。</li>
+              <li>使用前要<strong>在电脑上用 Keyhole 提取一份采集凭据</strong>，步骤在采集页上。</li>
+              <li>注册后有赠送额度，用完<strong>按采集到的篇数计费</strong>。</li>
+            </ul>
+          </div>
 
-      <footer>
-        旧工具的付费会员如有未到期的问题，请发邮件到
-        <a href="mailto:support@feed.zoro.build">support@feed.zoro.build</a>。
-      </footer>
+          <div class="cell">
+            <span class="eyebrow">取阅 · 02</span>
+            <h2>公众号 RSS 订阅与新文章推送</h2>
+            <p>订阅关心的公众号，用 RSS 阅读器或通知渠道接收新文章。</p>
+            <a class="btn ghost" href="https://feed.zoro.build/">了解取阅 →</a>
+          </div>
+
+          <div class="cell small must">
+            <span class="eyebrow">注册前先看</span>
+            <h3>新网站是邀请制注册</h3>
+            <p>需要先<strong>申请邀请码</strong>，通过后邀请码会发到你的邮箱。</p>
+            <a class="btn" href="https://feed.zoro.build/invite">申请邀请码 →</a>
+          </div>
+
+          <div class="cell small">
+            <span class="eyebrow">本地数据</span>
+            <h3>旧网站里同步过的文章</h3>
+            <p>你之前同步的文章<strong>只存放在当时使用的浏览器里</strong>，网站下线后就没有入口再打开了。</p>
+          </div>
+
+          <div class="cell small">
+            <span class="eyebrow">付费会员</span>
+            <h3>未到期的问题</h3>
+            <p>
+              请发邮件到 <a class="mail" href="mailto:support@feed.zoro.build">support@feed.zoro.build</a>
+            </p>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <footer>
+      <div class="wrap">wechat-article-exporter · down.mptext.top · 2026</div>
+    </footer>
   </body>
 </html>

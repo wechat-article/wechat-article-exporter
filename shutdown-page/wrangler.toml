@@ -4,7 +4,9 @@ name = "down-mptext-shutdown"
 compatibility_date = "2026-10-01"
 workers_dev = true
 
-# 旧站的所有路径（/dashboard/*、/api/* 等）都返回这张页面。
+# 首页 200；旧站的其余路径（/dashboard/*、/api/* 等）返回 404，正文仍是这张页面。
+# 旧地址已经没有对应内容，返回 200 会被搜索引擎当成软 404 一直留在索引里，404 才会被移出。
+# public/404.html 是部署前从 index.html 复制的，不进仓库。
 [assets]
 directory = "./public"
-not_found_handling = "single-page-application"
+not_found_handling = "404-page"

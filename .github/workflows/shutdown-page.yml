@@ -1,4 +1,4 @@
-# 部署 down.mptext.top 的下线落地页（shutdown-page/）。只有静态资源，不需要构建。
+# 部署 down.mptext.top 的下线落地页（shutdown-page/）。只有静态资源，部署前只复制出 404.html。
 # 自定义域在 Cloudflare 控制台绑定，这里只发布 Worker。
 name: Deploy shutdown page
 
@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 旧路径返回 404 时的正文，与首页同一份
+      - name: Copy 404 page
+        run: cp shutdown-page/public/index.html shutdown-page/public/404.html
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
